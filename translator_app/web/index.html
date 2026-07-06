@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RemotePlus Translator</title>
+  <link rel="stylesheet" href="/assets/app.css">
+  <link rel="stylesheet" href="/assets/device.css">
+</head>
+<body>
+  <header>
+    <div class="brand"><span class="mark">間</span><div><h1>RemotePlus Translator</h1><p data-i18n="subtitle">오프라인 호텔 음성 통역</p></div></div>
+    <div class="header-actions">
+      <label class="ui-language"><span data-i18n="uiLanguage">화면 언어</span><select id="ui-language"><option value="ja">日本語</option><option value="ko">한국어</option><option value="en">English</option><option value="zh">中文</option><option value="es">Español</option></select></label>
+      <div id="connection" class="connection"><i></i><span data-i18n="connecting">연결 중</span></div>
+    </div>
+  </header>
+
+  <main>
+    <section class="panel runtime">
+      <div class="panel-title"><span data-i18n="runtime">실행 상태</span><div id="phase" class="phase"><span class="pulse"></span><strong data-i18n="starting">시작 중</strong></div></div>
+      <div class="runtime-grid">
+        <div><small data-i18n="detectedLanguage">현재 대화 언어</small><strong id="partner" data-i18n="auto">자동 감지</strong></div>
+        <div><small data-i18n="privacy">처리 위치</small><strong data-i18n="localOnly">이 PC · 오프라인</strong></div>
+        <button id="pause" class="primary" data-i18n="pause">일시 정지</button>
+      </div>
+    </section>
+
+    <section class="panel settings">
+      <div class="panel-title"><span data-i18n="channelSettings">번역 및 언어 설정</span><button id="language-setup" class="mini" data-i18n="languagePacks">언어·음성팩</button></div>
+      <div class="setting-row">
+        <label><span data-i18n="inputLanguage">고객 입력 언어</span><select id="language"><option value="auto" data-i18n="auto">자동 감지</option></select></label>
+        <label><span data-i18n="replyLanguage">답변 출력 언어</span><select id="reply-language"><option value="auto" data-i18n="replyAuto">최근 고객 언어</option></select></label>
+        <label><span data-i18n="inputDevice">음성 입력 장치</span><select id="input-device"><option value="default" data-i18n="systemDefault">시스템 기본 장치</option></select></label>
+        <label><span data-i18n="outputDevice">TTS 출력 장치</span><select id="output-device"><option value="default" data-i18n="systemDefault">시스템 기본 장치</option></select></label>
+        <div class="direction"><span data-i18n="customerSpeech">고객 음성</span><b>→</b><span data-i18n="japaneseText">일본어 텍스트</span><b>·</b><span data-i18n="japaneseReply">일본어 답변</span><b>→</b><span data-i18n="customerTts">고객 언어 음성</span></div>
+        <button id="tts" class="toggle on" aria-pressed="true"><span></span><em data-i18n="ttsOn">TTS 켜짐</em></button>
+      </div>
+    </section>
+
+    <section class="panel output">
+      <div class="panel-title"><span data-i18n="output">통합 번역 출력</span><span><small data-i18n="outputHint">원문과 일본어를 함께 표시합니다</small><button id="clear-history" class="mini" data-i18n="clearHistory">기록 지우기</button></span></div>
+      <div id="feed" class="feed" aria-live="polite">
+        <div id="empty" class="empty">
+          <div class="rings"><span></span><span></span><span></span></div>
+          <h3 data-i18n="loadingTitle">모델을 준비하고 있습니다</h3>
+          <p data-i18n="loadingBody">준비가 끝나면 고객 음성을 듣기 시작합니다.</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="setup-modal" class="modal" hidden>
+    <div class="modal-card">
+      <h2 data-i18n="setupTitle">사용할 고객 언어 선택</h2>
+      <p data-i18n="setupBody">선택한 언어만 자동 감지와 수동 목록에 사용됩니다.</p>
+      <div id="setup-languages" class="language-checks"></div>
+      <div class="modal-actions">
+        <button id="open-voice-settings" data-i18n="windowsSettings">Windows 언어 설정</button>
+        <button id="install-voices" data-i18n="installVoices">선택 음성팩 설치</button>
+        <button id="save-setup" class="primary" data-i18n="save">저장</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast"></div>
+  <script src="/assets/app.js"></script>
+</body>
+</html>

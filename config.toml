@@ -1,0 +1,293 @@
+[audio]
+sample_rate = 16000
+block_ms = 20
+input_device = "default"
+output_device = "default"
+start_rms = 0.012
+continue_rms = 0.007
+pre_roll_ms = 300
+end_silence_ms = 550
+min_speech_ms = 350
+max_utterance_ms = 12000
+post_tts_mute_ms = 500
+
+[stt]
+model = "small"
+device = "cpu"
+compute_type = "int8"
+beam_size = 3
+language = "auto"
+japanese_reply_threshold = 0.5
+enabled_language_min_probability = 0.35
+hotwords = ["콜라 주세요", "콜라", "진저에일", "cola", "ginger ale"]
+
+[stt.corrections]
+"콜을 주세요" = "콜라 주세요"
+"콜라주세요" = "콜라 주세요"
+"진저일" = "진저에일"
+
+[stt.language_hotwords]
+ko = ["호텔 예약", "예약 확인", "예약 변경", "예약 취소", "체크인", "체크아웃", "얼리 체크인", "레이트 체크아웃", "룸서비스", "하우스키핑", "프런트 데스크", "컨시어지", "벨 데스크", "모닝콜", "미니바", "어메니티", "추가 수건", "생수", "세탁 서비스", "드라이클리닝", "조식 뷔페", "음식 알레르기", "채식", "비건", "할랄", "글루텐 프리", "콜라", "진저에일", "탄산수", "공항 셔틀", "택시 호출", "분실물"]
+en = ["hotel reservation", "booking confirmation", "change my reservation", "cancel my reservation", "check-in", "check-out", "early check-in", "late check-out", "room service", "housekeeping", "front desk", "concierge", "bell desk", "wake-up call", "minibar", "amenities", "extra towels", "bottled water", "laundry service", "dry cleaning", "breakfast buffet", "food allergy", "vegetarian", "vegan", "halal", "gluten-free", "cola", "ginger ale", "sparkling water", "airport shuttle", "call a taxi", "lost and found"]
+zh = ["酒店预订", "确认预订", "更改预订", "取消预订", "入住", "退房", "提前入住", "延迟退房", "客房服务", "客房清洁", "前台", "礼宾部", "行李服务", "叫醒服务", "迷你吧", "洗漱用品", "额外毛巾", "矿泉水", "洗衣服务", "干洗服务", "早餐自助餐", "食物过敏", "素食", "纯素", "清真", "无麸质", "可乐", "姜汁汽水", "苏打水", "机场接送", "叫出租车", "失物招领"]
+es = ["reserva de hotel", "confirmar la reserva", "cambiar la reserva", "cancelar la reserva", "entrada", "salida", "entrada anticipada", "salida tardía", "servicio de habitaciones", "limpieza de habitaciones", "recepción", "conserjería", "servicio de equipaje", "llamada despertador", "minibar", "artículos de aseo", "toallas adicionales", "agua embotellada", "servicio de lavandería", "limpieza en seco", "desayuno buffet", "alergia alimentaria", "vegetariano", "vegano", "halal", "sin gluten", "cola", "ginger ale", "agua con gas", "traslado al aeropuerto", "pedir un taxi", "objetos perdidos"]
+ja = ["ホテル予約", "予約確認", "予約変更", "予約キャンセル", "チェックイン", "チェックアウト", "アーリーチェックイン", "レイトチェックアウト", "ルームサービス", "ハウスキーピング", "フロントデスク", "コンシェルジュ", "ベルデスク", "モーニングコール", "ミニバー", "アメニティ", "追加のタオル", "ミネラルウォーター", "ランドリーサービス", "ドライクリーニング", "朝食ビュッフェ", "食物アレルギー", "ベジタリアン", "ヴィーガン", "ハラール", "グルテンフリー", "コーラ", "ジンジャーエール", "炭酸水", "空港シャトル", "タクシー手配", "忘れ物"]
+
+[translation]
+backend = "hymt2"
+model = "facebook/m2m100_418M"
+device = "cpu"
+max_new_tokens = 256
+hymt2_model = "models/hymt2/Hy-MT2-1.8B-Q4_K_M.gguf"
+hymt2_runtime = "models/hymt2/llama"
+hymt2_threads = 8
+hymt2_context = 1024
+hymt2_timeout_seconds = 45
+hymt2_request_timeout_seconds = 15
+
+[translation.glossary]
+"コーラ" = ["cola", "coke", "콜라", "可乐", "可樂"]
+"ジンジャーエール" = ["ginger ale", "진저에일", "姜汁汽水", "薑汁汽水"]
+"ピーナッツ" = ["peanut", "땅콩", "花生", "cacahuete", "cacahuates", "maní"]
+"レイトチェックアウト" = ["late check-out", "late checkout", "레이트 체크아웃", "延迟退房", "延遲退房", "salida tardía", "salir más tarde"]
+
+[[translation.protected_terms]]
+ja = ["予約"]
+en = ["reservation", "booking"]
+ko = ["예약"]
+zh = ["预订", "预约"]
+es = ["reserva"]
+
+[[translation.protected_terms]]
+ja = ["キャンセル", "取り消し"]
+en = ["cancel", "cancellation"]
+ko = ["취소"]
+zh = ["取消"]
+es = ["cancelar", "cancelación"]
+
+[[translation.protected_terms]]
+ja = ["パスポート"]
+en = ["passport"]
+ko = ["여권"]
+zh = ["护照", "護照"]
+es = ["pasaporte"]
+
+[[translation.protected_terms]]
+ja = ["金庫", "セーフ"]
+en = ["room safe", "safe"]
+ko = ["객실 금고", "금고"]
+zh = ["保险箱", "保險箱"]
+es = ["caja fuerte"]
+
+[[translation.protected_terms]]
+ja = ["タオル"]
+en = ["towel", "towels"]
+ko = ["수건"]
+zh = ["毛巾"]
+es = ["toalla", "toallas"]
+
+[[translation.protected_terms]]
+ja = ["空港シャトル", "空港送迎"]
+en = ["airport shuttle", "shuttle"]
+ko = ["공항 셔틀", "셔틀"]
+zh = ["机场班车", "機場班車", "机场接送"]
+es = ["transporte al aeropuerto", "traslado al aeropuerto", "autobús del aeropuerto"]
+
+[[translation.protected_terms]]
+ja = ["車椅子"]
+en = ["wheelchair"]
+ko = ["휠체어"]
+zh = ["轮椅", "輪椅"]
+es = ["silla de ruedas", "sillas de ruedas"]
+
+[[translation.protected_terms]]
+ja = ["ベジタリアン", "菜食"]
+en = ["vegetarian"]
+ko = ["채식", "베지테리언"]
+zh = ["素食"]
+es = ["vegetariano", "vegetariana"]
+
+[[translation.protected_terms]]
+ja = ["朝食"]
+en = ["breakfast"]
+ko = ["조식", "아침 식사"]
+zh = ["早餐"]
+es = ["desayuno"]
+
+[[translation.protected_terms]]
+ja = ["ミニバー"]
+en = ["minibar", "mini bar"]
+ko = ["미니바"]
+zh = ["迷你吧"]
+es = ["minibar"]
+
+[[translation.protected_terms]]
+ja = ["請求"]
+en = ["charged", "charge", "bill"]
+ko = ["청구"]
+zh = ["收费", "收取", "账单"]
+es = ["cobrar", "cobraron", "cobro", "factura"]
+
+[[translation.protected_terms]]
+ja = ["お湯", "温水"]
+en = ["hot water"]
+ko = ["뜨거운 물", "온수"]
+zh = ["热水", "熱水"]
+es = ["agua caliente"]
+
+[[translation.protected_terms]]
+ja = ["キーカード", "カードキー"]
+en = ["key card", "room card"]
+ko = ["키 카드", "객실 카드"]
+zh = ["房卡", "房间卡"]
+es = ["tarjeta de la habitación", "tarjeta de habitación"]
+
+[[translation.protected_terms]]
+ja = ["プール"]
+en = ["swimming pool", "pool"]
+ko = ["수영장"]
+zh = ["游泳池"]
+es = ["piscina"]
+
+[[translation.protected_terms]]
+ja = ["モーニングコール", "目覚まし"]
+en = ["wake-up call", "wakeup call", "wake me"]
+ko = ["모닝콜", "깨워"]
+zh = ["叫醒", "叫醒服务"]
+es = ["llamada despertador", "despertarme"]
+
+[[translation.protected_terms]]
+ja = ["6時30分", "六時半", "6時半"]
+en = ["six thirty", "half past six", "6:30"]
+ko = ["여섯 시 반", "6시 30분", "6시 반"]
+zh = ["六点半", "6点半"]
+es = ["seis y media", "6:30"]
+
+[[translation.protected_terms]]
+ja = ["グルテン"]
+en = ["gluten"]
+ko = ["글루텐"]
+zh = ["麸质", "麩質"]
+es = ["gluten"]
+
+[[translation.protected_terms]]
+ja = ["ベビーベッド", "乳児用ベッド"]
+en = ["baby crib", "crib"]
+ko = ["아기 침대", "유아용 침대"]
+zh = ["婴儿床", "嬰兒床"]
+es = ["cuna para bebé", "cuna"]
+
+[[translation.protected_terms]]
+ja = ["領収書"]
+en = ["receipt"]
+ko = ["영수증"]
+zh = ["收据", "收據"]
+es = ["recibo"]
+
+[[translation.protected_terms]]
+ja = ["会社名"]
+en = ["company name"]
+ko = ["회사 이름", "회사명"]
+zh = ["公司名称", "公司名稱"]
+es = ["nombre de mi empresa", "nombre de la empresa"]
+
+[[translation.protected_terms]]
+ja = ["フライト", "飛行機"]
+en = ["flight"]
+ko = ["비행기", "항공편"]
+zh = ["航班"]
+es = ["vuelo"]
+
+[[translation.protected_terms]]
+ja = ["遅延", "遅れ"]
+en = ["delayed", "delay"]
+ko = ["지연"]
+zh = ["延误", "延誤"]
+es = ["retrasado", "retraso"]
+
+[[translation.protected_terms]]
+ja = ["空港送迎", "空港ピックアップ"]
+en = ["airport pickup", "airport pick-up"]
+ko = ["공항 픽업", "공항 도착"]
+zh = ["机场接机", "機場接機"]
+es = ["recogida en el aeropuerto"]
+
+[[translation.protected_terms]]
+ja = ["禁煙"]
+en = ["non-smoking", "nonsmoking"]
+ko = ["금연"]
+zh = ["无烟", "無煙"]
+es = ["no fumadores"]
+
+[[translation.protected_terms]]
+ja = ["タバコ", "煙草"]
+en = ["cigarette", "tobacco"]
+ko = ["담배"]
+zh = ["烟味", "煙味"]
+es = ["tabaco"]
+
+[[translation.protected_terms]]
+ja = ["におい", "臭い", "匂い"]
+en = ["smell", "smells"]
+ko = ["냄새"]
+zh = ["烟味", "味道"]
+es = ["huele", "olor"]
+
+[[translation.protected_terms]]
+ja = ["子供", "子ども"]
+en = ["child", "kid"]
+ko = ["아이", "어린이"]
+zh = ["孩子", "小孩"]
+es = ["hijo", "hija", "niño", "niña"]
+
+[[translation.protected_terms]]
+ja = ["発熱", "熱"]
+en = ["fever"]
+ko = ["열이"]
+zh = ["发烧", "發燒"]
+es = ["fiebre"]
+
+[[translation.protected_terms]]
+ja = ["医師", "医者"]
+en = ["doctor"]
+ko = ["의사"]
+zh = ["医生", "醫生"]
+es = ["médico", "doctor"]
+
+[[translation.protected_terms]]
+ja = ["ピーナッツ"]
+en = ["peanut", "peanuts"]
+ko = ["땅콩", "피넛"]
+zh = ["花生"]
+es = ["cacahuete", "cacahuates", "maní"]
+
+[[translation.protected_terms]]
+ja = ["アレルギー"]
+en = ["allergy", "allergic"]
+ko = ["알레르기", "알러지"]
+zh = ["过敏", "過敏"]
+es = ["alergia", "alérgico", "alérgica"]
+
+[[translation.protected_terms]]
+ja = ["レイトチェックアウト"]
+en = ["late check-out", "late checkout"]
+ko = ["레이트 체크아웃", "늦은 체크아웃"]
+zh = ["延迟退房", "延遲退房", "晚退房"]
+es = ["salida tardía", "salir más tarde"]
+
+[tts]
+enabled = true
+volume = 0.9
+
+[conversation]
+japanese_code = "ja"
+language_lock = "auto"
+reply_language = "auto"
+language_memory_seconds = 90
+minimum_language_probability = 0.55
+enabled_languages = ["en", "ko", "zh", "es"]
+
+[server]
+host = "127.0.0.1"
+port = 8765
+open_browser = false

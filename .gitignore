@@ -1,0 +1,15 @@
+.venv/
+models/
+cache/
+logs/
+__pycache__/
+.pytest_cache/
+*.pyc
+*.wav
+config.local.toml
+dist/
+build/local_bridge/
+*.egg-info/
+feedback/
+user-settings.json
+benchmarks/results/

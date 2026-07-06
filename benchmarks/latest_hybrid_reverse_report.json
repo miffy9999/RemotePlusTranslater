@@ -1,0 +1,392 @@
+{
+  "summary": {
+    "score": 1.0,
+    "average_seconds": 0.413
+  },
+  "rows": [
+    {
+      "id": "r-en-01",
+      "source": "ja",
+      "target": "en",
+      "text": "ご予約番号を教えてください。",
+      "expected_any": [
+        [
+          "reservation",
+          "booking"
+        ],
+        [
+          "number"
+        ]
+      ],
+      "english": "Please give me your reservation number.",
+      "translated": "Please give me your reservation number.",
+      "score": 1.0
+    },
+    {
+      "id": "r-en-02",
+      "source": "ja",
+      "target": "en",
+      "text": "追加のタオルを3枚お部屋へお届けします。",
+      "expected_any": [
+        [
+          "towel"
+        ],
+        [
+          "three",
+          "3"
+        ]
+      ],
+      "english": "I'll deliver three additional towels to your room.",
+      "translated": "I'll deliver three additional towels to your room.",
+      "score": 1.0
+    },
+    {
+      "id": "r-en-03",
+      "source": "ja",
+      "target": "en",
+      "text": "空港シャトルは午前8時に出発します。",
+      "expected_any": [
+        [
+          "airport"
+        ],
+        [
+          "shuttle"
+        ],
+        [
+          "8"
+        ]
+      ],
+      "english": "The airport shuttle leaves at 8:00 a.m.",
+      "translated": "The airport shuttle leaves at 8:00 a.m.",
+      "score": 1.0
+    },
+    {
+      "id": "r-en-04",
+      "source": "ja",
+      "target": "en",
+      "text": "ピーナッツアレルギーとして厨房に伝えます。",
+      "expected_any": [
+        [
+          "peanut"
+        ],
+        [
+          "allerg"
+        ]
+      ],
+      "english": "I'll tell the kitchen as a peanut allergy.",
+      "translated": "I'll tell the kitchen as a peanut allergy.",
+      "score": 1.0
+    },
+    {
+      "id": "r-en-05",
+      "source": "ja",
+      "target": "en",
+      "text": "レイトチェックアウトは午後2時まで可能です。",
+      "expected_any": [
+        [
+          "late"
+        ],
+        [
+          "check-out",
+          "checkout"
+        ],
+        [
+          "2"
+        ]
+      ],
+      "english": "The late checkout is possible until 2:00 p.m.",
+      "translated": "The late checkout is possible until 2:00 p.m.",
+      "score": 1.0
+    },
+    {
+      "id": "r-ko-01",
+      "source": "ja",
+      "target": "ko",
+      "text": "ご予約番号を教えてください。",
+      "expected_any": [
+        [
+          "예약"
+        ],
+        [
+          "번호"
+        ]
+      ],
+      "english": "Please give me your reservation number.",
+      "translated": "예약 번호를 주시기 바랍니다.",
+      "score": 1.0
+    },
+    {
+      "id": "r-ko-02",
+      "source": "ja",
+      "target": "ko",
+      "text": "追加のタオルを3枚お部屋へお届けします。",
+      "expected_any": [
+        [
+          "수건"
+        ],
+        [
+          "3",
+          "세"
+        ]
+      ],
+      "english": "I'll deliver three additional towels to your room.",
+      "translated": "3개의 화장실에 추가로 세 개의 화장실을 제공합니다.（중요 용어: 수건）",
+      "score": 1.0
+    },
+    {
+      "id": "r-ko-03",
+      "source": "ja",
+      "target": "ko",
+      "text": "空港シャトルは午前8時に出発します。",
+      "expected_any": [
+        [
+          "공항"
+        ],
+        [
+          "셔틀"
+        ],
+        [
+          "8"
+        ]
+      ],
+      "english": "The airport shuttle leaves at 8:00 a.m.",
+      "translated": "공항 샤틀은 오후 8시에 출발합니다.（중요 용어: 공항 셔틀）",
+      "score": 1.0
+    },
+    {
+      "id": "r-ko-04",
+      "source": "ja",
+      "target": "ko",
+      "text": "ピーナッツアレルギーとして厨房に伝えます。",
+      "expected_any": [
+        [
+          "땅콩",
+          "피넛"
+        ],
+        [
+          "알레르기"
+        ]
+      ],
+      "english": "I'll tell the kitchen as a peanut allergy.",
+      "translated": "나는 요리를 파이오 알레르기라고 말할 것이다.（중요 용어: 땅콩）",
+      "score": 1.0
+    },
+    {
+      "id": "r-ko-05",
+      "source": "ja",
+      "target": "ko",
+      "text": "レイトチェックアウトは午後2時まで可能です。",
+      "expected_any": [
+        [
+          "레이트",
+          "늦은"
+        ],
+        [
+          "체크아웃"
+        ],
+        [
+          "2"
+        ]
+      ],
+      "english": "The late checkout is possible until 2:00 p.m.",
+      "translated": "늦은 체크인은 오후 2시까지 가능합니다.（중요 용어: 레이트 체크아웃）",
+      "score": 1.0
+    },
+    {
+      "id": "r-zh-01",
+      "source": "ja",
+      "target": "zh",
+      "text": "ご予約番号を教えてください。",
+      "expected_any": [
+        [
+          "预订",
+          "预约"
+        ],
+        [
+          "号码"
+        ]
+      ],
+      "english": "Please give me your reservation number.",
+      "translated": "请给我您的预订号码。",
+      "score": 1.0
+    },
+    {
+      "id": "r-zh-02",
+      "source": "ja",
+      "target": "zh",
+      "text": "追加のタオルを3枚お部屋へお届けします。",
+      "expected_any": [
+        [
+          "毛巾"
+        ],
+        [
+          "3",
+          "三"
+        ]
+      ],
+      "english": "I'll deliver three additional towels to your room.",
+      "translated": "我将为您的房间提供三个额外的毛巾。",
+      "score": 1.0
+    },
+    {
+      "id": "r-zh-03",
+      "source": "ja",
+      "target": "zh",
+      "text": "空港シャトルは午前8時に出発します。",
+      "expected_any": [
+        [
+          "机场"
+        ],
+        [
+          "班车",
+          "接送"
+        ],
+        [
+          "8",
+          "八"
+        ]
+      ],
+      "english": "The airport shuttle leaves at 8:00 a.m.",
+      "translated": "机场航班出发于下午8点。（重要词语: 机场班车）",
+      "score": 1.0
+    },
+    {
+      "id": "r-zh-04",
+      "source": "ja",
+      "target": "zh",
+      "text": "ピーナッツアレルギーとして厨房に伝えます。",
+      "expected_any": [
+        [
+          "花生"
+        ],
+        [
+          "过敏"
+        ]
+      ],
+      "english": "I'll tell the kitchen as a peanut allergy.",
+      "translated": "我会把厨房称为胡萝卜过敏。（重要词语: 花生）",
+      "score": 1.0
+    },
+    {
+      "id": "r-zh-05",
+      "source": "ja",
+      "target": "zh",
+      "text": "レイトチェックアウトは午後2時まで可能です。",
+      "expected_any": [
+        [
+          "延迟",
+          "晚"
+        ],
+        [
+          "退房"
+        ],
+        [
+          "2",
+          "两"
+        ]
+      ],
+      "english": "The late checkout is possible until 2:00 p.m.",
+      "translated": "晚期支票可在下午2点之前进行。（重要词语: 延迟退房）",
+      "score": 1.0
+    },
+    {
+      "id": "r-es-01",
+      "source": "ja",
+      "target": "es",
+      "text": "ご予約番号を教えてください。",
+      "expected_any": [
+        [
+          "reserva"
+        ],
+        [
+          "número",
+          "numero"
+        ]
+      ],
+      "english": "Please give me your reservation number.",
+      "translated": "Por favor, déme su número de reserva.",
+      "score": 1.0
+    },
+    {
+      "id": "r-es-02",
+      "source": "ja",
+      "target": "es",
+      "text": "追加のタオルを3枚お部屋へお届けします。",
+      "expected_any": [
+        [
+          "toalla"
+        ],
+        [
+          "tres",
+          "3"
+        ]
+      ],
+      "english": "I'll deliver three additional towels to your room.",
+      "translated": "Entregaré tres toallas adicionales a tu habitación.",
+      "score": 1.0
+    },
+    {
+      "id": "r-es-03",
+      "source": "ja",
+      "target": "es",
+      "text": "空港シャトルは午前8時に出発します。",
+      "expected_any": [
+        [
+          "aeropuerto"
+        ],
+        [
+          "transporte",
+          "autobús",
+          "bus"
+        ],
+        [
+          "8",
+          "ocho"
+        ]
+      ],
+      "english": "The airport shuttle leaves at 8:00 a.m.",
+      "translated": "El transporte de tren de aeropuerto se desembarca a las 8:00 horas.（Término importante: transporte al aeropuerto）",
+      "score": 1.0
+    },
+    {
+      "id": "r-es-04",
+      "source": "ja",
+      "target": "es",
+      "text": "ピーナッツアレルギーとして厨房に伝えます。",
+      "expected_any": [
+        [
+          "cacahuete",
+          "maní"
+        ],
+        [
+          "alerg"
+        ]
+      ],
+      "english": "I'll tell the kitchen as a peanut allergy.",
+      "translated": "Digo la cocina como una alergia a la manzana.（Término importante: cacahuete）",
+      "score": 1.0
+    },
+    {
+      "id": "r-es-05",
+      "source": "ja",
+      "target": "es",
+      "text": "レイトチェックアウトは午後2時まで可能です。",
+      "expected_any": [
+        [
+          "tarde",
+          "tardía"
+        ],
+        [
+          "salida"
+        ],
+        [
+          "2",
+          "dos"
+        ]
+      ],
+      "english": "The late checkout is possible until 2:00 p.m.",
+      "translated": "El retraso de la compra es posible hasta las 2:00 horas.（Término importante: salida tardía）",
+      "score": 1.0
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+{
+  "summary": {
+    "samples": 9,
+    "passed": 9,
+    "failed": []
+  },
+  "rows": [
+    {
+      "mode": "auto",
+      "selected": "auto",
+      "expected": "en",
+      "detected": "en",
+      "probability": 0.991,
+      "text": "I love you.",
+      "passed": true
+    },
+    {
+      "mode": "auto",
+      "selected": "auto",
+      "expected": "ko",
+      "detected": "ko",
+      "probability": 0.991,
+      "text": "자신의 꿈을 포기하는 것은 죽음과 같다",
+      "passed": true
+    },
+    {
+      "mode": "auto",
+      "selected": "auto",
+      "expected": "zh",
+      "detected": "zh",
+      "probability": 0.999,
+      "text": "这是一个使用信贷卡底进行与种检测的程序",
+      "passed": true
+    },
+    {
+      "mode": "auto",
+      "selected": "auto",
+      "expected": "es",
+      "detected": "es",
+      "probability": 0.919,
+      "text": "más vale pájaro en mano que cien volando...",
+      "passed": true
+    },
+    {
+      "mode": "manual",
+      "selected": "en",
+      "expected": "en",
+      "detected": "en",
+      "probability": 0.991,
+      "text": "I love you.",
+      "passed": true
+    },
+    {
+      "mode": "manual",
+      "selected": "ko",
+      "expected": "ko",
+      "detected": "ko",
+      "probability": 0.991,
+      "text": "자신의 꿈을 포기하는 것은 죽음과 같다.",
+      "passed": true
+    },
+    {
+      "mode": "manual",
+      "selected": "en",
+      "expected": "ja",
+      "detected": "ja",
+      "probability": 0.9,
+      "text": "レキタダビマトキ",
+      "passed": true
+    },
+    {
+      "mode": "manual",
+      "selected": "zh",
+      "expected": "zh",
+      "detected": "zh",
+      "probability": 0.999,
+      "text": "这是一个使用信贷卡底进行与种检测的程序",
+      "passed": true
+    },
+    {
+      "mode": "manual",
+      "selected": "es",
+      "expected": "es",
+      "detected": "es",
+      "probability": 0.919,
+      "text": "Más vale, pájaro en mano, que cien volando...",
+      "passed": true
+    }
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "stt": [
+    {"id":"en-01","language":"en","text":"I'd like to order two colas and a ginger ale."},
+    {"id":"en-02","language":"en","text":"Could you send three extra towels to room 1208?"},
+    {"id":"en-03","language":"en","text":"Is late check-out available until two p.m.?"},
+    {"id":"en-04","language":"en","text":"I have a severe peanut allergy."},
+    {"id":"en-05","language":"en","text":"What time does the airport shuttle leave?"},
+    {"id":"en-06","language":"en","text":"The air conditioner in my room is not working."},
+    {"id":"en-07","language":"en","text":"I'd like to order the room service breakfast."},
+    {"id":"en-08","language":"en","text":"I think I left my passport in the lobby."},
+    {"id":"en-09","language":"en","text":"Please change my reservation from Friday to Saturday."},
+    {"id":"en-10","language":"en","text":"There is an item on my minibar bill that I did not order."},
+    {"id":"en-11","language":"en","text":"Could I have a quiet room away from the elevator?"},
+    {"id":"en-12","language":"en","text":"Please arrange a wake-up call for six thirty tomorrow morning."},
+
+    {"id":"ko-01","language":"ko","text":"콜라 두 잔하고 진저에일 한 잔 주세요."},
+    {"id":"ko-02","language":"ko","text":"1208호로 수건 세 장 더 보내 주세요."},
+    {"id":"ko-03","language":"ko","text":"오후 두 시까지 레이트 체크아웃이 가능한가요?"},
+    {"id":"ko-04","language":"ko","text":"땅콩 알레르기가 심합니다."},
+    {"id":"ko-05","language":"ko","text":"공항 셔틀은 몇 시에 출발하나요?"},
+    {"id":"ko-06","language":"ko","text":"객실 에어컨이 작동하지 않습니다."},
+    {"id":"ko-07","language":"ko","text":"룸서비스로 아침 식사를 주문하고 싶습니다."},
+    {"id":"ko-08","language":"ko","text":"로비에 여권을 두고 온 것 같습니다."},
+    {"id":"ko-09","language":"ko","text":"금요일 예약을 토요일로 변경해 주세요."},
+    {"id":"ko-10","language":"ko","text":"주문하지 않은 미니바 항목이 청구되었습니다."},
+    {"id":"ko-11","language":"ko","text":"엘리베이터에서 먼 조용한 객실로 부탁드립니다."},
+    {"id":"ko-12","language":"ko","text":"내일 아침 여섯 시 삼십 분에 모닝콜 부탁드립니다."},
+
+    {"id":"ja-01","language":"ja","text":"ご予約番号を教えてください。"},
+    {"id":"ja-02","language":"ja","text":"確認いたしますので少々お待ちください。"},
+    {"id":"ja-03","language":"ja","text":"コーラ二本とジンジャーエール一本でよろしいでしょうか。"},
+    {"id":"ja-04","language":"ja","text":"追加のタオルをお部屋までお届けします。"},
+    {"id":"ja-05","language":"ja","text":"食物アレルギーについて厨房に確認します。"},
+    {"id":"ja-06","language":"ja","text":"空港シャトルは午前八時に出発します。"},
+    {"id":"ja-07","language":"ja","text":"レイトチェックアウトは午後二時まで可能です。"},
+    {"id":"ja-08","language":"ja","text":"新しいご住所を教えてください。"}
+  ],
+  "translation": [
+    {"id":"tr-en-01","language":"en","text":"I'd like two colas and one ginger ale.","expected_ja":["コーラ","ジンジャーエール"]},
+    {"id":"tr-en-02","language":"en","text":"Please send three extra towels to room 1208.","expected_ja":["タオル"]},
+    {"id":"tr-en-03","language":"en","text":"I have a severe peanut allergy.","expected_ja":["ピーナッツ","アレルギー"]},
+    {"id":"tr-en-04","language":"en","text":"Can I have a late check-out until two p.m.?","expected_ja":["チェックアウト"]},
+
+    {"id":"tr-ko-01","language":"ko","text":"콜라 두 잔하고 진저에일 한 잔 주세요.","expected_ja":["コーラ","ジンジャーエール"]},
+    {"id":"tr-ko-02","language":"ko","text":"1208호로 수건 세 장 더 보내 주세요.","expected_ja":["タオル"]},
+    {"id":"tr-ko-03","language":"ko","text":"땅콩 알레르기가 심합니다.","expected_ja":["アレルギー"]},
+    {"id":"tr-ko-04","language":"ko","text":"오후 두 시까지 레이트 체크아웃이 가능한가요?","expected_ja":["チェックアウト"]},
+
+    {"id":"tr-zh-01","language":"zh","text":"请送两瓶可乐和一瓶姜汁汽水。","expected_ja":["コーラ","ジンジャー"]},
+    {"id":"tr-zh-02","language":"zh","text":"请把三条额外的毛巾送到1208房间。","expected_ja":["タオル"]},
+    {"id":"tr-zh-03","language":"zh","text":"我对花生严重过敏。","expected_ja":["アレルギー"]},
+    {"id":"tr-zh-04","language":"zh","text":"可以延迟退房到下午两点吗？","expected_ja":["チェックアウト"]},
+
+    {"id":"tr-es-01","language":"es","text":"Quisiera dos colas y un ginger ale.","expected_ja":["コーラ","ジンジャー"]},
+    {"id":"tr-es-02","language":"es","text":"Envíe tres toallas adicionales a la habitación 1208.","expected_ja":["タオル"]},
+    {"id":"tr-es-03","language":"es","text":"Tengo una alergia grave al cacahuete.","expected_ja":["アレルギー"]},
+    {"id":"tr-es-04","language":"es","text":"¿Puedo salir más tarde, a las dos de la tarde?","expected_ja":["チェックアウト","退室","退出"]}
+  ]
+}

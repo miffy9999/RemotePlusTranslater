@@ -1,0 +1,46 @@
+[project]
+name = "local-conversation-translator"
+version = "0.4.1"
+description = "Offline bidirectional speech translator centered on Japanese"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "faster-whisper==1.2.1",
+  "numpy==2.2.6",
+  "sounddevice==0.5.3",
+  "SoundCard==0.4.6",
+  "pywin32==310",
+  "fastapi==0.116.1",
+  "uvicorn[standard]==0.35.0",
+  "pywebview==6.2.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==8.4.1", "ruff==0.12.3", "pyinstaller==6.21.0", "httpx==0.28.1"]
+m2m100 = [
+  "torch==2.7.1",
+  "transformers==4.53.3",
+  "accelerate==1.9.0",
+  "sentencepiece==0.2.1",
+  "safetensors==0.5.3",
+]
+
+[project.scripts]
+local-translator = "translator_app.cli:main"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["translator_app*"]
+
+[tool.setuptools.package-data]
+translator_app = ["web/*"]
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

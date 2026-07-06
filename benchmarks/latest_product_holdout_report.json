@@ -1,0 +1,793 @@
+{
+  "summary": {
+    "samples": 40,
+    "forward_score": 1.0,
+    "reverse_score": 1.0,
+    "failed": []
+  },
+  "rows": [
+    {
+      "id": "f-en-h1",
+      "source": "en",
+      "target": "ja",
+      "text": "Could I get a wake-up call at half past six?",
+      "expected_any": [
+        [
+          "モーニングコール",
+          "目覚まし"
+        ],
+        [
+          "6時30分",
+          "6時半",
+          "六時半"
+        ]
+      ],
+      "translated": "6時30分にモーニングコールをお願いできますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 2.977
+    },
+    {
+      "id": "f-en-h2",
+      "source": "en",
+      "target": "ja",
+      "text": "I am allergic to gluten and need a gluten-free meal.",
+      "expected_any": [
+        [
+          "グルテン"
+        ],
+        [
+          "アレルギー"
+        ]
+      ],
+      "translated": "私はグルテンにアレルギーがあり、グルテンフリーの食事が必要です。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 2.838
+    },
+    {
+      "id": "f-en-h3",
+      "source": "en",
+      "target": "ja",
+      "text": "Can you put a baby crib in the room?",
+      "expected_any": [
+        [
+          "ベビーベッド",
+          "乳児用ベッド"
+        ]
+      ],
+      "translated": "部屋にベビーベッドを置くことはできますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.842
+    },
+    {
+      "id": "f-en-h4",
+      "source": "en",
+      "target": "ja",
+      "text": "The room next door is too noisy. Can I change rooms?",
+      "expected_any": [
+        [
+          "騒音",
+          "うるさい",
+          "騒がしい"
+        ],
+        [
+          "部屋",
+          "客室"
+        ],
+        [
+          "変更",
+          "替え",
+          "変え"
+        ]
+      ],
+      "translated": "隣の部屋がうるさいです。部屋を変えることができますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 2.059
+    },
+    {
+      "id": "f-en-h5",
+      "source": "en",
+      "target": "ja",
+      "text": "I need a receipt issued in my company name.",
+      "expected_any": [
+        [
+          "領収書"
+        ],
+        [
+          "会社名",
+          "会社の名前"
+        ]
+      ],
+      "translated": "会社名で発行された領収書が必要です。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.964
+    },
+    {
+      "id": "f-ko-h1",
+      "source": "ko",
+      "target": "ja",
+      "text": "아침 여섯 시 반에 깨워 주실 수 있나요?",
+      "expected_any": [
+        [
+          "モーニングコール",
+          "目覚まし"
+        ],
+        [
+          "6時30分",
+          "6時半",
+          "六時半"
+        ]
+      ],
+      "translated": "朝の6時30分に起こしてくれますか？（重要語: モーニングコール）",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 2.131
+    },
+    {
+      "id": "f-ko-h2",
+      "source": "ko",
+      "target": "ja",
+      "text": "글루텐 알레르기가 있어서 글루텐 프리 식사가 필요합니다.",
+      "expected_any": [
+        [
+          "グルテン"
+        ],
+        [
+          "アレルギー"
+        ]
+      ],
+      "translated": "グルテンアレルギーがあるため、グルテンフリーの食事が必要です。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 2.552
+    },
+    {
+      "id": "f-ko-h3",
+      "source": "ko",
+      "target": "ja",
+      "text": "객실에 아기 침대를 놓아 주실 수 있나요?",
+      "expected_any": [
+        [
+          "ベビーベッド",
+          "乳児用ベッド"
+        ]
+      ],
+      "translated": "客室にベビーベッドを置いてもらえますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.932
+    },
+    {
+      "id": "f-ko-h4",
+      "source": "ko",
+      "target": "ja",
+      "text": "옆방이 너무 시끄러운데 다른 방으로 바꿀 수 있나요?",
+      "expected_any": [
+        [
+          "騒音",
+          "うるさい",
+          "騒がしい"
+        ],
+        [
+          "部屋",
+          "客室"
+        ],
+        [
+          "変更",
+          "替え",
+          "変え",
+          "移る"
+        ]
+      ],
+      "translated": "隣の部屋がとても騒がしいですが、別の部屋に移ることはできますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.756
+    },
+    {
+      "id": "f-ko-h5",
+      "source": "ko",
+      "target": "ja",
+      "text": "회사 이름으로 영수증을 발급해 주세요.",
+      "expected_any": [
+        [
+          "領収書"
+        ],
+        [
+          "会社名",
+          "会社の名前"
+        ]
+      ],
+      "translated": "会社名で領収書を発行してください。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.641
+    },
+    {
+      "id": "f-zh-h1",
+      "source": "zh",
+      "target": "ja",
+      "text": "可以在早上六点半叫醒我吗？",
+      "expected_any": [
+        [
+          "モーニングコール",
+          "目覚まし"
+        ],
+        [
+          "6時30分",
+          "6時半",
+          "六時半"
+        ]
+      ],
+      "translated": "朝6時30分に私を起こしてくれますか？（重要語: モーニングコール）",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.916
+    },
+    {
+      "id": "f-zh-h2",
+      "source": "zh",
+      "target": "ja",
+      "text": "我对麸质过敏，需要无麸质餐。",
+      "expected_any": [
+        [
+          "グルテン"
+        ],
+        [
+          "アレルギー"
+        ]
+      ],
+      "translated": "私はグルテンにアレルギーがあり、グルテンフリーの食事が必要です。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 2.399
+    },
+    {
+      "id": "f-zh-h3",
+      "source": "zh",
+      "target": "ja",
+      "text": "可以在房间里放一张婴儿床吗？",
+      "expected_any": [
+        [
+          "ベビーベッド",
+          "乳児用ベッド"
+        ]
+      ],
+      "translated": "部屋にベビーベッドを置くことはできますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.545
+    },
+    {
+      "id": "f-zh-h4",
+      "source": "zh",
+      "target": "ja",
+      "text": "隔壁房间太吵了，可以换房吗？",
+      "expected_any": [
+        [
+          "騒音",
+          "うるさい",
+          "騒がしい"
+        ],
+        [
+          "部屋",
+          "客室"
+        ],
+        [
+          "変更",
+          "替え",
+          "変え"
+        ]
+      ],
+      "translated": "隣の部屋がうるさいです。別の部屋に変えることはできますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.254
+    },
+    {
+      "id": "f-zh-h5",
+      "source": "zh",
+      "target": "ja",
+      "text": "请用公司名称开具收据。",
+      "expected_any": [
+        [
+          "領収書"
+        ],
+        [
+          "会社名",
+          "会社の名前"
+        ]
+      ],
+      "translated": "会社名の下で領収書を発行してください。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.702
+    },
+    {
+      "id": "f-es-h1",
+      "source": "es",
+      "target": "ja",
+      "text": "¿Puede despertarme a las seis y media?",
+      "expected_any": [
+        [
+          "モーニングコール",
+          "目覚まし"
+        ],
+        [
+          "6時30分",
+          "6時半",
+          "六時半"
+        ]
+      ],
+      "translated": "6時30分に起こしてくれますか？（重要語: モーニングコール）",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 2.165
+    },
+    {
+      "id": "f-es-h2",
+      "source": "es",
+      "target": "ja",
+      "text": "Soy alérgico al gluten y necesito una comida sin gluten.",
+      "expected_any": [
+        [
+          "グルテン"
+        ],
+        [
+          "アレルギー"
+        ]
+      ],
+      "translated": "私はグルテンにアレルギーがあり、グルテンを含まない食事が必要です。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 2.731
+    },
+    {
+      "id": "f-es-h3",
+      "source": "es",
+      "target": "ja",
+      "text": "¿Puede poner una cuna para bebé en la habitación?",
+      "expected_any": [
+        [
+          "ベビーベッド",
+          "乳児用ベッド"
+        ]
+      ],
+      "translated": "ベビーベッドを部屋に置くことができますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 2.086
+    },
+    {
+      "id": "f-es-h4",
+      "source": "es",
+      "target": "ja",
+      "text": "La habitación de al lado es muy ruidosa. ¿Puedo cambiar de habitación?",
+      "expected_any": [
+        [
+          "騒音",
+          "うるさい",
+          "騒がしい",
+          "大騒ぎ"
+        ],
+        [
+          "部屋",
+          "客室"
+        ],
+        [
+          "変更",
+          "替え",
+          "変え"
+        ]
+      ],
+      "translated": "隣の部屋はとても騒音が大きいです。部屋を変えることはできますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.768
+    },
+    {
+      "id": "f-es-h5",
+      "source": "es",
+      "target": "ja",
+      "text": "Necesito un recibo a nombre de mi empresa.",
+      "expected_any": [
+        [
+          "領収書"
+        ],
+        [
+          "会社名",
+          "会社の名前"
+        ]
+      ],
+      "translated": "会社名の領収書が必要です。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.734
+    },
+    {
+      "id": "r-en-h1",
+      "source": "ja",
+      "target": "en",
+      "text": "確認いたしますので、少々お待ちください。",
+      "expected_any": [
+        [
+          "wait"
+        ],
+        [
+          "check"
+        ]
+      ],
+      "translated": "Please wait a moment while I check.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-en-h2",
+      "source": "ja",
+      "target": "en",
+      "text": "ご不便をおかけして申し訳ございません。",
+      "expected_any": [
+        [
+          "apolog"
+        ],
+        [
+          "inconvenience"
+        ]
+      ],
+      "translated": "We sincerely apologize for the inconvenience.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-en-h3",
+      "source": "ja",
+      "target": "en",
+      "text": "担当スタッフがすぐお部屋に伺います。",
+      "expected_any": [
+        [
+          "staff"
+        ],
+        [
+          "room"
+        ]
+      ],
+      "translated": "A staff member will come to your room shortly.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-en-h4",
+      "source": "ja",
+      "target": "en",
+      "text": "タクシーを手配いたします。",
+      "expected_any": [
+        [
+          "taxi"
+        ],
+        [
+          "arrange"
+        ]
+      ],
+      "translated": "We will arrange a taxi for you.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-en-h5",
+      "source": "ja",
+      "target": "en",
+      "text": "請求内容を確認して訂正いたします。",
+      "expected_any": [
+        [
+          "charge"
+        ],
+        [
+          "check"
+        ],
+        [
+          "correct"
+        ]
+      ],
+      "translated": "We will check the charge and correct it if necessary.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-ko-h1",
+      "source": "ja",
+      "target": "ko",
+      "text": "確認いたしますので、少々お待ちください。",
+      "expected_any": [
+        [
+          "기다려"
+        ],
+        [
+          "확인"
+        ]
+      ],
+      "translated": "확인하는 동안 잠시만 기다려 주세요.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-ko-h2",
+      "source": "ja",
+      "target": "ko",
+      "text": "ご不便をおかけして申し訳ございません。",
+      "expected_any": [
+        [
+          "죄송"
+        ],
+        [
+          "불편"
+        ]
+      ],
+      "translated": "불편을 드려 진심으로 죄송합니다.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-ko-h3",
+      "source": "ja",
+      "target": "ko",
+      "text": "担当スタッフがすぐお部屋に伺います。",
+      "expected_any": [
+        [
+          "직원"
+        ],
+        [
+          "객실",
+          "방"
+        ]
+      ],
+      "translated": "직원이 곧 객실로 방문하겠습니다.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-ko-h4",
+      "source": "ja",
+      "target": "ko",
+      "text": "タクシーを手配いたします。",
+      "expected_any": [
+        [
+          "택시"
+        ],
+        [
+          "불러",
+          "배정"
+        ]
+      ],
+      "translated": "택시를 불러 드리겠습니다.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-ko-h5",
+      "source": "ja",
+      "target": "ko",
+      "text": "請求内容を確認して訂正いたします。",
+      "expected_any": [
+        [
+          "요금",
+          "청구"
+        ],
+        [
+          "확인"
+        ],
+        [
+          "정정"
+        ]
+      ],
+      "translated": "요금을 확인하고 필요한 경우 정정하겠습니다.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-zh-h1",
+      "source": "ja",
+      "target": "zh",
+      "text": "確認いたしますので、少々お待ちください。",
+      "expected_any": [
+        [
+          "稍等",
+          "等待"
+        ],
+        [
+          "确认"
+        ]
+      ],
+      "translated": "请稍等片刻，我们正在确认。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-zh-h2",
+      "source": "ja",
+      "target": "zh",
+      "text": "ご不便をおかけして申し訳ございません。",
+      "expected_any": [
+        [
+          "歉意",
+          "抱歉"
+        ],
+        [
+          "不便"
+        ]
+      ],
+      "translated": "给您带来不便，我们深表歉意。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-zh-h3",
+      "source": "ja",
+      "target": "zh",
+      "text": "担当スタッフがすぐお部屋に伺います。",
+      "expected_any": [
+        [
+          "工作人员",
+          "员工"
+        ],
+        [
+          "房间"
+        ]
+      ],
+      "translated": "工作人员很快会到您的房间。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-zh-h4",
+      "source": "ja",
+      "target": "zh",
+      "text": "タクシーを手配いたします。",
+      "expected_any": [
+        [
+          "出租车"
+        ],
+        [
+          "安排"
+        ]
+      ],
+      "translated": "我们会为您安排出租车。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-zh-h5",
+      "source": "ja",
+      "target": "zh",
+      "text": "請求内容を確認して訂正いたします。",
+      "expected_any": [
+        [
+          "费用",
+          "收费"
+        ],
+        [
+          "核对",
+          "确认"
+        ],
+        [
+          "更正"
+        ]
+      ],
+      "translated": "我们会核对费用，并在需要时进行更正。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-es-h1",
+      "source": "ja",
+      "target": "es",
+      "text": "確認いたしますので、少々お待ちください。",
+      "expected_any": [
+        [
+          "espere"
+        ],
+        [
+          "comprob"
+        ]
+      ],
+      "translated": "Espere un momento mientras lo comprobamos.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-es-h2",
+      "source": "ja",
+      "target": "es",
+      "text": "ご不便をおかけして申し訳ございません。",
+      "expected_any": [
+        [
+          "disculp"
+        ],
+        [
+          "molestias"
+        ]
+      ],
+      "translated": "Le pedimos sinceras disculpas por las molestias.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-es-h3",
+      "source": "ja",
+      "target": "es",
+      "text": "担当スタッフがすぐお部屋に伺います。",
+      "expected_any": [
+        [
+          "personal"
+        ],
+        [
+          "habitación"
+        ]
+      ],
+      "translated": "Un miembro del personal irá a su habitación en breve.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-es-h4",
+      "source": "ja",
+      "target": "es",
+      "text": "タクシーを手配いたします。",
+      "expected_any": [
+        [
+          "taxi"
+        ],
+        [
+          "pedir",
+          "organizar"
+        ]
+      ],
+      "translated": "Le pediremos un taxi.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-es-h5",
+      "source": "ja",
+      "target": "es",
+      "text": "請求内容を確認して訂正いたします。",
+      "expected_any": [
+        [
+          "cargo"
+        ],
+        [
+          "revis"
+        ],
+        [
+          "correg"
+        ]
+      ],
+      "translated": "Revisaremos el cargo y lo corregiremos si es necesario.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    }
+  ]
+}

@@ -1,0 +1,682 @@
+{
+  "summary": {
+    "samples": 28,
+    "forward_score": 1.0,
+    "reverse_score": 1.0,
+    "failed": []
+  },
+  "rows": [
+    {
+      "id": "f-en-v1",
+      "source": "en",
+      "target": "ja",
+      "text": "Can the laundry be returned by tomorrow morning?",
+      "expected_any": [
+        [
+          "ランドリー",
+          "洗濯"
+        ],
+        [
+          "明日"
+        ],
+        [
+          "朝"
+        ]
+      ],
+      "translated": "洗濯物は明日の朝まで返すことができますか?",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.696
+    },
+    {
+      "id": "f-en-v2",
+      "source": "en",
+      "target": "ja",
+      "text": "My flight is delayed. Please change the airport pickup time.",
+      "expected_any": [
+        [
+          "フライト",
+          "飛行機",
+          "便"
+        ],
+        [
+          "遅延",
+          "遅れ"
+        ],
+        [
+          "空港"
+        ],
+        [
+          "時間",
+          "タイミング"
+        ],
+        [
+          "変更",
+          "変え"
+        ]
+      ],
+      "translated": "飛行機のタイミングを変更してください。（重要語: 遅延・空港送迎）",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.67
+    },
+    {
+      "id": "f-en-v3",
+      "source": "en",
+      "target": "ja",
+      "text": "This is a non-smoking room, but it smells like cigarettes.",
+      "expected_any": [
+        [
+          "禁煙"
+        ],
+        [
+          "タバコ",
+          "煙草"
+        ],
+        [
+          "臭い",
+          "におい",
+          "匂い"
+        ]
+      ],
+      "translated": "禁煙の部屋ですが、タバコの匂いがする。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.862
+    },
+    {
+      "id": "f-en-v4",
+      "source": "en",
+      "target": "ja",
+      "text": "My child has a fever. Can you call a doctor?",
+      "expected_any": [
+        [
+          "子供",
+          "子ども"
+        ],
+        [
+          "熱",
+          "発熱"
+        ],
+        [
+          "医者",
+          "医師"
+        ]
+      ],
+      "translated": "発熱が起きているので、医者に相談できますか?（重要語: 子供）",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.738
+    },
+    {
+      "id": "f-ko-v1",
+      "source": "ko",
+      "target": "ja",
+      "text": "세탁물을 내일 아침까지 받을 수 있나요?",
+      "expected_any": [
+        [
+          "ランドリー",
+          "洗濯"
+        ],
+        [
+          "明日"
+        ],
+        [
+          "朝"
+        ]
+      ],
+      "translated": "明日の朝まで洗濯物は取れますか?",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.618
+    },
+    {
+      "id": "f-ko-v2",
+      "source": "ko",
+      "target": "ja",
+      "text": "비행기가 지연됐으니 공항 픽업 시간을 변경해 주세요.",
+      "expected_any": [
+        [
+          "フライト",
+          "飛行機",
+          "便"
+        ],
+        [
+          "遅延",
+          "遅れ"
+        ],
+        [
+          "空港"
+        ],
+        [
+          "時間"
+        ],
+        [
+          "変更",
+          "変え"
+        ]
+      ],
+      "translated": "飛行機が遅れたので、空港の予約時間を変更してください。（重要語: 空港送迎）",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.852
+    },
+    {
+      "id": "f-ko-v3",
+      "source": "ko",
+      "target": "ja",
+      "text": "금연 객실인데 담배 냄새가 납니다.",
+      "expected_any": [
+        [
+          "禁煙"
+        ],
+        [
+          "タバコ",
+          "煙草"
+        ],
+        [
+          "臭い",
+          "におい",
+          "匂い"
+        ]
+      ],
+      "translated": "部屋は、タバコの匂いがする。（重要語: 禁煙）",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.64
+    },
+    {
+      "id": "f-ko-v4",
+      "source": "ko",
+      "target": "ja",
+      "text": "아이가 열이 나는데 의사를 불러 주실 수 있나요?",
+      "expected_any": [
+        [
+          "子供",
+          "子ども"
+        ],
+        [
+          "熱",
+          "発熱"
+        ],
+        [
+          "医者",
+          "医師"
+        ]
+      ],
+      "translated": "発熱した子供に医者に相談してもらえますか?",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.693
+    },
+    {
+      "id": "f-zh-v1",
+      "source": "zh",
+      "target": "ja",
+      "text": "洗好的衣服可以明天早上送回来吗？",
+      "expected_any": [
+        [
+          "ランドリー",
+          "洗濯"
+        ],
+        [
+          "明日"
+        ],
+        [
+          "朝"
+        ]
+      ],
+      "translated": "洗濯物は明日の朝に返すことができますか?",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.524
+    },
+    {
+      "id": "f-zh-v2",
+      "source": "zh",
+      "target": "ja",
+      "text": "我的航班延误了，请更改机场接机时间。",
+      "expected_any": [
+        [
+          "フライト",
+          "便"
+        ],
+        [
+          "遅延",
+          "遅れ"
+        ],
+        [
+          "空港"
+        ],
+        [
+          "時間"
+        ],
+        [
+          "変更",
+          "変え"
+        ]
+      ],
+      "translated": "フライトが遅れて、空港の到着時間を変更してください。（重要語: 空港送迎）",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.614
+    },
+    {
+      "id": "f-zh-v3",
+      "source": "zh",
+      "target": "ja",
+      "text": "这是无烟房，但有烟味。",
+      "expected_any": [
+        [
+          "禁煙"
+        ],
+        [
+          "タバコ",
+          "煙草"
+        ],
+        [
+          "臭い",
+          "におい"
+        ]
+      ],
+      "translated": "煙が無いが、煙が無い。（重要語: 禁煙・タバコ・におい）",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.392
+    },
+    {
+      "id": "f-zh-v4",
+      "source": "zh",
+      "target": "ja",
+      "text": "我的孩子发烧了，可以叫医生吗？",
+      "expected_any": [
+        [
+          "子供",
+          "子ども"
+        ],
+        [
+          "熱",
+          "発熱"
+        ],
+        [
+          "医者",
+          "医師"
+        ]
+      ],
+      "translated": "子供が発熱しているので、医者に相談できますか?",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.605
+    },
+    {
+      "id": "f-es-v1",
+      "source": "es",
+      "target": "ja",
+      "text": "¿Pueden devolver la ropa lavada mañana por la mañana?",
+      "expected_any": [
+        [
+          "ランドリー",
+          "洗濯"
+        ],
+        [
+          "明日"
+        ],
+        [
+          "朝"
+        ]
+      ],
+      "translated": "明日の朝、洗濯物は返すことができますか?",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.54
+    },
+    {
+      "id": "f-es-v2",
+      "source": "es",
+      "target": "ja",
+      "text": "Mi vuelo se ha retrasado. Cambie la hora de recogida en el aeropuerto.",
+      "expected_any": [
+        [
+          "フライト",
+          "飛行機",
+          "便"
+        ],
+        [
+          "遅延",
+          "遅れ"
+        ],
+        [
+          "空港"
+        ],
+        [
+          "時間"
+        ],
+        [
+          "変更",
+          "変え"
+        ]
+      ],
+      "translated": "飛行機のタイミングが遅れて、空港での出荷時間が変更されました。（重要語: 空港送迎）",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.852
+    },
+    {
+      "id": "f-es-v3",
+      "source": "es",
+      "target": "ja",
+      "text": "Es una habitación para no fumadores, pero huele a tabaco.",
+      "expected_any": [
+        [
+          "禁煙"
+        ],
+        [
+          "タバコ",
+          "煙草"
+        ],
+        [
+          "臭い",
+          "におい",
+          "匂い"
+        ]
+      ],
+      "translated": "禁煙の部屋ですが、タバコの匂いがします。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.668
+    },
+    {
+      "id": "f-es-v4",
+      "source": "es",
+      "target": "ja",
+      "text": "Mi hijo tiene fiebre. ¿Puede llamar a un médico?",
+      "expected_any": [
+        [
+          "子供",
+          "子ども"
+        ],
+        [
+          "熱",
+          "発熱"
+        ],
+        [
+          "医者",
+          "医師"
+        ]
+      ],
+      "translated": "発熱しているので、医者に相談できますか?（重要語: 子供）",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.543
+    },
+    {
+      "id": "r-en-v1",
+      "source": "ja",
+      "target": "en",
+      "text": "朝食会場は2階で、午前6時30分から10時までです。",
+      "expected_any": [
+        [
+          "breakfast"
+        ],
+        [
+          "second floor",
+          "2nd floor"
+        ],
+        [
+          "6:30"
+        ],
+        [
+          "10"
+        ]
+      ],
+      "translated": "The breakfast venue is on the second floor and is open from 6:30 to 10:00 a.m.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-en-v2",
+      "source": "ja",
+      "target": "en",
+      "text": "パスポートが見つかりました。身分証明書を持ってフロントへお越しください。",
+      "expected_any": [
+        [
+          "passport"
+        ],
+        [
+          "identification",
+          "ID"
+        ],
+        [
+          "front desk",
+          "reception"
+        ]
+      ],
+      "translated": "We found your passport. Please bring identification to the front desk.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-en-v3",
+      "source": "ja",
+      "target": "en",
+      "text": "緊急の場合は救急車を手配します。",
+      "expected_any": [
+        [
+          "emergency"
+        ],
+        [
+          "ambulance"
+        ]
+      ],
+      "translated": "In an emergency, we will arrange an ambulance.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-ko-v1",
+      "source": "ja",
+      "target": "ko",
+      "text": "朝食会場は2階で、午前6時30分から10時までです。",
+      "expected_any": [
+        [
+          "조식",
+          "아침 식사"
+        ],
+        [
+          "2층"
+        ],
+        [
+          "6시 30분",
+          "6:30"
+        ],
+        [
+          "10시",
+          "10"
+        ]
+      ],
+      "translated": "조식 장소는 2층이며 오전 6시 30분부터 10시까지 운영합니다.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-ko-v2",
+      "source": "ja",
+      "target": "ko",
+      "text": "パスポートが見つかりました。身分証明書を持ってフロントへお越しください。",
+      "expected_any": [
+        [
+          "여권"
+        ],
+        [
+          "신분증",
+          "신분 증명서"
+        ],
+        [
+          "프런트",
+          "프론트"
+        ]
+      ],
+      "translated": "여권을 찾았습니다. 신분증을 가지고 프런트 데스크로 와 주세요.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-ko-v3",
+      "source": "ja",
+      "target": "ko",
+      "text": "緊急の場合は救急車を手配します。",
+      "expected_any": [
+        [
+          "긴급",
+          "응급"
+        ],
+        [
+          "구급차"
+        ]
+      ],
+      "translated": "응급 상황에는 구급차를 불러 드리겠습니다.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-zh-v1",
+      "source": "ja",
+      "target": "zh",
+      "text": "朝食会場は2階で、午前6時30分から10時までです。",
+      "expected_any": [
+        [
+          "早餐"
+        ],
+        [
+          "二楼",
+          "2楼"
+        ],
+        [
+          "六点半",
+          "6:30"
+        ],
+        [
+          "十点",
+          "10"
+        ]
+      ],
+      "translated": "早餐地点在二楼，开放时间为上午六点半到十点。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-zh-v2",
+      "source": "ja",
+      "target": "zh",
+      "text": "パスポートが見つかりました。身分証明書を持ってフロントへお越しください。",
+      "expected_any": [
+        [
+          "护照"
+        ],
+        [
+          "身份证件",
+          "身份证明"
+        ],
+        [
+          "前台"
+        ]
+      ],
+      "translated": "我们找到了您的护照。请携带身份证件到前台领取。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-zh-v3",
+      "source": "ja",
+      "target": "zh",
+      "text": "緊急の場合は救急車を手配します。",
+      "expected_any": [
+        [
+          "紧急"
+        ],
+        [
+          "救护车"
+        ]
+      ],
+      "translated": "紧急情况下，我们会为您安排救护车。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-es-v1",
+      "source": "ja",
+      "target": "es",
+      "text": "朝食会場は2階で、午前6時30分から10時までです。",
+      "expected_any": [
+        [
+          "desayuno"
+        ],
+        [
+          "segundo piso",
+          "segunda planta"
+        ],
+        [
+          "6:30",
+          "seis y media"
+        ],
+        [
+          "10",
+          "diez"
+        ]
+      ],
+      "translated": "El desayuno se sirve en la segunda planta de 6:30 a 10:00 de la mañana.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-es-v2",
+      "source": "ja",
+      "target": "es",
+      "text": "パスポートが見つかりました。身分証明書を持ってフロントへお越しください。",
+      "expected_any": [
+        [
+          "pasaporte"
+        ],
+        [
+          "identificación",
+          "documento"
+        ],
+        [
+          "recepción"
+        ]
+      ],
+      "translated": "Hemos encontrado su pasaporte. Lleve un documento de identificación a recepción.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    },
+    {
+      "id": "r-es-v3",
+      "source": "ja",
+      "target": "es",
+      "text": "緊急の場合は救急車を手配します。",
+      "expected_any": [
+        [
+          "emergencia"
+        ],
+        [
+          "ambulancia"
+        ]
+      ],
+      "translated": "En caso de emergencia, solicitaremos una ambulancia.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0
+    }
+  ]
+}
