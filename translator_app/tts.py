@@ -1,36 +1,44 @@
 from __future__ import annotations
 
+import asyncio
 import queue
-import re
+import tempfile
 import threading
 import time
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Callable
 
-from .audio import OUTPUT_PREFIX, PlaybackGate
+from .audio import PlaybackGate
 from .config import AudioConfig, TtsConfig
-from .languages import get_language
-
 
 MetricsCallback = Callable[..., None]
 
-
-def _lcids(value: str) -> set[str]:
-    return {
-        part.strip().lower().lstrip("0")
-        for part in value.split(";")
-        if part.strip()
-    }
-
-
-def _device_guid(value: str) -> str | None:
-    matches = re.findall(
-        r"\{[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-"
-        r"[0-9a-f]{4}-[0-9a-f]{12}\}",
-        value,
-        re.IGNORECASE,
-    )
-    return matches[-1].casefold() if matches else None
+# Supported customer languages plus Japanese employee speech.
+EDGE_VOICES: dict[str, str] = {
+    "ja": "ja-JP-NanamiNeural",
+    "en": "en-US-JennyNeural",
+    "ko": "ko-KR-SunHiNeural",
+    "zh": "zh-CN-XiaoxiaoNeural",
+    "es": "es-ES-ElviraNeural",
+    "fr": "fr-FR-DeniseNeural",
+    "de": "de-DE-KatjaNeural",
+    "it": "it-IT-ElsaNeural",
+    "pt": "pt-BR-FranciscaNeural",
+    "ru": "ru-RU-SvetlanaNeural",
+    "ar": "ar-SA-ZariyahNeural",
+    "hi": "hi-IN-SwaraNeural",
+    "vi": "vi-VN-HoaiMyNeural",
+    "th": "th-TH-PremwadeeNeural",
+    "id": "id-ID-GadisNeural",
+    "ms": "ms-MY-YasminNeural",
+    "tr": "tr-TR-EmelNeural",
+    "nl": "nl-NL-ColetteNeural",
+    "pl": "pl-PL-ZofiaNeural",
+    "uk": "uk-UA-PolinaNeural",
+    "cs": "cs-CZ-VlastaNeural",
+    "he": "he-IL-HilaNeural",
+}
 
 
 @dataclass(slots=True)
@@ -44,8 +52,15 @@ class SpeechRequest:
     translation_ready_at: float = 0.0
 
 
-class SapiSpeaker(threading.Thread):
-    """Windows SAPI speaker with queue and playback timing diagnostics."""
+class EdgeSpeaker(threading.Thread):
+    """Online Edge Neural TTS with latest-answer priority.
+
+    This implementation has no Windows SAPI or language-pack dependency. It
+    downloads a compact MP3 for each reply and plays it through the Windows
+    default audio output. A newer reply interrupts both queued and playing
+    audio so an outdated hotel response is not spoken after the conversation
+    has moved on.
+    """
 
     def __init__(
         self,
@@ -55,28 +70,46 @@ class SapiSpeaker(threading.Thread):
         status: Callable[[str, str], None],
         metrics: MetricsCallback | None = None,
     ):
-        super().__init__(name="tts", daemon=True)
+        super().__init__(name="edge-tts", daemon=True)
         self.cfg = cfg
         self.audio_cfg = audio_cfg
         self.gate = gate
         self.status = status
         self.metrics = metrics
-
-        self._requests: queue.Queue[SpeechRequest] = queue.Queue(maxsize=3)
+        self._requests: queue.Queue[SpeechRequest] = queue.Queue(maxsize=1)
         self._stop_event = threading.Event()
-        self._voice_cache: dict[str, object] = {}
+        self._interrupt_event = threading.Event()
+        self._playing = threading.Event()
         self._request_lock = threading.Lock()
         self._next_request_id = 0
 
     def _metric(self, event: str, **fields: object) -> None:
         if self.metrics is None:
             return
-
         try:
             self.metrics(event, **fields)
         except Exception:
-            # Diagnostics must never interrupt playback.
             pass
+
+    def _clear_requests(self, *, reason: str) -> None:
+        while True:
+            try:
+                dropped = self._requests.get_nowait()
+            except queue.Empty:
+                return
+            self._metric(
+                "tts_dropped",
+                request_id=dropped.request_id,
+                utterance_id=dropped.utterance_id or 0,
+                reason=reason,
+            )
+
+    def interrupt(self, *, clear_queue: bool = True, reason: str = "manual") -> None:
+        if self._playing.is_set():
+            self._interrupt_event.set()
+            self._metric("tts_interrupt_requested", reason=reason)
+        if clear_queue:
+            self._clear_requests(reason=reason)
 
     def speak(
         self,
@@ -87,281 +120,172 @@ class SapiSpeaker(threading.Thread):
         speech_ended_at: float = 0.0,
         translation_ready_at: float = 0.0,
     ) -> int | None:
-        """Queue a request and return its trace ID, or None when dropped."""
         if not self.cfg.enabled:
-            self._metric(
-                "tts_not_queued",
-                utterance_id=utterance_id or 0,
-                reason="tts_disabled",
-            )
+            self._metric("tts_not_queued", utterance_id=utterance_id or 0, reason="tts_disabled")
             return None
-
+        clean = text.strip()
+        if not clean:
+            return None
         with self._request_lock:
             self._next_request_id += 1
             request_id = self._next_request_id
-
-        queued_at = time.monotonic()
+        if self.cfg.latest_only:
+            self.interrupt(clear_queue=True, reason="newer_tts_request")
         request = SpeechRequest(
             request_id=request_id,
-            text=text,
-            language=language,
-            queued_at=queued_at,
+            text=clean,
+            language=language.strip().lower(),
+            queued_at=time.monotonic(),
             utterance_id=utterance_id,
             speech_ended_at=speech_ended_at,
             translation_ready_at=translation_ready_at,
         )
-        queue_before = self._requests.qsize()
-
         try:
             self._requests.put_nowait(request)
-
-            self._metric(
-                "tts_queued",
-                request_id=request_id,
-                utterance_id=utterance_id or 0,
-                characters=len(text),
-                queue_depth_before=queue_before,
-                queue_depth_after=self._requests.qsize(),
-                translation_to_tts_queue_seconds=(
-                    f"{max(0.0, queued_at - translation_ready_at):.3f}"
-                    if translation_ready_at
-                    else "0.000"
-                ),
-            )
-            return request_id
-
         except queue.Full:
-            self._metric(
-                "tts_dropped",
-                request_id=request_id,
-                utterance_id=utterance_id or 0,
-                reason="tts_queue_full",
-                queue_depth=queue_before,
-            )
-            self.status(
-                "warning",
-                "TTS queue is full; speech output was skipped",
-            )
-            return None
+            self._clear_requests(reason="tts_queue_replaced")
+            try:
+                self._requests.put_nowait(request)
+            except queue.Full:
+                self._metric("tts_dropped", request_id=request_id, utterance_id=utterance_id or 0, reason="tts_queue_full")
+                return None
+        self._metric(
+            "tts_queued",
+            request_id=request_id,
+            utterance_id=utterance_id or 0,
+            characters=len(clean),
+            backend="edge",
+            queue_depth_after=self._requests.qsize(),
+            translation_to_tts_queue_seconds=(
+                f"{max(0.0, request.queued_at - translation_ready_at):.3f}"
+                if translation_ready_at else "0.000"
+            ),
+        )
+        return request_id
 
-    @staticmethod
-    def installed_voices() -> list[dict[str, str]]:
-        import pythoncom
-        import win32com.client
+    def _voice(self, language: str) -> str:
+        return self.cfg.edge_voice_overrides.get(language) or EDGE_VOICES.get(language) or EDGE_VOICES["en"]
 
-        pythoncom.CoInitialize()
+    async def _save_edge(self, text: str, voice: str, target: str) -> None:
+        import edge_tts
+        await edge_tts.Communicate(text, voice, rate=self.cfg.edge_rate).save(target)
 
+    def _synthesize(self, request: SpeechRequest) -> Path:
+        handle = tempfile.NamedTemporaryFile(prefix="remoteplus-edge-", suffix=".mp3", delete=False)
+        output = Path(handle.name)
+        handle.close()
         try:
-            speaker = win32com.client.Dispatch("SAPI.SpVoice")
-            tokens = speaker.GetVoices()
+            asyncio.run(asyncio.wait_for(
+                self._save_edge(request.text, self._voice(request.language), str(output)),
+                timeout=self.cfg.edge_timeout_seconds,
+            ))
+            if not output.exists() or output.stat().st_size < 1024:
+                raise RuntimeError("Edge TTS returned an empty audio file")
+            return output
+        except Exception:
+            output.unlink(missing_ok=True)
+            raise
 
-            result = [
-                {
-                    "name": voice.GetDescription(),
-                    "language": str(
-                        voice.GetAttribute("Language")
-                    ).lower(),
-                    "id": str(voice.Id),
-                }
-                for voice in tokens
-            ]
+    def _play(self, request: SpeechRequest, begin_playback: Callable[[], None]) -> None:
+        import pygame
+        if not pygame.mixer.get_init():
+            pygame.mixer.init(buffer=256)
 
-            del tokens, speaker
-            return result
-
-        finally:
-            pythoncom.CoUninitialize()
-
-    @classmethod
-    def voice_status(
-        cls,
-        language_codes: list[str],
-    ) -> list[dict[str, str | bool]]:
-        voices = cls.installed_voices()
-        installed_lcids = set().union(
-            *(
-                _lcids(str(voice["language"]))
-                for voice in voices
-            )
+        synthesized_at = time.monotonic()
+        path = self._synthesize(request)
+        self._metric(
+            "tts_edge_generated",
+            request_id=request.request_id,
+            utterance_id=request.utterance_id or 0,
+            synthesis_seconds=f"{time.monotonic() - synthesized_at:.3f}",
         )
-
-        result = []
-
-        for code in language_codes:
-            item = get_language(code)
-
-            if item is None:
-                continue
-
-            wanted = {
-                value.lower().lstrip("0")
-                for value in item.sapi_lcids or ()
-            }
-
-            result.append(
-                {
-                    "code": code,
-                    "name": item.name,
-                    "native_name": item.native_name,
-                    "installed": bool(wanted & installed_lcids),
-                }
-            )
-
-        return result
-
-    def _select_voice(self, speaker, language: str):
-        if language in self._voice_cache:
-            return self._voice_cache[language]
-
-        item = get_language(language)
-
-        if item is None or item.sapi_lcids is None:
-            raise ValueError(
-                f"No Windows voice mapping for language '{language}'"
-            )
-
-        wanted = {
-            value.lower().lstrip("0")
-            for value in item.sapi_lcids
-        }
-
-        for voice in speaker.GetVoices():
-            actual = _lcids(str(voice.GetAttribute("Language")))
-
-            if actual & wanted:
-                self._voice_cache[language] = voice
-                return voice
-
-        raise RuntimeError(
-            f"{item.native_name} Windows voice is not installed. "
-            "Install its Speech language pack."
-        )
-
-    def _select_output(self, speaker, default_output) -> None:
-        selected = self.audio_cfg.output_device
-
-        if selected == "default":
-            speaker.AudioOutput = default_output
-            return
-
-        device_id = str(selected)
-
-        if device_id.startswith(OUTPUT_PREFIX):
-            device_id = device_id[len(OUTPUT_PREFIX):]
-
-        wanted_guid = _device_guid(device_id)
-
-        for output in speaker.GetAudioOutputs():
-            actual_guid = _device_guid(str(output.Id))
-
-            if wanted_guid is not None and actual_guid == wanted_guid:
-                speaker.AudioOutput = output
+        try:
+            if self._stop_event.is_set() or self._interrupt_event.is_set():
+                self._metric("tts_interrupted", request_id=request.request_id, utterance_id=request.utterance_id or 0, stage="before_playback")
                 return
-
-        self.audio_cfg.output_device = "default"
-        speaker.AudioOutput = default_output
-        self.status(
-            "warning",
-            "Selected output disappeared; using the system default",
-        )
+            pygame.mixer.music.load(str(path))
+            pygame.mixer.music.set_volume(float(self.cfg.volume))
+            begin_playback()
+            pygame.mixer.music.play()
+            while pygame.mixer.music.get_busy() and not self._stop_event.is_set():
+                if self._interrupt_event.is_set():
+                    pygame.mixer.music.stop()
+                    self._metric("tts_interrupted", request_id=request.request_id, utterance_id=request.utterance_id or 0, stage="playback")
+                    return
+                time.sleep(0.02)
+        finally:
+            try:
+                pygame.mixer.music.unload()
+            except Exception:
+                pass
+            path.unlink(missing_ok=True)
 
     def run(self) -> None:
-        import pythoncom
-        import win32com.client
+        while not self._stop_event.is_set():
+            try:
+                request = self._requests.get(timeout=0.2)
+            except queue.Empty:
+                continue
 
-        pythoncom.CoInitialize()
+            self._interrupt_event.clear()
+            self._playing.set()
+            dequeued_at = time.monotonic()
+            self._metric(
+                "tts_dequeued",
+                request_id=request.request_id,
+                utterance_id=request.utterance_id or 0,
+                queue_wait_seconds=f"{max(0.0, dequeued_at - request.queued_at):.3f}",
+                queue_depth_after=self._requests.qsize(),
+            )
+            gate_started = False
+            started_at = 0.0
 
-        try:
-            speaker = win32com.client.Dispatch("SAPI.SpVoice")
-            default_output = speaker.AudioOutput
-            speaker.Volume = round(self.cfg.volume * 100)
-
-            while not self._stop_event.is_set():
-                try:
-                    request = self._requests.get(timeout=0.2)
-                except queue.Empty:
-                    continue
-
-                dequeued_at = time.monotonic()
-
+            def begin_playback() -> None:
+                nonlocal gate_started, started_at
+                if gate_started:
+                    return
+                gate_started = True
+                started_at = time.monotonic()
+                self.gate.begin()
+                self.status("speaking", "Speaking translated reply")
                 self._metric(
-                    "tts_dequeued",
+                    "tts_playback_started",
                     request_id=request.request_id,
                     utterance_id=request.utterance_id or 0,
-                    queue_wait_seconds=(
-                        f"{max(0.0, dequeued_at - request.queued_at):.3f}"
+                    backend="edge",
+                    speech_end_to_tts_start_seconds=(
+                        f"{max(0.0, started_at - request.speech_ended_at):.3f}"
+                        if request.speech_ended_at else "0.000"
                     ),
-                    queue_depth_after=self._requests.qsize(),
+                    translation_to_tts_start_seconds=(
+                        f"{max(0.0, started_at - request.translation_ready_at):.3f}"
+                        if request.translation_ready_at else "0.000"
+                    ),
                 )
 
-                try:
-                    prepare_started = time.monotonic()
-
-                    speaker.Volume = round(self.cfg.volume * 100)
-                    self._select_output(speaker, default_output)
-                    speaker.Voice = self._select_voice(
-                        speaker,
-                        request.language,
-                    )
-
-                    prepare_seconds = time.monotonic() - prepare_started
-                    playback_started_at = time.monotonic()
-
-                    self.gate.begin()
-                    self.status("speaking", "Speaking translated reply")
-
-                    self._metric(
-                        "tts_playback_started",
-                        request_id=request.request_id,
-                        utterance_id=request.utterance_id or 0,
-                        voice_prepare_seconds=f"{prepare_seconds:.3f}",
-                        speech_end_to_tts_start_seconds=(
-                            f"{max(0.0, playback_started_at - request.speech_ended_at):.3f}"
-                            if request.speech_ended_at
-                            else "0.000"
-                        ),
-                        translation_to_tts_start_seconds=(
-                            f"{max(0.0, playback_started_at - request.translation_ready_at):.3f}"
-                            if request.translation_ready_at
-                            else "0.000"
-                        ),
-                    )
-
-                    # SAPI Speak is synchronous: return means playback has finished.
-                    speaker.Speak(request.text)
-
-                    playback_finished_at = time.monotonic()
-
-                    self._metric(
-                        "tts_playback_finished",
-                        request_id=request.request_id,
-                        utterance_id=request.utterance_id or 0,
-                        playback_seconds=(
-                            f"{max(0.0, playback_finished_at - playback_started_at):.3f}"
-                        ),
-                        speech_end_to_tts_finish_seconds=(
-                            f"{max(0.0, playback_finished_at - request.speech_ended_at):.3f}"
-                            if request.speech_ended_at
-                            else "0.000"
-                        ),
-                    )
-
-                    self.status("listening", "Listening")
-
-                except Exception as exc:
-                    self._metric(
-                        "tts_failed",
-                        request_id=request.request_id,
-                        utterance_id=request.utterance_id or 0,
-                        error=repr(exc),
-                    )
-                    self.status("error", f"TTS failed: {exc}")
-
-                finally:
+            try:
+                self._play(request, begin_playback)
+                finished_at = time.monotonic()
+                self._metric(
+                    "tts_playback_finished",
+                    request_id=request.request_id,
+                    utterance_id=request.utterance_id or 0,
+                    backend="edge",
+                    playback_seconds=(f"{max(0.0, finished_at - started_at):.3f}" if started_at else "0.000"),
+                    speech_end_to_tts_finish_seconds=(
+                        f"{max(0.0, finished_at - request.speech_ended_at):.3f}"
+                        if request.speech_ended_at else "0.000"
+                    ),
+                )
+                self.status("listening", "Listening")
+            except Exception as exc:
+                self._metric("tts_failed", request_id=request.request_id, utterance_id=request.utterance_id or 0, error=repr(exc))
+                self.status("warning", f"Online TTS failed: {exc}")
+            finally:
+                self._playing.clear()
+                if gate_started:
                     self.gate.end()
-
-        finally:
-            pythoncom.CoUninitialize()
 
     def stop(self) -> None:
         self._stop_event.set()
+        self.interrupt(clear_queue=True, reason="shutdown")

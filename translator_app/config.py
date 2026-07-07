@@ -8,23 +8,18 @@ from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Any, TypeVar
 
-from .languages import get_language
+from .languages import CUSTOMER_LANGUAGE_CODES, get_language
 
 FROZEN = bool(getattr(sys, "frozen", False))
-ROOT = (
-    Path(sys.executable).resolve().parent
-    if FROZEN
-    else Path(__file__).resolve().parent.parent
-)
-_configured_data_root = os.environ.get("REMOTEPLUS_DATA_DIR") or os.environ.get(
-    "LOCAL_BRIDGE_DATA_DIR"
-)
+ROOT = Path(sys.executable).resolve().parent if FROZEN else Path(__file__).resolve().parent.parent
+_configured_data_root = os.environ.get("REMOTEPLUS_DATA_DIR") or os.environ.get("LOCAL_BRIDGE_DATA_DIR")
 if _configured_data_root:
     DATA_ROOT = Path(_configured_data_root)
 elif FROZEN:
     DATA_ROOT = Path(os.environ.get("LOCALAPPDATA", str(ROOT))) / "RemotePlusTranslator"
 else:
     DATA_ROOT = ROOT
+
 T = TypeVar("T")
 
 
@@ -33,14 +28,17 @@ class AudioConfig:
     sample_rate: int = 16000
     block_ms: int = 20
     input_device: str | int = "default"
+    # Edge TTS plays through the Windows default output device. Retained so
+    # older config.local.toml files stay valid.
     output_device: str | int = "default"
     start_rms: float = 0.012
     continue_rms: float = 0.007
-    pre_roll_ms: int = 300
-    end_silence_ms: int = 420
+    pre_roll_ms: int = 180
+    end_silence_ms: int = 360
     min_speech_ms: int = 350
     max_utterance_ms: int = 12000
-    post_tts_mute_ms: int = 500
+    post_tts_mute_ms: int = 180
+    # Legacy preview values are accepted but not used by the fixed-language path.
     preview_enabled: bool = False
     preview_interval_ms: int = 1400
     preview_min_speech_ms: int = 900
@@ -57,13 +55,9 @@ class SttConfig:
     language: str = "auto"
     cpu_threads: int = 6
     num_workers: int = 1
-    # Kept only so existing config.local.toml files from the pair-language
-    # experiment still load. Fixed customer/staff mode does not use them.
+    # Accepted only for old configuration compatibility. No language probe runs.
     japanese_probe_ms: int = 1200
     japanese_probe_margin: float = 0.03
-    # Kept for compatibility with existing config.toml/config.local.toml.
-    # The two-language (Japanese vs selected customer language) pipeline
-    # no longer uses these legacy auto-detection thresholds.
     japanese_reply_threshold: float = 0.5
     enabled_language_min_probability: float = 0.35
     hotwords: list[str] = field(default_factory=list)
@@ -77,7 +71,7 @@ class TranslationConfig:
     backend: str = "hymt2"
     model: str = "facebook/m2m100_418M"
     device: str = "cpu"
-    max_new_tokens: int = 256
+    max_new_tokens: int = 128
     hymt2_model: str = "models/hymt2/Hy-MT2-1.8B-Q4_K_M.gguf"
     hymt2_runtime: str = "models/hymt2/llama"
     hymt2_threads: int = 8
@@ -96,6 +90,14 @@ class TranslationConfig:
 class TtsConfig:
     enabled: bool = True
     volume: float = 0.9
+    # Edge is the sole runtime backend. No Windows speech language pack is used.
+    backend: str = "edge"
+    edge_rate: str = "+0%"
+    edge_timeout_seconds: int = 15
+    latest_only: bool = True
+    edge_voice_overrides: dict[str, str] = field(default_factory=dict)
+    # Accepted from previous config.local.toml files; ignored deliberately.
+    fallback_to_sapi: bool = False
 
 
 @dataclass(slots=True)
@@ -105,7 +107,7 @@ class ConversationConfig:
     reply_language: str = "auto"
     language_memory_seconds: int = 90
     minimum_language_probability: float = 0.55
-    enabled_languages: list[str] = field(default_factory=lambda: ["en", "ko", "zh", "es"])
+    enabled_languages: list[str] = field(default_factory=lambda: list(CUSTOMER_LANGUAGE_CODES))
 
 
 @dataclass(slots=True)
@@ -138,7 +140,7 @@ def _merge(base: dict[str, Any], overlay: dict[str, Any]) -> dict[str, Any]:
 
 
 def _make(cls: type[T], values: dict[str, Any]) -> T:
-    allowed = {f.name for f in fields(cls) if f.init}
+    allowed = {item.name for item in fields(cls) if item.init}
     unknown = set(values) - allowed
     if unknown:
         raise ValueError(f"Unknown {cls.__name__} settings: {', '.join(sorted(unknown))}")
@@ -172,23 +174,21 @@ def load_config(path: Path | None = None) -> AppConfig:
 
 
 def validate_config(cfg: AppConfig) -> None:
-    a = cfg.audio
-    if a.sample_rate != 16000:
+    audio = cfg.audio
+    if audio.sample_rate != 16000:
         raise ValueError("The current Whisper audio pipeline requires sample_rate=16000")
-    if a.block_ms not in (10, 20, 30):
+    if audio.block_ms not in (10, 20, 30):
         raise ValueError("audio.block_ms must be 10, 20, or 30")
-    if not 0 < a.continue_rms <= a.start_rms < 1:
+    if not 0 < audio.continue_rms <= audio.start_rms < 1:
         raise ValueError("RMS thresholds must satisfy 0 < continue_rms <= start_rms < 1")
-    if a.min_speech_ms >= a.max_utterance_ms:
+    if audio.min_speech_ms >= audio.max_utterance_ms:
         raise ValueError("min_speech_ms must be less than max_utterance_ms")
-    if a.preview_interval_ms < 400:
-        raise ValueError("audio.preview_interval_ms must be at least 400")
-    if a.preview_min_speech_ms < 300:
-        raise ValueError("audio.preview_min_speech_ms must be at least 300")
-    if a.preview_max_audio_ms < a.preview_min_speech_ms:
-        raise ValueError("audio.preview_max_audio_ms must be >= preview_min_speech_ms")
     if not 0 <= cfg.tts.volume <= 1:
         raise ValueError("tts.volume must be between 0 and 1")
+    if cfg.tts.backend != "edge":
+        raise ValueError("tts.backend must be 'edge'. Windows language-pack TTS has been removed.")
+    if cfg.tts.edge_timeout_seconds < 3:
+        raise ValueError("tts.edge_timeout_seconds must be at least 3")
     if cfg.translation.backend not in {"m2m100", "hymt2"}:
         raise ValueError("translation.backend must be m2m100 or hymt2")
     if not 1 <= cfg.server.port <= 65535:
@@ -197,27 +197,16 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("server.host must be a loopback address")
     if cfg.stt.cpu_threads < 1 or cfg.stt.num_workers < 1:
         raise ValueError("stt.cpu_threads and stt.num_workers must be at least 1")
-    if cfg.stt.japanese_probe_ms < 300:
-        raise ValueError("stt.japanese_probe_ms must be at least 300")
-    if not 0 <= cfg.stt.japanese_probe_margin <= 1:
-        raise ValueError("stt.japanese_probe_margin must be between 0 and 1")
-    if not 0 <= cfg.stt.japanese_reply_threshold <= 1:
-        raise ValueError("stt.japanese_reply_threshold must be between 0 and 1")
-    if not 0 <= cfg.stt.enabled_language_min_probability <= 1:
-        raise ValueError("stt.enabled_language_min_probability must be between 0 and 1")
     if cfg.translation.hymt2_threads < 1:
         raise ValueError("translation.hymt2_threads must be at least 1")
     if cfg.translation.hymt2_request_timeout_seconds < 1:
         raise ValueError("translation.hymt2_request_timeout_seconds must be at least 1")
     if cfg.translation.hymt2_startup_poll_ms < 20:
         raise ValueError("translation.hymt2_startup_poll_ms must be at least 20")
-    enabled = cfg.conversation.enabled_languages
+    enabled = [str(code).lower() for code in cfg.conversation.enabled_languages]
     if not enabled or any(code == "ja" or get_language(code) is None for code in enabled):
-        raise ValueError("conversation.enabled_languages must contain supported foreign codes")
-    if (
-        cfg.conversation.reply_language != "auto"
-        and cfg.conversation.reply_language not in enabled
-    ):
+        raise ValueError("conversation.enabled_languages must contain supported customer language codes")
+    if cfg.conversation.reply_language != "auto" and cfg.conversation.reply_language not in enabled:
         raise ValueError("conversation.reply_language must be auto or an enabled language")
 
 
@@ -227,6 +216,4 @@ def sounddevice_value(value: str | int) -> int | None:
     try:
         return int(value)
     except (TypeError, ValueError) as exc:
-        raise ValueError(
-            "audio.input_device must be a device number, 'default', or 'loopback:...'"
-        ) from exc
+        raise ValueError("audio.input_device must be a device number, 'default', or 'loopback:...'") from exc

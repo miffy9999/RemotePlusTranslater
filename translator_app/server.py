@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-import ctypes
-import os
 import queue
 import secrets
 from contextlib import asynccontextmanager
@@ -18,9 +16,7 @@ from .config import AppConfig, load_config
 from .conversation import ConversationController
 from .events import EventBus
 from .feedback import FeedbackStore
-from .languages import public_languages
-from .settings import UserSettings
-from .tts import SapiSpeaker
+from .languages import CUSTOMER_LANGUAGE_CODES, public_languages
 
 WEB = Path(__file__).resolve().parent / "web"
 
@@ -34,14 +30,6 @@ class ControlRequest(BaseModel):
     input_device: str | int | None = None
     output_device: str | int | None = None
     enabled_languages: list[str] | None = None
-
-
-class LanguageSetupRequest(BaseModel):
-    languages: list[str]
-
-
-class VoiceInstallRequest(BaseModel):
-    languages: list[str]
 
 
 class FeedbackRequest(BaseModel):
@@ -58,11 +46,11 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True) -> Fast
     bus = EventBus()
     controller = ConversationController(config, bus)
     feedback = FeedbackStore(config.data_root)
-    settings = UserSettings(config.data_root)
-    enabled_languages, setup_required = settings.load_languages(
-        config.conversation.enabled_languages
-    )
-    controller.control(enabled_languages=enabled_languages)
+
+    # Every supported customer language is selectable immediately. There is no
+    # Windows voice pack setup because Edge Neural TTS is online.
+    controller.control(enabled_languages=list(CUSTOMER_LANGUAGE_CODES))
+
     auth_token = secrets.token_urlsafe(32)
     cookie_name = "remoteplus_session"
     allowed_hosts = {
@@ -79,7 +67,7 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True) -> Fast
         yield
         controller.stop()
 
-    app = FastAPI(title="Local Conversation Translator", lifespan=lifespan)
+    app = FastAPI(title="RemotePlus Translator", lifespan=lifespan)
     app.state.controller = controller
     app.state.auth_token = auth_token
 
@@ -99,28 +87,22 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True) -> Fast
     @app.get("/")
     def index():
         response = FileResponse(WEB / "index.html")
-        response.set_cookie(
-            cookie_name,
-            auth_token,
-            httponly=True,
-            samesite="strict",
-            secure=False,
-        )
+        response.set_cookie(cookie_name, auth_token, httponly=True, samesite="strict", secure=False)
         return response
 
     @app.get("/api/state")
     def state():
-        snapshot = controller.snapshot()
         return {
-            "state": snapshot,
+            "state": controller.snapshot(),
             "history": bus.history(),
-            "languages": public_languages(snapshot["enabled_languages"]),
-            "setup_required": setup_required,
+            "languages": public_languages(CUSTOMER_LANGUAGE_CODES),
+            "tts": {"backend": "edge", "provider": "Edge online neural"},
         }
 
     @app.get("/api/devices")
     def devices():
         try:
+            # Input choices are used. Edge TTS uses Windows' default speaker.
             return list_audio_devices()
         except Exception as exc:
             raise HTTPException(500, str(exc)) from exc
@@ -128,32 +110,23 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True) -> Fast
     @app.post("/api/control")
     def control(request: ControlRequest):
         try:
-            return controller.control(**request.model_dump())
+            payload = request.model_dump()
+            # The UI no longer chooses a subset, but old clients cannot shrink
+            # the supported language set accidentally.
+            if payload.get("enabled_languages") is not None:
+                payload["enabled_languages"] = list(CUSTOMER_LANGUAGE_CODES)
+            return controller.control(**payload)
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
 
-    @app.get("/api/language-setup")
-    def language_setup():
-        snapshot = controller.snapshot()
-        primary = ["en", "ko", "zh", "es"]
+    @app.get("/api/tts")
+    def tts_info():
         return {
-            "enabled": snapshot["enabled_languages"],
-            "available": public_languages(primary),
-            "voices": SapiSpeaker.voice_status(primary),
-            "setup_required": setup_required,
+            "backend": "edge",
+            "provider": "Edge online neural",
+            "language_pack_required": False,
+            "languages": public_languages(CUSTOMER_LANGUAGE_CODES),
         }
-
-    @app.post("/api/language-setup")
-    def save_language_setup(request: LanguageSetupRequest):
-        nonlocal setup_required
-        available = {"en", "ko", "zh", "es"}
-        selected = list(dict.fromkeys(code.lower() for code in request.languages))
-        if not selected or any(code not in available for code in selected):
-            raise HTTPException(400, "Select at least one supported language")
-        settings.save_languages(selected)
-        setup_required = False
-        state = controller.control(enabled_languages=selected)
-        return {"saved": True, "state": state, "languages": public_languages(selected)}
 
     @app.post("/api/feedback")
     def save_feedback(request: FeedbackRequest):
@@ -173,64 +146,21 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True) -> Fast
     def clear_feedback():
         return {"cleared": feedback.clear()}
 
-    @app.get("/api/voices")
-    def voices():
-        try:
-            return {"voices": SapiSpeaker.voice_status(["en", "ko", "zh", "es"])}
-        except Exception as exc:
-            raise HTTPException(500, str(exc)) from exc
-
-    @app.post("/api/voice-settings")
-    def open_voice_settings():
-        try:
-            os.startfile("ms-settings:regionlanguage")
-            return {"opened": True}
-        except OSError as exc:
-            raise HTTPException(500, str(exc)) from exc
-
-    @app.post("/api/install-voices")
-    def install_voices(request: VoiceInstallRequest):
-        locales = {"en": "en-US", "ko": "ko-KR", "zh": "zh-CN", "es": "es-ES"}
-        selected = [locales[code] for code in request.languages if code in locales]
-        if not selected:
-            raise HTTPException(400, "No installable voice language selected")
-        script = config.root / "install_voice_packs.ps1"
-        if not script.exists():
-            raise HTTPException(500, "Voice pack installer is missing")
-        locale_list = ",".join(selected)
-        powershell = (
-            os.path.join(os.environ.get("SystemRoot", r"C:\Windows"),
-                         "System32", "WindowsPowerShell", "v1.0", "powershell.exe")
-        )
-        arguments = (
-            f'-NoProfile -ExecutionPolicy Bypass -File "{script}" '
-            f'-LocaleList "{locale_list}"'
-        )
-        result = ctypes.windll.shell32.ShellExecuteW(
-            None, "runas", powershell, arguments, str(config.root), 1
-        )
-        if result <= 32:
-            raise HTTPException(500, f"Unable to start installer: Windows error {result}")
-        return {"started": True, "restart_required": True}
-
     @app.websocket("/ws")
     async def events(websocket: WebSocket):
         host = websocket.headers.get("host", "").casefold()
         origin = websocket.headers.get("origin", "").casefold()
-        supplied = websocket.cookies.get(cookie_name) or websocket.headers.get(
-            "x-auth-token", ""
-        )
-        if (
-            host not in allowed_hosts
-            or origin not in allowed_origins
-            or not secrets.compare_digest(supplied, auth_token)
-        ):
+        supplied = websocket.cookies.get(cookie_name) or websocket.headers.get("x-auth-token", "")
+        if host not in allowed_hosts or origin not in allowed_origins or not secrets.compare_digest(supplied, auth_token):
             await websocket.close(code=1008)
             return
         await websocket.accept()
         subscriber = bus.subscribe()
         try:
-            await websocket.send_json({"type": "snapshot", "data": await asyncio.to_thread(state)})
+            await websocket.send_json({
+                "type": "snapshot",
+                "data": await asyncio.to_thread(state),
+            })
             while True:
                 try:
                     event = await asyncio.to_thread(subscriber.get, True, 1.0)

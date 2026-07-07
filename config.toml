@@ -5,9 +5,9 @@ input_device = "default"
 output_device = "default"
 start_rms = 0.012
 continue_rms = 0.007
-pre_roll_ms = 300
-end_silence_ms = 350
-preview_enabled = true
+pre_roll_ms = 180
+end_silence_ms = 360
+preview_enabled = false
 preview_interval_ms = 1400
 preview_min_speech_ms = 900
 preview_max_audio_ms = 3600
@@ -23,6 +23,7 @@ beam_size = 1
 preview_beam_size = 1
 cpu_threads = 6
 num_workers = 1
+# Legacy values retained only for config compatibility. This mode does not probe languages.
 japanese_probe_ms = 1200
 japanese_probe_margin = 0.03
 language = "auto"
@@ -46,7 +47,7 @@ ja = ["ホテル予約", "予約確認", "予約変更", "予約キャンセル"
 backend = "hymt2"
 model = "facebook/m2m100_418M"
 device = "cpu"
-max_new_tokens = 96
+max_new_tokens = 128
 hymt2_model = "models/hymt2/Hy-MT2-1.8B-Q4_K_M.gguf"
 hymt2_runtime = "models/hymt2/llama"
 hymt2_threads = 8
@@ -290,6 +291,12 @@ es = ["salida tardía", "salir más tarde"]
 [tts]
 enabled = true
 volume = 0.9
+# Edge online neural voice only. Windows speech language packs are not used.
+backend = "edge"
+edge_rate = "+0%"
+edge_timeout_seconds = 15
+fallback_to_sapi = false # legacy compatibility only; SAPI is not used
+latest_only = true
 
 [conversation]
 japanese_code = "ja"
@@ -297,7 +304,7 @@ language_lock = "auto"
 reply_language = "auto"
 language_memory_seconds = 90
 minimum_language_probability = 0.55
-enabled_languages = ["en", "ko", "zh", "es"]
+enabled_languages = ["en", "ko", "zh", "es", "fr", "de", "it", "pt", "ru", "ar", "hi", "vi", "th", "id", "ms", "tr", "nl", "pl", "uk", "cs", "he"]
 
 [server]
 host = "127.0.0.1"

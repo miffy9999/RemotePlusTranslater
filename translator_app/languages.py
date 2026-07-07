@@ -1,74 +1,68 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
+from typing import Iterable
 
 
 @dataclass(frozen=True, slots=True)
 class Language:
-    whisper: str
+    code: str
     name: str
     native_name: str
-    translation_code: str | None
-    sapi_lcids: tuple[str, ...] | None
+    # Kept only so older extensions that read this attribute do not fail.
+    sapi_lcids: tuple[str, ...] = ()
 
 
-# SAPI LCIDs are hexadecimal Windows language identifiers. Actual availability depends on
-# installed Windows language/voice packs.
-_ROWS = [
-    ("ja", "Japanese", "日本語", "ja", ("411",)),
-    ("en", "English", "English", "en", ("409", "809", "c09", "1009")),
-    ("ko", "Korean", "한국어", "ko", ("412",)),
-    ("es", "Spanish", "Español", "es", ("c0a", "40a", "80a", "2c0a")),
-    ("zh", "Chinese", "中文", "zh", ("804", "404")),
-    ("fr", "French", "Français", "fr", ("40c", "c0c")),
-    ("de", "German", "Deutsch", "de", ("407",)),
-    ("it", "Italian", "Italiano", "it", ("410",)),
-    ("pt", "Portuguese", "Português", "pt", ("416", "816")),
-    ("ru", "Russian", "Русский", "ru", ("419",)),
-    ("uk", "Ukrainian", "Українська", "uk", ("422",)),
-    ("nl", "Dutch", "Nederlands", "nl", ("413",)),
-    ("pl", "Polish", "Polski", "pl", ("415",)),
-    ("tr", "Turkish", "Türkçe", "tr", ("41f",)),
-    ("vi", "Vietnamese", "Tiếng Việt", "vi", ("42a",)),
-    ("th", "Thai", "ไทย", "th", ("41e",)),
-    ("id", "Indonesian", "Bahasa Indonesia", "id", ("421",)),
-    ("ms", "Malay", "Bahasa Melayu", "ms", ("43e",)),
-    ("hi", "Hindi", "हिन्दी", "hi", ("439",)),
-    ("ar", "Arabic", "العربية", "ar", ("401", "c01")),
-    ("cs", "Czech", "Čeština", "cs", ("405",)),
-    ("da", "Danish", "Dansk", "da", ("406",)),
-    ("fi", "Finnish", "Suomi", "fi", ("40b",)),
-    ("sv", "Swedish", "Svenska", "sv", ("41d",)),
-    ("no", "Norwegian", "Norsk", "no", ("414",)),
-    ("el", "Greek", "Ελληνικά", "el", ("408",)),
-    ("he", "Hebrew", "עברית", "he", ("40d",)),
-    ("ro", "Romanian", "Română", "ro", ("418",)),
-    ("hu", "Hungarian", "Magyar", "hu", ("40e",)),
-]
+_LANGUAGES: tuple[Language, ...] = (
+    Language("ja", "Japanese", "日本語"),
+    Language("en", "English", "English"),
+    Language("ko", "Korean", "한국어"),
+    Language("zh", "Chinese", "中文"),
+    Language("es", "Spanish", "Español"),
+    Language("fr", "French", "Français"),
+    Language("de", "German", "Deutsch"),
+    Language("it", "Italian", "Italiano"),
+    Language("pt", "Portuguese", "Português"),
+    Language("ru", "Russian", "Русский"),
+    Language("ar", "Arabic", "العربية"),
+    Language("hi", "Hindi", "हिन्दी"),
+    Language("vi", "Vietnamese", "Tiếng Việt"),
+    Language("th", "Thai", "ไทย"),
+    Language("id", "Indonesian", "Bahasa Indonesia"),
+    Language("ms", "Malay", "Bahasa Melayu"),
+    Language("tr", "Turkish", "Türkçe"),
+    Language("nl", "Dutch", "Nederlands"),
+    Language("pl", "Polish", "Polski"),
+    Language("uk", "Ukrainian", "Українська"),
+    Language("cs", "Czech", "Čeština"),
+    Language("he", "Hebrew", "עברית"),
+)
 
-LANGUAGES = {row[0]: Language(*row) for row in _ROWS}
-HYMT2_CODES = frozenset(
-    {"ja", "en", "ko", "zh", "es", "fr", "de", "it", "pt", "ru", "ar", "hi",
-     "vi", "th", "id", "ms", "tr", "nl", "pl", "uk", "cs", "he"}
+_BY_CODE = {language.code: language for language in _LANGUAGES}
+
+# Japanese is reserved for the Space-held employee mode. Every item below is a
+# selectable fixed customer language and has an Edge Neural voice mapping.
+CUSTOMER_LANGUAGE_CODES: tuple[str, ...] = tuple(
+    language.code for language in _LANGUAGES if language.code != "ja"
 )
 
 
-def get_language(code: str) -> Language | None:
-    return LANGUAGES.get(code.lower().split("-")[0])
+def get_language(code: str | None) -> Language | None:
+    if not code:
+        return None
+    return _BY_CODE.get(str(code).strip().lower())
 
 
-def public_languages(enabled: list[str] | None = None) -> list[dict[str, str | bool]]:
-    allowed = set(enabled) if enabled is not None else HYMT2_CODES
-    return [
-        {
-            "code": item.whisper,
-            "name": item.name,
-            "native_name": item.native_name,
-            "tts": item.sapi_lcids is not None,
-        }
-        for item in LANGUAGES.values()
-        if item.whisper != "ja"
-        and item.translation_code is not None
-        and item.whisper in HYMT2_CODES
-        and item.whisper in allowed
-    ]
+def public_languages(codes: Iterable[str] | None = None) -> list[dict[str, str]]:
+    wanted = list(codes) if codes is not None else list(CUSTOMER_LANGUAGE_CODES)
+    result: list[dict[str, str]] = []
+    for code in wanted:
+        language = get_language(code)
+        if language is None:
+            continue
+        result.append({
+            "code": language.code,
+            "name": language.name,
+            "native_name": language.native_name,
+        })
+    return result
