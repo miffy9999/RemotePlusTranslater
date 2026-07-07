@@ -14,8 +14,15 @@ const deviceMessages={
   zh:{inputDevice:'音频输入设备',outputDevice:'TTS输出设备',systemDefault:'系统默认设备',correct:'记录更正',correctSource:'请更正识别的原文',correctTranslation:'请更正译文',saved:'更正已保存在本机',languagePacks:'语言和语音包',clearHistory:'清除记录',setupTitle:'选择客户语言',setupBody:'自动检测和手动选择仅使用所选语言。',windowsSettings:'Windows语言设置',installVoices:'安装所选语音',save:'保存',installed:'已安装',missing:'缺少语音',historyCleared:'显示记录已清除',selectLanguage:'请至少选择一种语言',restartAfterInstall:'安装完成后请重启程序'},
   es:{inputDevice:'Dispositivo de entrada',outputDevice:'Salida de TTS',systemDefault:'Dispositivo predeterminado',correct:'Guardar corrección',correctSource:'Corrige el texto reconocido',correctTranslation:'Corrige la traducción',saved:'Corrección guardada localmente',languagePacks:'Idiomas y voces',clearHistory:'Borrar historial',setupTitle:'Elegir idiomas del cliente',setupBody:'Solo se usarán los idiomas seleccionados en la detección y selección manual.',windowsSettings:'Configuración de Windows',installVoices:'Instalar voces elegidas',save:'Guardar',installed:'Instalado',missing:'Falta la voz',historyCleared:'Historial de pantalla borrado',selectLanguage:'Seleccione al menos un idioma',restartAfterInstall:'Reinicie la aplicación después de instalar'}
 };
-let ui=localStorage.getItem('remoteplus-ui-language')||'ja', state={tts_enabled:true,paused:false}, retry=700, toastTimer,setupShown=false,missingDevices={input:0,output:0};
-const t=key=>messages[ui]?.[key]||deviceMessages[ui]?.[key]||messages.en[key]||deviceMessages.en[key]||key;
+let ui=localStorage.getItem('remoteplus-ui-language')||'ja', state={tts_enabled:true,paused:false,speech_mode:'customer'}, retry=700, toastTimer,setupShown=false,missingDevices={input:0,output:0};
+const modeMessages={
+  ko:{speechMode:'인식 모드',staffSpeech:'직원 말하기 · Space 누르는 동안',staffSpeechActive:'직원 말하기 중 · 일본어 고정',setupBody:'선택한 언어를 고객 음성 인식과 번역에 사용합니다.'},
+  ja:{speechMode:'認識モード',staffSpeech:'スタッフ発話・Spaceを押している間',staffSpeechActive:'スタッフ発話中・日本語固定',setupBody:'選択した言語をお客様の音声認識と翻訳に使用します。'},
+  en:{speechMode:'Recognition mode',staffSpeech:'Staff speaking · hold Space',staffSpeechActive:'Staff speaking · Japanese fixed',setupBody:'Selected languages are used for customer speech recognition and translation.'},
+  zh:{speechMode:'识别模式',staffSpeech:'员工说话 · 按住 Space',staffSpeechActive:'员工说话中 · 固定日语',setupBody:'所选语言用于客人语音识别和翻译。'},
+  es:{speechMode:'Modo de reconocimiento',staffSpeech:'Personal hablando · mantener Space',staffSpeechActive:'Personal hablando · japonés fijo',setupBody:'Los idiomas seleccionados se usan para reconocer y traducir la voz del cliente.'}
+};
+const t=key=>modeMessages[ui]?.[key]||messages[ui]?.[key]||deviceMessages[ui]?.[key]||modeMessages.en[key]||messages.en[key]||deviceMessages.en[key]||key;
 function applyI18n(){document.documentElement.lang=ui;document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n));$('#ui-language').value=ui;applyState(state)}
 function toast(message){const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),4200)}
 function status(data){phase.textContent=data.message||data.phase||t('starting');$('.pulse').style.background=data.phase==='error'?'var(--red)':'var(--green)'}
@@ -23,20 +30,118 @@ function add(item){empty?.remove();const d=item.data||item;if(d.direction===unde
 async function saveCorrection(d){const correctedSource=prompt(t('correctSource'),d.source);if(correctedSource===null)return;const correctedTranslation=prompt(t('correctTranslation'),d.translated);if(correctedTranslation===null)return;if(correctedSource===d.source&&correctedTranslation===d.translated)return;const r=await fetch('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({direction:d.direction,source_language:d.source_language,source:d.source,translation:d.translated,corrected_source:correctedSource===d.source?'':correctedSource,corrected_translation:correctedTranslation===d.translated?'':correctedTranslation})});if(!r.ok)throw Error((await r.json()).detail||'Unable to save correction');toast(t('saved'))}
 function setPartner(code){$('#partner').textContent=names[code]||code?.toUpperCase()||t('auto')}
 function selectValue(id,value){const el=$(id),wanted=String(value);el.value=[...el.options].some(x=>x.value===wanted)?wanted:'default'}
-function applyState(s){state={...state,...s};$('#tts').classList.toggle('on',!!state.tts_enabled);$('#tts').setAttribute('aria-pressed',!!state.tts_enabled);$('#tts em').textContent=state.tts_enabled?t('ttsOn'):t('ttsOff');$('#pause').textContent=state.paused?t('resume'):t('pause');if(state.input_language&&$('#language').options.length)$('#language').value=state.input_language;if(state.reply_language&&$('#reply-language').options.length)$('#reply-language').value=state.reply_language;if(state.input_device!==undefined&&$('#input-device').options.length)selectValue('#input-device',state.input_device);if(state.output_device!==undefined&&$('#output-device').options.length)selectValue('#output-device',state.output_device);if(state.active_language)setPartner(state.active_language)}
+function applyState(s){
+  state={...state,...s};
+
+  $('#tts').classList.toggle('on',!!state.tts_enabled);
+  $('#tts').setAttribute('aria-pressed',!!state.tts_enabled);
+  $('#tts em').textContent=state.tts_enabled?t('ttsOn'):t('ttsOff');
+
+  $('#pause').textContent=state.paused?t('resume'):t('pause');
+
+  const language=$('#language');
+  if(state.input_language&&language?.options.length){
+    selectValue('#language',state.input_language);
+  }
+
+  if(state.input_device!==undefined&&$('#input-device')?.options.length){
+    selectValue('#input-device',state.input_device);
+  }
+
+  if(state.output_device!==undefined&&$('#output-device')?.options.length){
+    selectValue('#output-device',state.output_device);
+  }
+
+  const staff=state.speech_mode==='staff';
+  const mode=$('#speech-mode');
+  if(mode){
+    mode.classList.toggle('staff',staff);
+    mode.setAttribute('aria-pressed',String(staff));
+    mode.querySelector('em').textContent=staff?t('staffSpeechActive'):t('staffSpeech');
+  }
+
+  if(state.input_language){
+    setPartner(state.input_language);
+  }
+}
 async function loadDevices(){const r=await fetch('/api/devices');if(!r.ok)throw Error('Unable to load audio devices');const data=await r.json();for(const [id,items] of [['input-device',data.inputs],['output-device',data.outputs]]){const select=$('#'+id);while(select.options.length>1)select.remove(1);for(const item of items){const op=document.createElement('option');op.value=String(item.id);op.textContent=item.name;select.appendChild(op)}}const reset={};for(const [kind,id,key] of [['input','#input-device','input_device'],['output','#output-device','output_device']]){const selected=state[key];const present=selected==='default'||[...$(id).options].some(x=>x.value===String(selected));missingDevices[kind]=present?0:missingDevices[kind]+1;if(!present&&missingDevices[kind]>=2){reset[key]='default';missingDevices[kind]=0}}if(Object.keys(reset).length)await control(reset);else applyState(state)}
-function renderLanguages(languages){const input=$('#language'),reply=$('#reply-language'),inputSelected=state.input_language||'auto',replySelected=state.reply_language||'auto';while(input.options.length>1)input.remove(1);while(reply.options.length>1)reply.remove(1);for(const lang of languages){for(const select of [input,reply]){const op=document.createElement('option');op.value=lang.code;op.textContent=`${lang.native_name} · ${lang.name}`;select.appendChild(op)}}selectValue('#language',inputSelected);selectValue('#reply-language',replySelected)}
+function renderLanguages(languages){
+  const input=$('#language');
+  const inputSelected=state.input_language||'';
+
+  input.replaceChildren();
+
+  for(const lang of languages){
+    const op=document.createElement('option');
+    op.value=lang.code;
+    op.textContent=`${lang.native_name} · ${lang.name}`;
+    input.appendChild(op);
+  }
+
+  selectValue('#language',inputSelected||input.options[0]?.value||'');
+}
 function clearFeed(){feed.replaceChildren(empty);toast(t('historyCleared'))}
 async function openSetup(force=false){if(setupShown&&!force)return;const r=await fetch('/api/language-setup');if(!r.ok)throw Error('Unable to load language setup');const data=await r.json(),box=$('#setup-languages'),voiceMap=new Map(data.voices.map(v=>[v.code,v]));box.replaceChildren();for(const lang of data.available){const label=document.createElement('label'),input=document.createElement('input'),name=document.createElement('span'),status=document.createElement('small'),voice=voiceMap.get(lang.code);input.type='checkbox';input.value=lang.code;input.checked=data.enabled.includes(lang.code);name.textContent=`${lang.native_name} · ${lang.name}`;status.textContent=voice?.installed?t('installed'):t('missing');status.className=voice?.installed?'ok':'';label.append(input,name,status);box.append(label)}$('#setup-modal').hidden=false;setupShown=true}
 function selectedSetupLanguages(){return [...document.querySelectorAll('#setup-languages input:checked')].map(x=>x.value)}
 async function saveSetup(){const languages=selectedSetupLanguages();if(!languages.length){toast(t('selectLanguage'));return}const r=await fetch('/api/language-setup',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({languages})});if(!r.ok)throw Error((await r.json()).detail||'Unable to save languages');const data=await r.json();applyState(data.state);renderLanguages(data.languages);$('#setup-modal').hidden=true;setupShown=false}
 async function installVoices(){const languages=selectedSetupLanguages();if(!languages.length){toast(t('selectLanguage'));return}if(!confirm(t('installVoices')+'?'))return;const r=await fetch('/api/install-voices',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({languages})});if(!r.ok)throw Error((await r.json()).detail||'Unable to start voice installer');toast(t('restartAfterInstall'))}
 function snapshot(data){feed.replaceChildren(empty);applyState(data.state);status(data.state);renderLanguages(data.languages);for(const ev of data.history||[])if(ev.type==='translation')add(ev);if(data.setup_required)openSetup().catch(e=>toast(e.message))}
-async function control(body){const r=await fetch('/api/control',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw Error((await r.json()).detail||'Unable to change setting');applyState(await r.json())}
+async function control(body){const r=await fetch('/api/control',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)});if(!r.ok)throw Error((await r.json()).detail||'Unable to change setting');const snapshot=await r.json();applyState(snapshot);return snapshot}
 $('#tts').onclick=()=>control({tts_enabled:!state.tts_enabled}).catch(e=>toast(e.message));
 $('#pause').onclick=()=>control({paused:!state.paused}).catch(e=>toast(e.message));
-$('#language').onchange=e=>control({active_language:e.target.value}).then(()=>{if(e.target.value==='auto')setPartner()}).catch(e=>toast(e.message));
-$('#reply-language').onchange=e=>control({reply_language:e.target.value}).catch(e=>toast(e.message));
+$('#language').onchange=e=>control({active_language:e.target.value}).catch(e=>toast(e.message));
+let spaceHeld=false, staffPointerHeld=false, modeRequestId=0;
+function setSpeechMode(mode){
+  if(state.speech_mode===mode)return;
+  const requestId=++modeRequestId;
+  applyState({speech_mode:mode});
+  control({speech_mode:mode}).then(snapshot=>{
+    if(requestId===modeRequestId)applyState(snapshot);
+  }).catch(error=>{
+    if(requestId===modeRequestId){
+      toast(error.message);
+      applyState({speech_mode:'customer'});
+    }
+  });
+}
+function enterStaffMode(){setSpeechMode('staff')}
+function leaveStaffMode(){setSpeechMode('customer')}
+function isTypingTarget(target){
+  return Boolean(target?.closest?.('input,textarea,select,[contenteditable="true"]'));
+}
+const staffButton=$('#speech-mode');
+staffButton.addEventListener('pointerdown',event=>{
+  event.preventDefault();
+  staffPointerHeld=true;
+  staffButton.setPointerCapture?.(event.pointerId);
+  enterStaffMode();
+});
+for(const eventName of ['pointerup','pointercancel','lostpointercapture']){
+  staffButton.addEventListener(eventName,()=>{
+    staffPointerHeld=false;
+    if(!spaceHeld)leaveStaffMode();
+  });
+}
+staffButton.addEventListener('click',event=>event.preventDefault());
+window.addEventListener('keydown',event=>{
+  if(event.code!=='Space'||event.repeat||spaceHeld||isTypingTarget(event.target))return;
+  event.preventDefault();
+  spaceHeld=true;
+  enterStaffMode();
+});
+window.addEventListener('keyup',event=>{
+  if(event.code!=='Space'||!spaceHeld)return;
+  event.preventDefault();
+  spaceHeld=false;
+  if(!staffPointerHeld)leaveStaffMode();
+});
+function resetSpeechMode(){
+  spaceHeld=false;
+  staffPointerHeld=false;
+  leaveStaffMode();
+}
+window.addEventListener('blur',resetSpeechMode);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)resetSpeechMode()});
 $('#input-device').onchange=e=>{const value=e.target.value;const device=value==='default'||value.startsWith('loopback:')?value:Number(value);control({input_device:device}).catch(err=>toast(err.message))};
 $('#output-device').onchange=e=>control({output_device:e.target.value}).catch(err=>toast(err.message));
 $('#language-setup').onclick=()=>openSetup(true).catch(e=>toast(e.message));

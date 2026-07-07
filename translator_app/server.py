@@ -30,6 +30,7 @@ class ControlRequest(BaseModel):
     tts_enabled: bool | None = None
     active_language: str | None = None
     reply_language: str | None = None
+    speech_mode: str | None = None
     input_device: str | int | None = None
     output_device: str | int | None = None
     enabled_languages: list[str] | None = None

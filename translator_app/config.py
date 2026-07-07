@@ -37,10 +37,14 @@ class AudioConfig:
     start_rms: float = 0.012
     continue_rms: float = 0.007
     pre_roll_ms: int = 300
-    end_silence_ms: int = 550
+    end_silence_ms: int = 420
     min_speech_ms: int = 350
     max_utterance_ms: int = 12000
     post_tts_mute_ms: int = 500
+    preview_enabled: bool = False
+    preview_interval_ms: int = 1400
+    preview_min_speech_ms: int = 900
+    preview_max_audio_ms: int = 3600
 
 
 @dataclass(slots=True)
@@ -49,7 +53,17 @@ class SttConfig:
     device: str = "cpu"
     compute_type: str = "int8"
     beam_size: int = 1
+    preview_beam_size: int = 1
     language: str = "auto"
+    cpu_threads: int = 6
+    num_workers: int = 1
+    # Kept only so existing config.local.toml files from the pair-language
+    # experiment still load. Fixed customer/staff mode does not use them.
+    japanese_probe_ms: int = 1200
+    japanese_probe_margin: float = 0.03
+    # Kept for compatibility with existing config.toml/config.local.toml.
+    # The two-language (Japanese vs selected customer language) pipeline
+    # no longer uses these legacy auto-detection thresholds.
     japanese_reply_threshold: float = 0.5
     enabled_language_min_probability: float = 0.35
     hotwords: list[str] = field(default_factory=list)
@@ -70,6 +84,9 @@ class TranslationConfig:
     hymt2_context: int = 1024
     hymt2_timeout_seconds: int = 45
     hymt2_request_timeout_seconds: int = 15
+    hymt2_startup_poll_ms: int = 80
+    hymt2_preview_max_tokens: int = 72
+    hymt2_warmup: bool = True
     glossary: dict[str, list[str]] = field(default_factory=dict)
     protected_terms: list[dict[str, list[str]]] = field(default_factory=list)
     root: Path = field(default=ROOT, init=False, repr=False)
@@ -164,6 +181,12 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("RMS thresholds must satisfy 0 < continue_rms <= start_rms < 1")
     if a.min_speech_ms >= a.max_utterance_ms:
         raise ValueError("min_speech_ms must be less than max_utterance_ms")
+    if a.preview_interval_ms < 400:
+        raise ValueError("audio.preview_interval_ms must be at least 400")
+    if a.preview_min_speech_ms < 300:
+        raise ValueError("audio.preview_min_speech_ms must be at least 300")
+    if a.preview_max_audio_ms < a.preview_min_speech_ms:
+        raise ValueError("audio.preview_max_audio_ms must be >= preview_min_speech_ms")
     if not 0 <= cfg.tts.volume <= 1:
         raise ValueError("tts.volume must be between 0 and 1")
     if cfg.translation.backend not in {"m2m100", "hymt2"}:
@@ -172,16 +195,22 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("server.port must be between 1 and 65535")
     if cfg.server.host not in {"127.0.0.1", "localhost", "::1"}:
         raise ValueError("server.host must be a loopback address")
+    if cfg.stt.cpu_threads < 1 or cfg.stt.num_workers < 1:
+        raise ValueError("stt.cpu_threads and stt.num_workers must be at least 1")
+    if cfg.stt.japanese_probe_ms < 300:
+        raise ValueError("stt.japanese_probe_ms must be at least 300")
+    if not 0 <= cfg.stt.japanese_probe_margin <= 1:
+        raise ValueError("stt.japanese_probe_margin must be between 0 and 1")
     if not 0 <= cfg.stt.japanese_reply_threshold <= 1:
         raise ValueError("stt.japanese_reply_threshold must be between 0 and 1")
     if not 0 <= cfg.stt.enabled_language_min_probability <= 1:
         raise ValueError("stt.enabled_language_min_probability must be between 0 and 1")
-    if not 0 <= cfg.conversation.minimum_language_probability <= 1:
-        raise ValueError("conversation.minimum_language_probability must be between 0 and 1")
     if cfg.translation.hymt2_threads < 1:
         raise ValueError("translation.hymt2_threads must be at least 1")
     if cfg.translation.hymt2_request_timeout_seconds < 1:
         raise ValueError("translation.hymt2_request_timeout_seconds must be at least 1")
+    if cfg.translation.hymt2_startup_poll_ms < 20:
+        raise ValueError("translation.hymt2_startup_poll_ms must be at least 20")
     enabled = cfg.conversation.enabled_languages
     if not enabled or any(code == "ja" or get_language(code) is None for code in enabled):
         raise ValueError("conversation.enabled_languages must contain supported foreign codes")

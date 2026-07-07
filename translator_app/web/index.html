@@ -29,11 +29,14 @@
     <section class="panel settings">
       <div class="panel-title"><span data-i18n="channelSettings">번역 및 언어 설정</span><button id="language-setup" class="mini" data-i18n="languagePacks">언어·음성팩</button></div>
       <div class="setting-row">
-        <label><span data-i18n="inputLanguage">고객 입력 언어</span><select id="language"><option value="auto" data-i18n="auto">자동 감지</option></select></label>
-        <label><span data-i18n="replyLanguage">답변 출력 언어</span><select id="reply-language"><option value="auto" data-i18n="replyAuto">최근 고객 언어</option></select></label>
+        <label><span data-i18n="inputLanguage">고객 입력 언어</span><select id="language"></select></label>
         <label><span data-i18n="inputDevice">음성 입력 장치</span><select id="input-device"><option value="default" data-i18n="systemDefault">시스템 기본 장치</option></select></label>
         <label><span data-i18n="outputDevice">TTS 출력 장치</span><select id="output-device"><option value="default" data-i18n="systemDefault">시스템 기본 장치</option></select></label>
         <div class="direction"><span data-i18n="customerSpeech">고객 음성</span><b>→</b><span data-i18n="japaneseText">일본어 텍스트</span><b>·</b><span data-i18n="japaneseReply">일본어 답변</span><b>→</b><span data-i18n="customerTts">고객 언어 음성</span></div>
+        <div class="speech-mode-wrap">
+          <span data-i18n="speechMode">인식 모드</span>
+          <button id="speech-mode" class="speech-mode" type="button" aria-pressed="false" title="Hold Space while staff speaks"><span></span><em data-i18n="staffSpeech">직원 말하기 · Space 누르는 동안</em></button>
+        </div>
         <button id="tts" class="toggle on" aria-pressed="true"><span></span><em data-i18n="ttsOn">TTS 켜짐</em></button>
       </div>
     </section>
@@ -53,7 +56,7 @@
   <div id="setup-modal" class="modal" hidden>
     <div class="modal-card">
       <h2 data-i18n="setupTitle">사용할 고객 언어 선택</h2>
-      <p data-i18n="setupBody">선택한 언어만 자동 감지와 수동 목록에 사용됩니다.</p>
+      <p data-i18n="setupBody">선택한 언어를 고객 음성 인식과 번역에 사용합니다.</p>
       <div id="setup-languages" class="language-checks"></div>
       <div class="modal-actions">
         <button id="open-voice-settings" data-i18n="windowsSettings">Windows 언어 설정</button>
