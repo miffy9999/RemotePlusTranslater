@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ctypes.util
+import math
 import queue
 import threading
 import time
@@ -17,7 +18,8 @@ LOOPBACK_PREFIX = "loopback:"
 OUTPUT_PREFIX = "output:"
 MetricsCallback = Callable[..., None]
 SpeechContext = Callable[[], tuple[str, str]]
-SpeechStartedSink = Callable[[str, str], None]
+SpeechStartedSink = Callable[[int, str, str], None]
+LiveSnapshotSink = Callable[["LiveSnapshot"], None]
 
 
 def _load_soundcard():
@@ -65,6 +67,18 @@ class Utterance:
 
 
 @dataclass(slots=True)
+class LiveSnapshot:
+    audio: np.ndarray
+    utterance_id: int
+    revision: int
+    speech_started_at: float
+    captured_at: float
+    speech_seconds: float
+    speech_mode: str
+    recognition_language: str
+
+
+@dataclass(slots=True)
 class _SegmentResult:
     audio: np.ndarray
     utterance_id: int
@@ -98,16 +112,17 @@ class PlaybackGate:
 
 
 class SpeechSegmenter:
-    """RMS VAD that snapshots language mode at speech start."""
+    """VAD with short-tail final chunks and periodic live snapshots."""
 
     def __init__(self, cfg: AudioConfig):
         self.cfg = cfg
         self.block_samples = cfg.sample_rate * cfg.block_ms // 1000
         self.block_seconds = self.block_samples / cfg.sample_rate
-        self.pre_blocks = max(1, cfg.pre_roll_ms // cfg.block_ms)
-        self.end_blocks = max(1, cfg.end_silence_ms // cfg.block_ms)
-        self.min_blocks = max(1, cfg.min_speech_ms // cfg.block_ms)
-        self.max_blocks = max(1, cfg.max_utterance_ms // cfg.block_ms)
+        self.pre_blocks = max(1, math.ceil(cfg.pre_roll_ms / cfg.block_ms))
+        self.end_blocks = max(1, math.ceil(cfg.end_silence_ms / cfg.block_ms))
+        self.keep_tail_blocks = max(0, math.ceil(cfg.tail_keep_ms / cfg.block_ms))
+        self.min_blocks = max(1, math.ceil(cfg.min_speech_ms / cfg.block_ms))
+        self.max_blocks = max(1, math.ceil(cfg.max_utterance_ms / cfg.block_ms))
         self.pre_roll: deque[np.ndarray] = deque(maxlen=self.pre_blocks)
         self.frames: list[np.ndarray] = []
         self.speaking = False
@@ -119,6 +134,8 @@ class SpeechSegmenter:
         self.speech_ended_at = 0.0
         self.speech_mode = "customer"
         self.recognition_language = "en"
+        self.live_revision = 0
+        self.last_live_emit_at = 0.0
 
     def reset(self) -> None:
         self.pre_roll.clear()
@@ -131,6 +148,8 @@ class SpeechSegmenter:
         self.speech_ended_at = 0.0
         self.speech_mode = "customer"
         self.recognition_language = "en"
+        self.live_revision = 0
+        self.last_live_emit_at = 0.0
 
     def process(
         self,
@@ -173,11 +192,17 @@ class SpeechSegmenter:
         if self.silent_blocks < self.end_blocks and len(self.frames) < self.max_blocks:
             return None
 
-        valid = self.voiced_blocks >= self.min_blocks
         result = None
-        if valid:
+        if self.voiced_blocks >= self.min_blocks:
+            frames = self.frames
+            # Keep only a small tail after the last voiced block. It avoids
+            # sending VAD padding into the final model without clipping words.
+            if self.silent_blocks and len(frames) > self.silent_blocks:
+                drop = max(0, self.silent_blocks - self.keep_tail_blocks)
+                if drop:
+                    frames = frames[:-drop]
             result = _SegmentResult(
-                audio=np.concatenate(self.frames),
+                audio=np.concatenate(frames),
                 utterance_id=self.utterance_id,
                 speech_started_at=self.speech_started_at,
                 speech_ended_at=self.speech_ended_at or frame_ended_at,
@@ -187,6 +212,33 @@ class SpeechSegmenter:
             )
         self.reset()
         return result
+
+    def live_snapshot(self, captured_at: float) -> LiveSnapshot | None:
+        if not self.cfg.live_preview_enabled or not self.speaking:
+            return None
+        speech_seconds = max(0.0, captured_at - self.speech_started_at)
+        if speech_seconds * 1000 < self.cfg.live_preview_min_speech_ms:
+            return None
+        if captured_at - self.last_live_emit_at < self.cfg.live_preview_interval_ms / 1000:
+            return None
+        if not self.frames:
+            return None
+        self.last_live_emit_at = captured_at
+        self.live_revision += 1
+        max_samples = max(1, self.cfg.sample_rate * self.cfg.live_preview_max_audio_ms // 1000)
+        audio = np.concatenate(self.frames)
+        if len(audio) > max_samples:
+            audio = audio[-max_samples:]
+        return LiveSnapshot(
+            audio=audio,
+            utterance_id=self.utterance_id,
+            revision=self.live_revision,
+            speech_started_at=self.speech_started_at,
+            captured_at=captured_at,
+            speech_seconds=speech_seconds,
+            speech_mode=self.speech_mode,
+            recognition_language=self.recognition_language,
+        )
 
 
 class AudioCapture(threading.Thread):
@@ -199,6 +251,7 @@ class AudioCapture(threading.Thread):
         metrics: MetricsCallback | None = None,
         context: SpeechContext | None = None,
         speech_started_sink: SpeechStartedSink | None = None,
+        live_snapshot_sink: LiveSnapshotSink | None = None,
     ):
         super().__init__(name="audio-capture", daemon=True)
         self.cfg = cfg
@@ -208,6 +261,7 @@ class AudioCapture(threading.Thread):
         self.metrics = metrics
         self.context = context
         self.speech_started_sink = speech_started_sink
+        self.live_snapshot_sink = live_snapshot_sink
         self.segmenter = SpeechSegmenter(cfg)
         self._frames: queue.Queue[tuple[np.ndarray, float]] = queue.Queue(maxsize=100)
         self._stop_event = threading.Event()
@@ -265,11 +319,23 @@ class AudioCapture(threading.Thread):
             self._next_utterance_id = self.segmenter.utterance_id
         if not was_speaking and self.segmenter.speaking and self.speech_started_sink is not None:
             try:
-                self.speech_started_sink(self.segmenter.speech_mode, self.segmenter.recognition_language)
+                self.speech_started_sink(
+                    self.segmenter.utterance_id,
+                    self.segmenter.speech_mode,
+                    self.segmenter.recognition_language,
+                )
             except Exception:
                 pass
         if result is not None:
             self._submit(result)
+            return
+        if self.live_snapshot_sink is not None:
+            snapshot = self.segmenter.live_snapshot(ended_at)
+            if snapshot is not None:
+                try:
+                    self.live_snapshot_sink(snapshot)
+                except Exception:
+                    pass
 
     def run(self) -> None:
         while not self._stop_event.is_set():

@@ -15,6 +15,9 @@ from .config import AudioConfig, TtsConfig
 MetricsCallback = Callable[..., None]
 
 # Supported customer languages plus Japanese employee speech.
+EDGE_OUTPUT_PREFIX = "edge:"
+
+# Device names below are SDL/Pygame names, not Windows SAPI identifiers.
 EDGE_VOICES: dict[str, str] = {
     "ja": "ja-JP-NanamiNeural",
     "en": "en-US-JennyNeural",
@@ -82,6 +85,7 @@ class EdgeSpeaker(threading.Thread):
         self._playing = threading.Event()
         self._request_lock = threading.Lock()
         self._next_request_id = 0
+        self._mixer_device_name: str | None = None
 
     def _metric(self, event: str, **fields: object) -> None:
         if self.metrics is None:
@@ -163,8 +167,81 @@ class EdgeSpeaker(threading.Thread):
         )
         return request_id
 
+    @staticmethod
+    def output_devices() -> list[dict[str, str]]:
+        """Return output choices understood by the SDL mixer used for Edge TTS."""
+        initialized_here = False
+        try:
+            import pygame
+            from pygame._sdl2 import audio as sdl_audio
+
+            if not pygame.mixer.get_init():
+                pygame.mixer.init(buffer=256)
+                initialized_here = True
+            names = tuple(sdl_audio.get_audio_device_names(False) or ())
+            return [
+                {"id": f"{EDGE_OUTPUT_PREFIX}{name}", "name": str(name)}
+                for name in names
+                if str(name).strip()
+            ]
+        except Exception:
+            # The default output remains usable even when SDL cannot enumerate.
+            return []
+        finally:
+            if initialized_here:
+                try:
+                    import pygame
+                    pygame.mixer.quit()
+                except Exception:
+                    pass
+
     def _voice(self, language: str) -> str:
         return self.cfg.edge_voice_overrides.get(language) or EDGE_VOICES.get(language) or EDGE_VOICES["en"]
+
+    def _requested_output_name(self) -> str | None:
+        selected = str(self.audio_cfg.output_device or "default")
+        if selected == "default":
+            return None
+        if selected.startswith(EDGE_OUTPUT_PREFIX):
+            return selected[len(EDGE_OUTPUT_PREFIX):] or None
+        # Old SAPI/soundcard values cannot be used by SDL. Keep audio working.
+        return None
+
+    def _ensure_mixer_output(self, pygame) -> None:
+        requested = self._requested_output_name()
+        current_ready = bool(pygame.mixer.get_init())
+        if current_ready and self._mixer_device_name == requested:
+            return
+
+        if current_ready:
+            try:
+                pygame.mixer.music.stop()
+            except Exception:
+                pass
+            pygame.mixer.quit()
+
+        try:
+            if requested is None:
+                pygame.mixer.init(buffer=256)
+            else:
+                pygame.mixer.init(buffer=256, devicename=requested)
+            self._mixer_device_name = requested
+            self._metric(
+                "tts_output_selected",
+                output_device=(requested or "default"),
+            )
+        except Exception as exc:
+            if requested is None:
+                raise
+            self.audio_cfg.output_device = "default"
+            self._mixer_device_name = None
+            pygame.mixer.init(buffer=256)
+            self._metric(
+                "tts_output_fallback",
+                requested_output=requested,
+                error=repr(exc),
+            )
+            self.status("warning", "Selected audio output is unavailable; using system default")
 
     async def _save_edge(self, text: str, voice: str, target: str) -> None:
         import edge_tts
@@ -188,9 +265,8 @@ class EdgeSpeaker(threading.Thread):
 
     def _play(self, request: SpeechRequest, begin_playback: Callable[[], None]) -> None:
         import pygame
-        if not pygame.mixer.get_init():
-            pygame.mixer.init(buffer=256)
 
+        self._ensure_mixer_output(pygame)
         synthesized_at = time.monotonic()
         path = self._synthesize(request)
         self._metric(

@@ -5,8 +5,15 @@ input_device = "default"
 output_device = "default"
 start_rms = 0.012
 continue_rms = 0.007
-pre_roll_ms = 180
+pre_roll_ms = 100
 end_silence_ms = 360
+live_preview_enabled = true
+live_preview_interval_ms = 1200
+live_preview_min_speech_ms = 1200
+live_preview_max_audio_ms = 2600
+tail_keep_ms = 180
+# Accuracy-balanced profile: base live captions after 1.2 s; small final STT uses beam 2.
+# Legacy keys retained for old local config compatibility.
 preview_enabled = false
 preview_interval_ms = 1400
 preview_min_speech_ms = 900
@@ -19,10 +26,15 @@ post_tts_mute_ms = 500
 model = "small"
 device = "cpu"
 compute_type = "int8"
-beam_size = 1
-preview_beam_size = 1
+beam_size = 2
 cpu_threads = 6
 num_workers = 1
+# Accuracy-balanced live-caption model. It does not delay final small-model STT.
+live_model = "base"
+live_cpu_threads = 2
+live_beam_size = 1
+live_hotwords_max_items = 0
+preview_beam_size = 1
 # Legacy values retained only for config compatibility. This mode does not probe languages.
 japanese_probe_ms = 1200
 japanese_probe_margin = 0.03

@@ -31,6 +31,7 @@
       <div class="setting-row">
         <label><span data-i18n="inputLanguage">고객 입력 언어</span><select id="language"></select></label>
         <label><span data-i18n="inputDevice">음성 입력 장치</span><select id="input-device"><option value="default" data-i18n="systemDefault">시스템 기본 장치</option></select></label>
+        <label><span data-i18n="outputDevice">음성 출력 장치</span><select id="output-device"><option value="default" data-i18n="systemDefault">시스템 기본 장치</option></select></label>
         <div class="direction"><span data-i18n="customerSpeech">고객 음성</span><b>→</b><span data-i18n="japaneseText">일본어 텍스트</span><b>·</b><span data-i18n="japaneseReply">일본어 답변</span><b>→</b><span data-i18n="customerTts">고객 언어 음성</span></div>
         <div class="speech-mode-wrap">
           <span data-i18n="speechMode">인식 모드</span>
@@ -38,7 +39,7 @@
         </div>
         <button id="tts" class="toggle on" aria-pressed="true"><span></span><em data-i18n="ttsOn">TTS 켜짐</em></button>
       </div>
-      <p class="edge-note" data-i18n="edgeNote">온라인 신경망 음성을 사용합니다. Windows 음성 언어팩은 필요하지 않습니다.</p>
+      <p class="edge-note" data-i18n="edgeNote">말하는 중에는 임시 자막을 먼저 표시하고, 문장이 끝나면 정확한 결과와 번역으로 교체합니다.</p>
     </section>
 
     <section class="panel output">

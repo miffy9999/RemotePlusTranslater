@@ -28,17 +28,23 @@ class AudioConfig:
     sample_rate: int = 16000
     block_ms: int = 20
     input_device: str | int = "default"
-    # Edge TTS plays through the Windows default output device. Retained so
-    # older config.local.toml files stay valid.
+    # Retained for old config compatibility. Edge TTS uses Windows' default output.
     output_device: str | int = "default"
     start_rms: float = 0.012
     continue_rms: float = 0.007
-    pre_roll_ms: int = 180
+    pre_roll_ms: int = 100
     end_silence_ms: int = 360
-    min_speech_ms: int = 350
+    tail_keep_ms: int = 180
+    min_speech_ms: int = 280
     max_utterance_ms: int = 12000
     post_tts_mute_ms: int = 180
-    # Legacy preview values are accepted but not used by the fixed-language path.
+    # A base live model receives a longer snapshot after speech is
+    # established. The small final model remains independent and authoritative.
+    live_preview_enabled: bool = True
+    live_preview_interval_ms: int = 1200
+    live_preview_min_speech_ms: int = 1200
+    live_preview_max_audio_ms: int = 2600
+    # Old files used these names. They are retained to avoid config failure.
     preview_enabled: bool = False
     preview_interval_ms: int = 1400
     preview_min_speech_ms: int = 900
@@ -47,15 +53,21 @@ class AudioConfig:
 
 @dataclass(slots=True)
 class SttConfig:
+    # Authoritative final transcription model.
     model: str = "small"
     device: str = "cpu"
     compute_type: str = "int8"
-    beam_size: int = 1
-    preview_beam_size: int = 1
-    language: str = "auto"
+    beam_size: int = 2
     cpu_threads: int = 6
     num_workers: int = 1
-    # Accepted only for old configuration compatibility. No language probe runs.
+    # Dedicated accuracy-balanced live model. It never blocks the final model.
+    live_model: str = "base"
+    live_cpu_threads: int = 2
+    live_beam_size: int = 1
+    live_hotwords_max_items: int = 0
+    language: str = "auto"
+    # Old probe settings are retained for config compatibility. No probe runs.
+    preview_beam_size: int = 1
     japanese_probe_ms: int = 1200
     japanese_probe_margin: float = 0.03
     japanese_reply_threshold: float = 0.5
@@ -90,13 +102,11 @@ class TranslationConfig:
 class TtsConfig:
     enabled: bool = True
     volume: float = 0.9
-    # Edge is the sole runtime backend. No Windows speech language pack is used.
     backend: str = "edge"
     edge_rate: str = "+0%"
     edge_timeout_seconds: int = 15
     latest_only: bool = True
     edge_voice_overrides: dict[str, str] = field(default_factory=dict)
-    # Accepted from previous config.local.toml files; ignored deliberately.
     fallback_to_sapi: bool = False
 
 
@@ -183,6 +193,12 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("RMS thresholds must satisfy 0 < continue_rms <= start_rms < 1")
     if audio.min_speech_ms >= audio.max_utterance_ms:
         raise ValueError("min_speech_ms must be less than max_utterance_ms")
+    if audio.tail_keep_ms < 0 or audio.tail_keep_ms > audio.end_silence_ms:
+        raise ValueError("audio.tail_keep_ms must be between 0 and end_silence_ms")
+    if audio.live_preview_interval_ms < 250 or audio.live_preview_min_speech_ms < 300:
+        raise ValueError("live preview intervals are too small")
+    if audio.live_preview_max_audio_ms < 800:
+        raise ValueError("live_preview_max_audio_ms must be at least 800")
     if not 0 <= cfg.tts.volume <= 1:
         raise ValueError("tts.volume must be between 0 and 1")
     if cfg.tts.backend != "edge":
@@ -195,8 +211,8 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("server.port must be between 1 and 65535")
     if cfg.server.host not in {"127.0.0.1", "localhost", "::1"}:
         raise ValueError("server.host must be a loopback address")
-    if cfg.stt.cpu_threads < 1 or cfg.stt.num_workers < 1:
-        raise ValueError("stt.cpu_threads and stt.num_workers must be at least 1")
+    if min(cfg.stt.cpu_threads, cfg.stt.num_workers, cfg.stt.live_cpu_threads) < 1:
+        raise ValueError("stt thread counts must be at least 1")
     if cfg.translation.hymt2_threads < 1:
         raise ValueError("translation.hymt2_threads must be at least 1")
     if cfg.translation.hymt2_request_timeout_seconds < 1:

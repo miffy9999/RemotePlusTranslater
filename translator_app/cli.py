@@ -40,6 +40,7 @@ def doctor() -> int:
             checks.append(("Hy-MT2 model", model.exists(), str(model)))
             checks.append(("llama.cpp runtime", runtime.exists(), str(runtime)))
         checks.append(("TTS", cfg.tts.backend == "edge", "Edge online neural; Windows language packs not required"))
+        checks.append(("live captions", cfg.audio.live_preview_enabled, f"{cfg.stt.live_model} / {cfg.stt.live_cpu_threads} threads"))
     except Exception as exc:
         checks.append(("configuration", False, str(exc)))
     try:
@@ -63,9 +64,15 @@ def prepare() -> int:
     def report(phase: str, message: str) -> None:
         print(f"[{phase.upper()}] {message}")
 
-    print("Speech and translation models are downloaded once and then used locally.")
+    print("Final and live-caption speech models are downloaded once and then used locally.")
     print("Reply speech uses Edge online neural voices; Windows language packs are not required.")
-    WhisperRecognizer(cfg.stt, report).load()
+    WhisperRecognizer(cfg.stt, report, label="final").load()
+    WhisperRecognizer(
+        cfg.stt, report, model_name=cfg.stt.live_model,
+        cpu_threads=cfg.stt.live_cpu_threads, beam_size=cfg.stt.live_beam_size,
+        hotwords_max_items=cfg.stt.live_hotwords_max_items,
+        apply_corrections=False, label="live caption",
+    ).load()
     if cfg.translation.backend == "hymt2":
         prepare_hymt2_files(cfg.translation, report)
     translator = create_translator(cfg.translation, report)

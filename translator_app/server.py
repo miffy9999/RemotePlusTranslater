@@ -17,6 +17,7 @@ from .conversation import ConversationController
 from .events import EventBus
 from .feedback import FeedbackStore
 from .languages import CUSTOMER_LANGUAGE_CODES, public_languages
+from .tts import EdgeSpeaker
 
 WEB = Path(__file__).resolve().parent / "web"
 
@@ -102,8 +103,18 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True) -> Fast
     @app.get("/api/devices")
     def devices():
         try:
-            # Input choices are used. Edge TTS uses Windows' default speaker.
-            return list_audio_devices()
+            result = list_audio_devices()
+            # Edge TTS audio is played by SDL/Pygame, so expose exactly the
+            # device names SDL can open rather than legacy SAPI identifiers.
+            edge_outputs = EdgeSpeaker.output_devices()
+            if edge_outputs:
+                result["outputs"] = edge_outputs
+            else:
+                result.setdefault("warnings", []).append(
+                    "Could not enumerate Edge TTS output devices; system default remains available."
+                )
+                result["outputs"] = []
+            return result
         except Exception as exc:
             raise HTTPException(500, str(exc)) from exc
 

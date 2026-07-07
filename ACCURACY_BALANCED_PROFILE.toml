@@ -1,0 +1,14 @@
+# Copy these values into config.local.toml ONLY when that file exists and
+# currently overrides [audio] or [stt]. Do not copy device settings.
+
+[audio]
+end_silence_ms = 360
+live_preview_interval_ms = 1200
+live_preview_min_speech_ms = 1200
+tail_keep_ms = 180
+
+[stt]
+beam_size = 2
+live_model = "base"
+live_cpu_threads = 2
+live_beam_size = 1
