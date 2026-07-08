@@ -94,21 +94,12 @@ def _launch_app_window(url: str, data_root: Path) -> subprocess.Popen | None:
         "--disable-session-crashed-bubble",
         "--disable-features=Translate,TranslateUI",
     ]
-    creationflags = 0
-    startupinfo = None
-    if os.name == "nt":
-        creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
-        startupinfo = subprocess.STARTUPINFO()
-        startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
-        startupinfo.wShowWindow = 0
     try:
         return subprocess.Popen(
             args,
             stdin=subprocess.DEVNULL,
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
-            creationflags=creationflags,
-            startupinfo=startupinfo,
             close_fds=True,
         )
     except Exception:
