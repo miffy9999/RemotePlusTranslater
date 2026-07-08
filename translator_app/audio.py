@@ -123,6 +123,9 @@ class SpeechSegmenter:
         self.keep_tail_blocks = max(0, math.ceil(cfg.tail_keep_ms / cfg.block_ms))
         self.min_blocks = max(1, math.ceil(cfg.min_speech_ms / cfg.block_ms))
         self.max_blocks = max(1, math.ceil(cfg.max_utterance_ms / cfg.block_ms))
+        self.staff_end_blocks = max(self.end_blocks, math.ceil(cfg.staff_end_silence_ms / cfg.block_ms))
+        self.staff_keep_tail_blocks = max(0, math.ceil(cfg.staff_tail_keep_ms / cfg.block_ms))
+        self.staff_max_blocks = max(self.max_blocks, math.ceil(cfg.staff_max_utterance_ms / cfg.block_ms))
         self.pre_roll: deque[np.ndarray] = deque(maxlen=self.pre_blocks)
         self.frames: list[np.ndarray] = []
         self.speaking = False
@@ -191,7 +194,11 @@ class SpeechSegmenter:
         else:
             self.silent_blocks += 1
 
-        if self.silent_blocks < self.end_blocks and len(self.frames) < self.max_blocks:
+        end_blocks = self.staff_end_blocks if self.speech_mode == "staff" else self.end_blocks
+        max_blocks = self.staff_max_blocks if self.speech_mode == "staff" else self.max_blocks
+        keep_tail_blocks = self.staff_keep_tail_blocks if self.speech_mode == "staff" else self.keep_tail_blocks
+
+        if self.silent_blocks < end_blocks and len(self.frames) < max_blocks:
             return None
 
         result = None
@@ -199,8 +206,11 @@ class SpeechSegmenter:
             frames = self.frames
             # Keep only a small tail after the last voiced block. It avoids
             # sending VAD padding into the final model without clipping words.
+            # Staff mode keeps a longer tail and waits longer before closing the
+            # chunk because Japanese replies are often read as one long sentence
+            # while Space is held. Customer mode keeps the low-latency defaults.
             if self.silent_blocks and len(frames) > self.silent_blocks:
-                drop = max(0, self.silent_blocks - self.keep_tail_blocks)
+                drop = max(0, self.silent_blocks - keep_tail_blocks)
                 if drop:
                     frames = frames[:-drop]
             result = _SegmentResult(

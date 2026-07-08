@@ -37,6 +37,12 @@ class AudioConfig:
     tail_keep_ms: int = 180
     min_speech_ms: int = 350
     max_utterance_ms: int = 12000
+    # Staff often speaks longer replies while holding Space. Keep the same
+    # silence cutoff as customer mode, but allow longer captured utterances and
+    # preserve a slightly longer ending tail.
+    staff_end_silence_ms: int = 360
+    staff_tail_keep_ms: int = 360
+    staff_max_utterance_ms: int = 20000
     post_tts_mute_ms: int = 180
     # A base live model receives a longer snapshot after speech is
     # established. The small final model remains independent and authoritative.
@@ -207,6 +213,12 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("min_speech_ms must be less than max_utterance_ms")
     if audio.tail_keep_ms < 0 or audio.tail_keep_ms > audio.end_silence_ms:
         raise ValueError("audio.tail_keep_ms must be between 0 and end_silence_ms")
+    if audio.staff_end_silence_ms < audio.end_silence_ms:
+        raise ValueError("audio.staff_end_silence_ms must be greater than or equal to end_silence_ms")
+    if audio.staff_tail_keep_ms < 0 or audio.staff_tail_keep_ms > audio.staff_end_silence_ms:
+        raise ValueError("audio.staff_tail_keep_ms must be between 0 and staff_end_silence_ms")
+    if audio.staff_max_utterance_ms < audio.max_utterance_ms:
+        raise ValueError("audio.staff_max_utterance_ms must be greater than or equal to max_utterance_ms")
     if audio.live_preview_interval_ms < 250 or audio.live_preview_min_speech_ms < 300:
         raise ValueError("live preview intervals are too small")
     if audio.live_preview_max_audio_ms < 800:

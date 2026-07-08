@@ -15,6 +15,11 @@ live_preview_max_audio_ms = 2200
 live_preview_max_revisions = 1
 live_preview_final_grace_ms = 0
 tail_keep_ms = 180
+# Staff mode keeps the same silence cutoff as customer mode, but allows longer
+# captured utterances and preserves a little more ending audio.
+staff_end_silence_ms = 360
+staff_tail_keep_ms = 360
+staff_max_utterance_ms = 20000
 # Accuracy-balanced profile: base live captions after 1.2 s; small final STT uses beam 2.
 # Legacy keys retained for old local config compatibility.
 preview_enabled = false
