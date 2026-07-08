@@ -66,6 +66,40 @@ class RecognitionJob:
 
 _NOISE_TEXT = re.compile(r"^(thank you|thanks for watching|subscribe|ご視聴ありがとうございました|字幕視聴ありがとうございました)$", re.IGNORECASE)
 
+_FILLER_PATTERNS: dict[str, tuple[re.Pattern[str], ...]] = {
+    # Conservative, standalone fillers only. Do not remove words inside real terms.
+    "ko": (
+        re.compile(r"(?<!\S)(?:어+|음+|엄+|아+|에+)(?:요)?(?=\s|$|[,.!?…])", re.IGNORECASE),
+    ),
+    "ja": (
+        re.compile(r"(?:(?<=^)|(?<=[\s、。,.!?！？]))(?:えー+|えっと|えーと|あのー*|あの|そのー*|まあ|まー|なんか)(?=$|[\s、。,.!?！？])"),
+    ),
+    "en": (
+        re.compile(r"(?<!\w)(?:um+|uh+|er+|ah+|hmm+)(?!\w)", re.IGNORECASE),
+    ),
+}
+
+
+def _clean_filler_text(text: str, language: str) -> tuple[str, int]:
+    """Remove cheap standalone speech fillers before translation.
+
+    This is deliberately regex-only and runs after final STT, never before or
+    during STT/TTS. It avoids model calls, dictionary lookups, and network I/O.
+    """
+    cleaned = text.strip()
+    if not cleaned:
+        return cleaned, 0
+    key = "ja" if language == "ja" else "ko" if language == "ko" else "en" if language == "en" else ""
+    removed = 0
+    for pattern in _FILLER_PATTERNS.get(key, ()): 
+        cleaned, count = pattern.subn(" ", cleaned)
+        removed += count
+    if removed:
+        cleaned = re.sub(r"\s+([,.!?。！？、])", r"\1", cleaned)
+        cleaned = re.sub(r"([、。,.!?！？]){2,}", r"\1", cleaned)
+        cleaned = re.sub(r"\s+", " ", cleaned).strip(" \\t\\r\\n、。,.!?！？…")
+    return cleaned, removed
+
 
 def _create_debug_logger() -> logging.Logger | None:
     if os.getenv("REMOTEPLUS_DEBUG") != "1":
@@ -84,20 +118,20 @@ def _create_debug_logger() -> logging.Logger | None:
 
 
 class ConversationController:
-    """Dual-STT real-time pipeline.
+    """Final-only latest-queue pipeline.
 
-    - Tiny STT receives short snapshots *during* speech and publishes only
-      discardable partial text.
-    - Small STT receives the completed utterance and produces the final text.
-    - Translation is a third independent worker.
-
-    A partial decode is never awaited by the final path. The queues keep only
-    the newest unstarted item, so an older turn cannot make a fresh turn feel
-    stale.
+    Live preview is disabled in this profile because base preview competed with
+    final Whisper and caused queue buildup during fast speech. The final small
+    model gets the CPU, translation runs independently, and only the latest
+    queued utterance is retained.
     """
 
     def __init__(self, cfg: AppConfig, bus: EventBus | None = None, recognizer: RecognizerLike | None = None, translator: TranslatorLike | None = None):
         self.cfg = cfg
+        # Hard-disable live preview for this build. It was the main cause of
+        # STT queue buildup on CPU-only machines.
+        self.cfg.audio.live_preview_enabled = False
+        self.cfg.audio.live_preview_final_grace_ms = 0
         self.bus = bus or EventBus()
         enabled = list(cfg.conversation.enabled_languages)
         customer = self._initial_customer_language(cfg, enabled)
@@ -113,8 +147,9 @@ class ConversationController:
         )
         self._state_lock = threading.Lock()
         self._live_lock = threading.Lock()
-        self._utterances: queue.Queue[Utterance] = queue.Queue(maxsize=2)
-        self._recognitions: queue.Queue[RecognitionJob] = queue.Queue(maxsize=2)
+        self._live_decode_done: dict[int, threading.Event] = {}
+        self._utterances: queue.Queue[Utterance] = queue.Queue(maxsize=1)
+        self._recognitions: queue.Queue[RecognitionJob] = queue.Queue(maxsize=1)
         self._live_snapshots: queue.Queue[LiveSnapshot] = queue.Queue(maxsize=1)
         self._finalizing_ids: set[int] = set()
         self._finalized_ids: deque[int] = deque(maxlen=128)
@@ -129,17 +164,7 @@ class ConversationController:
         self.recognizer = recognizer or WhisperRecognizer(cfg.stt, self._status, label="final")
         self.recognizer.set_enabled_languages(enabled) if hasattr(self.recognizer, "set_enabled_languages") else None
         self.recognizer.set_selected_language(customer) if hasattr(self.recognizer, "set_selected_language") else None
-        self.live_recognizer = WhisperRecognizer(
-            cfg.stt,
-            self._status,
-            model_name=cfg.stt.live_model,
-            cpu_threads=cfg.stt.live_cpu_threads,
-            beam_size=cfg.stt.live_beam_size,
-            hotwords_max_items=cfg.stt.live_hotwords_max_items,
-            apply_corrections=False,
-            label="live caption",
-        )
-        self.live_recognizer.set_enabled_languages(enabled)
+        self.live_recognizer: WhisperRecognizer | None = None
         self.translator = translator or create_translator(cfg.translation, self._status)
         self.speaker = EdgeSpeaker(cfg.tts, cfg.audio, self.gate, self._status, metrics=self._log_perf)
         self.capture = self._make_capture()
@@ -165,7 +190,7 @@ class ConversationController:
             metrics=self._log_perf,
             context=self._capture_context,
             speech_started_sink=self._speech_started,
-            live_snapshot_sink=self._queue_live_snapshot,
+            live_snapshot_sink=(self._queue_live_snapshot if self.cfg.audio.live_preview_enabled else None),
         )
 
     def _capture_context(self) -> tuple[str, str]:
@@ -189,25 +214,25 @@ class ConversationController:
             speech_mode=self.state.speech_mode,
             tts_enabled=self.state.tts_enabled,
             tts_backend="edge",
-            pipeline="dual_stt_live_final_translation_split",
-            live_model=self.cfg.stt.live_model,
+            pipeline="final_only_latest_queue_no_live",
+            live_preview=False,
             final_model=self.cfg.stt.model,
             speech_control="space_hold",
-            model_load_order="final_first_serial",
         )
         self.speaker.start()
         self._translator_warmup = threading.Thread(target=self._warm_translator, name="translator-warmup", daemon=True)
         self._translator_warmup.start()
         self._translation_worker.start()
-        # The final model is authoritative. Start it first, then load the base live model only
-        # after the final model is ready. This avoids a first-run cache/tqdm race.
+        # The final model is authoritative. No live preview model is loaded in
+        # this build, so there is no base-vs-small CPU competition.
         self._stt_worker.start()
-        self._live_launcher = threading.Thread(
-            target=self._launch_live_after_final_ready,
-            name="conversation-live-launcher",
-            daemon=True,
-        )
-        self._live_launcher.start()
+        if self.cfg.audio.live_preview_enabled:
+            self._live_launcher = threading.Thread(
+                target=self._launch_live_after_final_ready,
+                name="conversation-live-launcher",
+                daemon=True,
+            )
+            self._live_launcher.start()
 
     def stop(self) -> None:
         self._log_perf("run_stopping")
@@ -262,6 +287,40 @@ class ConversationController:
             self._finalizing_ids.discard(utterance_id)
             self._finalized_ids.append(utterance_id)
 
+    def _live_decode_started(self, utterance_id: int) -> threading.Event:
+        with self._live_lock:
+            event = self._live_decode_done.get(utterance_id)
+            if event is None:
+                event = threading.Event()
+                self._live_decode_done[utterance_id] = event
+            return event
+
+    def _live_decode_finished(self, utterance_id: int) -> None:
+        with self._live_lock:
+            event = self._live_decode_done.pop(utterance_id, None)
+        if event is not None:
+            event.set()
+
+    def _wait_briefly_for_live_decode(self, utterance_id: int) -> float:
+        grace_ms = max(0, int(self.cfg.audio.live_preview_final_grace_ms))
+        if grace_ms <= 0:
+            return 0.0
+        with self._live_lock:
+            event = self._live_decode_done.get(utterance_id)
+        if event is None or event.is_set():
+            return 0.0
+        started = time.monotonic()
+        event.wait(grace_ms / 1000)
+        waited = time.monotonic() - started
+        if waited:
+            self._log_perf(
+                "final_waited_for_live",
+                utterance_id=utterance_id,
+                wait_seconds=f"{waited:.3f}",
+                live_finished=event.is_set(),
+            )
+        return waited
+
     def _queue_live_snapshot(self, snapshot: LiveSnapshot) -> None:
         if self._stop.is_set() or self._is_finalizing(snapshot.utterance_id):
             return
@@ -304,7 +363,9 @@ class ConversationController:
         self._log_perf("translation_job_queued", utterance_id=job.utterance_id, speech_mode=job.speech_mode, queue_depth=self._recognitions.qsize())
 
     def _launch_live_after_final_ready(self) -> None:
-        """Start the base live-caption model only after small is usable."""
+        """Start the live-caption model only when explicitly enabled."""
+        if not self.cfg.audio.live_preview_enabled or self.live_recognizer is None:
+            return
         self._log_perf("live_model_waiting_for_final")
         while not self._stop.is_set():
             if self._ready.wait(timeout=0.2):
@@ -314,6 +375,8 @@ class ConversationController:
                 return
 
     def _run_live(self) -> None:
+        if not self.cfg.audio.live_preview_enabled or self.live_recognizer is None:
+            return
         try:
             started = time.monotonic()
             self._log_perf("live_model_load_started", model=self.cfg.stt.live_model)
@@ -336,12 +399,15 @@ class ConversationController:
                 self._log_perf("live_snapshot_skipped", utterance_id=snapshot.utterance_id, revision=snapshot.revision, reason="finalizing")
                 continue
             started = time.monotonic()
+            self._live_decode_started(snapshot.utterance_id)
             self._log_perf("live_stt_started", utterance_id=snapshot.utterance_id, revision=snapshot.revision, speech_mode=snapshot.speech_mode, forced_language=snapshot.recognition_language, audio_seconds=f"{len(snapshot.audio) / self.cfg.audio.sample_rate:.3f}")
             try:
                 result = self.live_recognizer.transcribe(snapshot.audio, language=snapshot.recognition_language)
             except Exception as exc:
                 self._log_perf("live_stt_failed", utterance_id=snapshot.utterance_id, revision=snapshot.revision, error=repr(exc))
                 continue
+            finally:
+                self._live_decode_finished(snapshot.utterance_id)
             done = time.monotonic()
             if self._is_finalizing(snapshot.utterance_id):
                 self._log_perf("live_stt_discarded", utterance_id=snapshot.utterance_id, revision=snapshot.revision, reason="final_started_before_publish")
@@ -370,8 +436,21 @@ class ConversationController:
             self._log_perf("whisper_ready", seconds=f"{time.monotonic() - started:.3f}")
             if self._stop.is_set():
                 return
+            # Do not open the microphone until the final STT model AND the
+            # translation engine are ready. This prevents input overflow/noise
+            # warnings while models are still loading and avoids queued audio
+            # being processed late.
+            if not self._translator_ready.is_set() and not self._translator_failed.is_set():
+                self._status("loading", "Loading translation model")
+                while not self._stop.is_set() and not self._translator_ready.is_set() and not self._translator_failed.is_set():
+                    time.sleep(0.05)
+            if self._stop.is_set():
+                return
+            if self._translator_failed.is_set():
+                self._status("warning", "Translation model failed")
+                return
             self.capture.start()
-            self._status("listening", "Listening")
+            self._status("listening", "Models ready")
             while not self._stop.is_set():
                 try:
                     item = self._utterances.get(timeout=0.2)
@@ -413,6 +492,18 @@ class ConversationController:
                 self._mark_finalized(item.utterance_id)
                 self._log_perf("stt_done", utterance_id=item.utterance_id, speech_mode=item.speech_mode, forced_language=forced, stt_seconds=f"{stt_seconds:.3f}", realtime_factor=f"{stt_seconds / item.duration:.3f}" if item.duration else "0.000", speech_end_to_stt_done_seconds=f"{max(0.0, time.monotonic()-item.speech_ended_at):.3f}" if item.speech_ended_at else "0.000", language=result.language, probability=f"{result.probability:.3f}")
                 text = result.text.strip()
+                cleaned_text, filler_count = _clean_filler_text(text, forced)
+                if filler_count:
+                    self._log_perf(
+                        "filler_removed",
+                        utterance_id=item.utterance_id,
+                        language=forced,
+                        removed=filler_count,
+                        original_characters=len(text),
+                        cleaned_characters=len(cleaned_text),
+                    )
+                    text = cleaned_text
+                    result = Recognition(text=text, language=forced, probability=result.probability)
                 if not text or _NOISE_TEXT.match(text):
                     self.bus.publish("preview_discard", utterance_id=item.utterance_id)
                     self._log_perf("recognition_skipped", utterance_id=item.utterance_id, speech_mode=item.speech_mode, reason="empty_or_noise")
@@ -518,15 +609,18 @@ class ConversationController:
             result = asdict(self.state)
         result["dropped"] += self.capture.dropped_utterances
         result["ready"] = self._ready.is_set()
-        result["live_ready"] = self._live_ready.is_set()
+        result["live_ready"] = False
         result["translator_ready"] = self._translator_ready.is_set()
         result["translator_failed"] = self._translator_failed.is_set()
+        if result["ready"] and result["translator_ready"] and result.get("phase") in {"starting", "loading"}:
+            result["phase"] = "listening"
+            result["message"] = "Models ready"
         result["stt_queue_depth"] = self._utterances.qsize()
-        result["live_queue_depth"] = self._live_snapshots.qsize()
+        result["live_queue_depth"] = 0
         result["translation_queue_depth"] = self._recognitions.qsize()
         result["tts_backend"] = self.cfg.tts.backend
         result["tts_online"] = self.cfg.tts.backend == "edge"
-        result["pipeline"] = "dual_stt_live_final_translation_split"
+        result["pipeline"] = "final_only_latest_queue_no_live"
         return result
 
     def control(self, *, paused: bool | None = None, tts_enabled: bool | None = None, active_language: str | None = None, reply_language: str | None = None, speech_mode: str | None = None, input_device: str | int | None = None, output_device: str | int | None = None, enabled_languages: list[str] | None = None) -> dict:
@@ -571,6 +665,8 @@ class ConversationController:
                 self.cfg.audio.output_device = output_device
             forced = self.cfg.conversation.japanese_code if self.state.speech_mode == "staff" else self.state.input_language
         for recognizer in (self.recognizer, self.live_recognizer):
+            if recognizer is None:
+                continue
             recognizer.set_enabled_languages(self.state.enabled_languages or [])
             recognizer.set_selected_language(forced)
             recognizer.set_context_language(forced)

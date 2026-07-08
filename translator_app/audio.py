@@ -164,6 +164,8 @@ class SpeechSegmenter:
         rms = float(np.sqrt(np.mean(np.square(frame), dtype=np.float64)))
         if not self.speaking:
             self.noise_floor = 0.995 * self.noise_floor + 0.005 * min(rms, 0.03)
+        # Original sensitivity: no extra speech-start confirmation or final noise gate.
+        # Keep the app responsive and let Whisper decide speech content.
         start_threshold = max(self.cfg.start_rms, self.noise_floor * 3.5)
         continue_threshold = max(self.cfg.continue_rms, self.noise_floor * 2.0)
 
@@ -219,6 +221,8 @@ class SpeechSegmenter:
         speech_seconds = max(0.0, captured_at - self.speech_started_at)
         if speech_seconds * 1000 < self.cfg.live_preview_min_speech_ms:
             return None
+        if self.live_revision >= self.cfg.live_preview_max_revisions:
+            return None
         if captured_at - self.last_live_emit_at < self.cfg.live_preview_interval_ms / 1000:
             return None
         if not self.frames:
@@ -269,6 +273,7 @@ class AudioCapture(threading.Thread):
         self._failure_count = 0
         self._capture_error = "Audio device unavailable"
         self._next_utterance_id = 0
+        self._next_overflow_log_at = 0.0
 
     def _metric(self, event: str, **fields: object) -> None:
         if self.metrics is None:
@@ -291,7 +296,16 @@ class AudioCapture(threading.Thread):
 
     def _callback(self, indata, frames, time_info, callback_status) -> None:
         if callback_status:
-            self.status("warning", f"Audio input warning: {callback_status}")
+            warning = str(callback_status)
+            # Input overflow is noisy during CPU spikes and does not require a UI warning.
+            # Drop the oldest pending frame and keep listening; throttle debug logging.
+            if "overflow" in warning.lower():
+                now = time.monotonic()
+                if now >= self._next_overflow_log_at:
+                    self._metric("audio_input_overflow_ignored", warning=warning)
+                    self._next_overflow_log_at = now + 5.0
+            else:
+                self.status("warning", f"Audio input warning: {callback_status}")
         item = (indata[:, 0].copy(), time.monotonic())
         try:
             self._frames.put_nowait(item)

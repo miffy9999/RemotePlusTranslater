@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import queue
 import tempfile
 import threading
@@ -8,6 +9,8 @@ import time
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable
+
+os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
 
 from .audio import PlaybackGate
 from .config import AudioConfig, TtsConfig

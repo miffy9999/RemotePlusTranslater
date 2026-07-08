@@ -35,15 +35,22 @@ class AudioConfig:
     pre_roll_ms: int = 100
     end_silence_ms: int = 360
     tail_keep_ms: int = 180
-    min_speech_ms: int = 280
+    min_speech_ms: int = 350
     max_utterance_ms: int = 12000
     post_tts_mute_ms: int = 180
     # A base live model receives a longer snapshot after speech is
     # established. The small final model remains independent and authoritative.
-    live_preview_enabled: bool = True
-    live_preview_interval_ms: int = 1200
-    live_preview_min_speech_ms: int = 1200
-    live_preview_max_audio_ms: int = 2600
+    live_preview_enabled: bool = False
+    # Preview is deliberately conservative: one caption only for speech that
+    # continues long enough to justify the extra base-model CPU work.
+    live_preview_interval_ms: int = 1800
+    live_preview_min_speech_ms: int = 1800
+    live_preview_max_audio_ms: int = 2200
+    live_preview_max_revisions: int = 1
+    # When a live decode is almost finished, let it publish for this short
+    # window before final small STT begins. This avoids two Whisper decodes
+    # competing for CPU in the common long-sentence case.
+    live_preview_final_grace_ms: int = 0
     # Old files used these names. They are retained to avoid config failure.
     preview_enabled: bool = False
     preview_interval_ms: int = 1400
@@ -57,7 +64,8 @@ class SttConfig:
     model: str = "small"
     device: str = "cpu"
     compute_type: str = "int8"
-    beam_size: int = 2
+    # Final priority: beam 1 cuts CPU decode time substantially.
+    beam_size: int = 1
     cpu_threads: int = 6
     num_workers: int = 1
     # Dedicated accuracy-balanced live model. It never blocks the final model.
@@ -125,6 +133,10 @@ class ServerConfig:
     host: str = "127.0.0.1"
     port: int = 8765
     open_browser: bool = True
+    # Run the local server as a hidden background process and exit it when the
+    # browser/app window disconnects. This does not force Edge or Chrome.
+    shutdown_when_idle: bool = True
+    auto_shutdown_no_clients_seconds: int = 10
 
 
 @dataclass(slots=True)
@@ -199,6 +211,10 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("live preview intervals are too small")
     if audio.live_preview_max_audio_ms < 800:
         raise ValueError("live_preview_max_audio_ms must be at least 800")
+    if audio.live_preview_max_revisions < 0:
+        raise ValueError("live_preview_max_revisions must be zero or greater")
+    if not 0 <= audio.live_preview_final_grace_ms <= 500:
+        raise ValueError("live_preview_final_grace_ms must be between 0 and 500")
     if not 0 <= cfg.tts.volume <= 1:
         raise ValueError("tts.volume must be between 0 and 1")
     if cfg.tts.backend != "edge":
@@ -209,6 +225,8 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("translation.backend must be m2m100 or hymt2")
     if not 1 <= cfg.server.port <= 65535:
         raise ValueError("server.port must be between 1 and 65535")
+    if cfg.server.auto_shutdown_no_clients_seconds < 3:
+        raise ValueError("server.auto_shutdown_no_clients_seconds must be at least 3")
     if cfg.server.host not in {"127.0.0.1", "localhost", "::1"}:
         raise ValueError("server.host must be a loopback address")
     if min(cfg.stt.cpu_threads, cfg.stt.num_workers, cfg.stt.live_cpu_threads) < 1:

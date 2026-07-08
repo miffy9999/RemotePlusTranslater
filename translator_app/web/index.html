@@ -9,7 +9,7 @@
 </head>
 <body>
   <header>
-    <div class="brand"><span class="mark">間</span><div><h1>RemotePlus Translator</h1><p data-i18n="subtitle">로컬 통역 · 온라인 신경망 음성</p></div></div>
+    <div class="brand"><span class="mark">RP</span><div><h1>RemotePlus</h1><p data-i18n="subtitle">프런트 데스크 통역 콘솔</p></div></div>
     <div class="header-actions">
       <label class="ui-language"><span data-i18n="uiLanguage">화면 언어</span><select id="ui-language"><option value="ja">日本語</option><option value="ko">한국어</option><option value="en">English</option><option value="zh">中文</option><option value="es">Español</option></select></label>
       <div id="connection" class="connection"><i></i><span data-i18n="connecting">연결 중</span></div>
@@ -17,37 +17,36 @@
   </header>
 
   <main>
-    <section class="panel runtime">
-      <div class="panel-title"><span data-i18n="runtime">실행 상태</span><div id="phase" class="phase"><span class="pulse"></span><strong data-i18n="starting">시작 중</strong></div></div>
-      <div class="runtime-grid">
-        <div><small data-i18n="detectedLanguage">현재 고객 언어</small><strong id="partner">-</strong></div>
-        <div><small data-i18n="privacy">처리 방식</small><strong data-i18n="processing">STT·번역은 이 PC · 음성은 온라인</strong></div>
-        <button id="pause" class="primary" data-i18n="pause">일시 정지</button>
+    <section class="panel controls">
+      <div class="panel-title">
+        <span data-i18n="channelSettings">현장 설정</span>
+        <div id="phase" class="phase"><span class="pulse"></span><strong data-i18n="starting">시작 중</strong></div>
       </div>
-    </section>
-
-    <section class="panel settings">
-      <div class="panel-title"><span data-i18n="channelSettings">번역 및 언어 설정</span><small data-i18n="allLanguages">지원 언어 전체 사용 가능</small></div>
-      <div class="setting-row">
-        <label><span data-i18n="inputLanguage">고객 입력 언어</span><select id="language"></select></label>
-        <label><span data-i18n="inputDevice">음성 입력 장치</span><select id="input-device"><option value="default" data-i18n="systemDefault">시스템 기본 장치</option></select></label>
-        <label><span data-i18n="outputDevice">음성 출력 장치</span><select id="output-device"><option value="default" data-i18n="systemDefault">시스템 기본 장치</option></select></label>
-        <div class="direction"><span data-i18n="customerSpeech">고객 음성</span><b>→</b><span data-i18n="japaneseText">일본어 텍스트</span><b>·</b><span data-i18n="japaneseReply">일본어 답변</span><b>→</b><span data-i18n="customerTts">고객 언어 음성</span></div>
-        <div class="speech-mode-wrap">
-          <span data-i18n="speechMode">인식 모드</span>
-          <button id="speech-mode" class="speech-mode" type="button" aria-pressed="false" title="Hold Space while staff speaks"><span></span><em data-i18n="staffSpeech">직원 말하기 · Space 누르는 동안</em></button>
+      <div class="control-stack">
+        <div class="status-strip">
+          <div><small data-i18n="detectedLanguage">현재 고객 언어</small><strong id="partner">-</strong></div>
+          <button id="pause" class="primary" data-i18n="pause">일시 정지</button>
         </div>
-        <button id="tts" class="toggle on" aria-pressed="true"><span></span><em data-i18n="ttsOn">TTS 켜짐</em></button>
+
+        <label class="field main-field"><span data-i18n="inputLanguage">고객 입력 언어</span><select id="language"></select></label>
+        <label class="field"><span data-i18n="inputDevice">음성 입력 장치</span><select id="input-device"><option value="default" data-i18n="systemDefault">시스템 기본 장치</option></select></label>
+        <label class="field"><span data-i18n="outputDevice">음성 출력 장치</span><select id="output-device"><option value="default" data-i18n="systemDefault">시스템 기본 장치</option></select></label>
+
+        <div class="quick-controls">
+          <div class="speech-mode-wrap">
+            <span data-i18n="speechMode">인식 모드</span>
+            <button id="speech-mode" class="speech-mode" type="button" aria-pressed="false" title="Hold Space while staff speaks"><span></span><em data-i18n="staffSpeech">직원 말하기 · Space 누르는 동안</em></button>
+          </div>
+          <button id="tts" class="toggle on" aria-pressed="true"><span></span><em data-i18n="ttsOn">TTS 켜짐</em></button>
+        </div>
       </div>
-      <p class="edge-note" data-i18n="edgeNote">말하는 중에는 임시 자막을 먼저 표시하고, 문장이 끝나면 정확한 결과와 번역으로 교체합니다.</p>
     </section>
 
     <section class="panel output">
-      <div class="panel-title"><span data-i18n="output">통합 번역 출력</span><span><small data-i18n="outputHint">원문과 일본어를 함께 표시합니다</small><button id="clear-history" class="mini" data-i18n="clearHistory">기록 지우기</button></span></div>
+      <div class="panel-title"><span data-i18n="output">대화 기록</span><span><small data-i18n="outputHint">최신 발화 우선</small><button id="clear-history" class="mini" data-i18n="clearHistory">기록 지우기</button></span></div>
       <div id="feed" class="feed" aria-live="polite">
         <div id="empty" class="empty">
-          <div class="rings"><span></span><span></span><span></span></div>
-          <h3 data-i18n="loadingTitle">모델을 준비하고 있습니다</h3>
+          <h3 data-i18n="loadingTitle">시스템을 준비하고 있습니다</h3>
           <p data-i18n="loadingBody">준비가 끝나면 고객 음성을 듣기 시작합니다.</p>
         </div>
       </div>
