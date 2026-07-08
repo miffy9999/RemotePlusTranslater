@@ -88,9 +88,12 @@ class _SegmentResult:
     speech_mode: str
     recognition_language: str
 
+    def __len__(self) -> int:
+        return len(self.audio)
+
 
 class PlaybackGate:
-    def __init__(self, post_mute_ms: int):
+    def __init__(self, post_mute_ms: int = 0):
         self._playing = threading.Event()
         self._muted_until = 0.0
         self._post_seconds = post_mute_ms / 1000
@@ -157,12 +160,14 @@ class SpeechSegmenter:
     def process(
         self,
         frame: np.ndarray,
-        frame_ended_at: float,
+        frame_ended_at: float | None = None,
         *,
-        candidate_utterance_id: int,
-        speech_mode: str,
-        recognition_language: str,
+        candidate_utterance_id: int | None = None,
+        speech_mode: str = "customer",
+        recognition_language: str = "en",
     ) -> _SegmentResult | None:
+        frame_ended_at = time.monotonic() if frame_ended_at is None else frame_ended_at
+        candidate_utterance_id = self.utterance_id + 1 if candidate_utterance_id is None else candidate_utterance_id
         frame = np.asarray(frame, dtype=np.float32).reshape(-1)
         rms = float(np.sqrt(np.mean(np.square(frame), dtype=np.float64)))
         if not self.speaking:

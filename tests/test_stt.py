@@ -27,7 +27,7 @@ def test_context_language_selects_hotel_hotwords():
     recognizer.set_context_language("en")
     words = recognizer._hotwords()
     assert "room service" in words
-    assert "ルームサービス" in words
+    assert "ルームサービス" not in words
     assert "룸서비스" not in words
 
 

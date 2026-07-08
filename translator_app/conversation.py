@@ -13,11 +13,11 @@ from pathlib import Path
 from typing import Protocol
 
 from .audio import AudioCapture, LiveSnapshot, PlaybackGate, Utterance
-from .config import AppConfig
+from .config import AppConfig, sounddevice_value
 from .events import EventBus
 from .hymt2 import create_translator
 from .languages import get_language
-from .stt import Recognition, WhisperRecognizer
+from .stt import Recognition, WhisperRecognizer, contains_japanese_kana
 from .tts import EdgeSpeaker
 
 
@@ -143,6 +143,7 @@ class ConversationController:
             output_device=cfg.audio.output_device,
             enabled_languages=enabled,
             active_language_at=time.time(),
+            paused=os.environ.get("REMOTEPLUS_START_PAUSED") == "1",
             tts_enabled=cfg.tts.enabled,
         )
         self._state_lock = threading.Lock()
@@ -168,11 +169,13 @@ class ConversationController:
         self.translator = translator or create_translator(cfg.translation, self._status)
         self.speaker = EdgeSpeaker(cfg.tts, cfg.audio, self.gate, self._status, metrics=self._log_perf)
         self.capture = self._make_capture()
+        self._capture_started = False
         self._stt_worker = threading.Thread(target=self._run_stt, name="conversation-final-stt", daemon=True)
         self._live_worker = threading.Thread(target=self._run_live, name="conversation-live-stt", daemon=True)
         self._translation_worker = threading.Thread(target=self._run_translation, name="conversation-translation", daemon=True)
         self._translator_warmup: threading.Thread | None = None
         self._live_launcher: threading.Thread | None = None
+        self._translator_warmup_lock = threading.Lock()
 
     @staticmethod
     def _initial_customer_language(cfg: AppConfig, enabled: list[str]) -> str:
@@ -203,6 +206,14 @@ class ConversationController:
         self._log_perf("speech_started", utterance_id=utterance_id, speech_mode=speech_mode, forced_language=language)
         self.bus.publish("speech_started", utterance_id=utterance_id, speech_mode=speech_mode, language=language)
 
+    def _start_capture_if_needed(self) -> None:
+        if self._capture_started and self.capture.is_alive():
+            return
+        if self._capture_started and not self.capture.is_alive():
+            self.capture = self._make_capture()
+        self.capture.start()
+        self._capture_started = True
+
     def start(self) -> None:
         if self._stt_worker.is_alive():
             return
@@ -220,8 +231,6 @@ class ConversationController:
             speech_control="space_hold",
         )
         self.speaker.start()
-        self._translator_warmup = threading.Thread(target=self._warm_translator, name="translator-warmup", daemon=True)
-        self._translator_warmup.start()
         self._translation_worker.start()
         # The final model is authoritative. No live preview model is loaded in
         # this build, so there is no base-vs-small CPU competition.
@@ -233,6 +242,17 @@ class ConversationController:
                 daemon=True,
             )
             self._live_launcher.start()
+
+    def _ensure_translator_warmup_started(self) -> None:
+        with self._translator_warmup_lock:
+            if self._translator_warmup is not None:
+                return
+            self._translator_warmup = threading.Thread(
+                target=self._warm_translator,
+                name="translator-warmup",
+                daemon=True,
+            )
+            self._translator_warmup.start()
 
     def stop(self) -> None:
         self._log_perf("run_stopping")
@@ -256,7 +276,11 @@ class ConversationController:
     def _log_perf(self, event: str, **fields: object) -> None:
         if self._debug_logger is None:
             return
-        details = " ".join(f"{key}={str(value).replace(chr(10), r'\\n').replace(chr(13), '')}" for key, value in fields.items())
+        escaped_newline = "\\n"
+        details = " ".join(
+            f"{key}={str(value).replace(chr(10), escaped_newline).replace(chr(13), '')}"
+            for key, value in fields.items()
+        )
         self._debug_logger.info("%s %s", event, details)
         for handler in self._debug_logger.handlers:
             handler.flush()
@@ -436,6 +460,16 @@ class ConversationController:
             self._log_perf("whisper_ready", seconds=f"{time.monotonic() - started:.3f}")
             if self._stop.is_set():
                 return
+            while not self._stop.is_set():
+                with self._state_lock:
+                    paused = self.state.paused
+                if not paused:
+                    break
+                self._status("paused", "Models ready; paused")
+                time.sleep(0.2)
+            if self._stop.is_set():
+                return
+            self._ensure_translator_warmup_started()
             # Do not open the microphone until the final STT model AND the
             # translation engine are ready. This prevents input overflow/noise
             # warnings while models are still loading and avoids queued audio
@@ -449,8 +483,13 @@ class ConversationController:
             if self._translator_failed.is_set():
                 self._status("warning", "Translation model failed")
                 return
-            self.capture.start()
-            self._status("listening", "Models ready")
+            with self._state_lock:
+                paused = self.state.paused
+            if paused:
+                self._status("paused", "Models ready; paused")
+            else:
+                self._start_capture_if_needed()
+                self._status("listening", "Models ready")
             while not self._stop.is_set():
                 try:
                     item = self._utterances.get(timeout=0.2)
@@ -567,7 +606,11 @@ class ConversationController:
         japanese = self.cfg.conversation.japanese_code
         if job.speech_mode == "staff":
             with self._state_lock:
-                target = self.state.input_language
+                target = (
+                    self.state.reply_language
+                    if self.state.reply_language != "auto"
+                    else self.state.active_language or self.state.input_language
+                )
                 tts_enabled = self.state.tts_enabled
             source, target, direction = japanese, target, "reply"
         else:
@@ -595,7 +638,16 @@ class ConversationController:
         request_id = 0
         if direction == "reply" and tts_enabled:
             try:
-                request_id = self.speaker.speak(translated, target, utterance_id=job.utterance_id, speech_ended_at=job.speech_ended_at, translation_ready_at=finished) or 0
+                try:
+                    request_id = self.speaker.speak(
+                        translated,
+                        target,
+                        utterance_id=job.utterance_id,
+                        speech_ended_at=job.speech_ended_at,
+                        translation_ready_at=finished,
+                    ) or 0
+                except TypeError:
+                    request_id = self.speaker.speak(translated, target) or 0
                 tts_queued = bool(request_id)
             except Exception as exc:
                 self._log_perf("tts_enqueue_failed", utterance_id=job.utterance_id, error=repr(exc))
@@ -603,6 +655,40 @@ class ConversationController:
         self._log_perf("translation_done", utterance_id=job.utterance_id, speech_mode=job.speech_mode, direction=direction, source_language=source, target_language=target, stt_seconds=f"{job.stt_seconds:.3f}", translation_seconds=f"{translation_seconds:.3f}", speech_end_to_translation_seconds=f"{latency:.3f}", tts_queued=tts_queued, tts_request_id=request_id, text_characters=len(text))
         self.bus.publish("translation", utterance_id=job.utterance_id, final=True, direction=direction, source=text, translated=translated, source_language=source, target_language=target, speech_mode=job.speech_mode, audio_seconds=round(job.duration, 2), speech_seconds=round(job.speech_seconds, 2), vad_tail_seconds=round(job.vad_tail_seconds, 3), stt_seconds=round(job.stt_seconds, 2), translation_seconds=round(translation_seconds, 2), tts_queued=tts_queued, latency_seconds=round(latency, 2))
         self._status("listening", "Listening")
+
+    def process_recognition(self, result: Recognition) -> None:
+        text = result.text.strip()
+        if not text:
+            return
+        japanese = self.cfg.conversation.japanese_code
+        with self._state_lock:
+            selected = self.state.input_language
+            active = self.state.active_language or selected
+            enabled = set(self.state.enabled_languages or [])
+        is_staff = result.language == japanese or contains_japanese_kana(text)
+        if is_staff:
+            language = japanese
+            speech_mode = "staff"
+        elif result.probability >= self.cfg.conversation.minimum_language_probability and result.language in enabled:
+            language = result.language
+            speech_mode = "customer"
+        else:
+            language = active or selected
+            speech_mode = "customer"
+        job = RecognitionJob(
+            Recognition(text, language, result.probability),
+            language,
+            speech_mode,
+            0.0,
+            time.monotonic(),
+            0.0,
+            0,
+            time.monotonic(),
+            time.monotonic(),
+            0.0,
+            0.0,
+        )
+        self._translate_job(job)
 
     def snapshot(self) -> dict:
         with self._state_lock:
@@ -638,6 +724,8 @@ class ConversationController:
                 if self.state.input_language not in valid:
                     self.state.input_language = valid[0]
                     self.state.active_language = valid[0]
+                if self.state.reply_language != "auto" and self.state.reply_language not in valid:
+                    self.state.reply_language = "auto"
             if active_language is not None:
                 language = active_language.lower().strip()
                 if language == "auto" or language == "ja" or language not in (self.state.enabled_languages or []) or get_language(language) is None:
@@ -647,7 +735,10 @@ class ConversationController:
                 self.state.active_language_at = time.time()
                 self.cfg.conversation.language_lock = language
             if reply_language is not None:
-                self.state.reply_language = reply_language
+                language = reply_language.lower().strip()
+                if language != "auto" and (language == "ja" or language not in (self.state.enabled_languages or []) or get_language(language) is None):
+                    raise ValueError("Reply language must be auto or an enabled customer language")
+                self.state.reply_language = language
             if speech_mode is not None:
                 previous_mode = self.state.speech_mode
                 self.state.speech_mode = speech_mode
@@ -657,6 +748,10 @@ class ConversationController:
                 self.state.tts_enabled = tts_enabled
                 self.speaker.cfg.enabled = tts_enabled
             if input_device is not None and input_device != self.state.input_device:
+                if isinstance(input_device, str) and input_device.startswith("loopback:"):
+                    pass
+                else:
+                    sounddevice_value(input_device)
                 self.state.input_device = input_device
                 self.cfg.audio.input_device = input_device
                 restart_capture = True
@@ -667,22 +762,29 @@ class ConversationController:
         for recognizer in (self.recognizer, self.live_recognizer):
             if recognizer is None:
                 continue
-            recognizer.set_enabled_languages(self.state.enabled_languages or [])
-            recognizer.set_selected_language(forced)
-            recognizer.set_context_language(forced)
+            if hasattr(recognizer, "set_enabled_languages"):
+                recognizer.set_enabled_languages(self.state.enabled_languages or [])
+            if hasattr(recognizer, "set_selected_language"):
+                recognizer.set_selected_language(forced)
+            if hasattr(recognizer, "set_context_language"):
+                recognizer.set_context_language(forced)
         if speech_mode == "staff" and previous_mode != "staff":
             self.speaker.interrupt(clear_queue=True, reason="staff_mode_started")
             self._log_perf("tts_interrupted_for_staff_mode")
         if paused:
             self.speaker.interrupt(clear_queue=True, reason="paused")
+        elif paused is False and self._ready.is_set() and self._translator_ready.is_set() and not self._stop.is_set():
+            self._start_capture_if_needed()
+            self._status("listening", "Listening")
         if restart_capture:
             old = self.capture
             old.stop()
             if old.is_alive():
                 old.join(timeout=3)
             self.capture = self._make_capture()
-            if self._ready.is_set() and not self._stop.is_set():
-                self.capture.start()
+            self._capture_started = False
+            if self._ready.is_set() and not self._stop.is_set() and not self.state.paused:
+                self._start_capture_if_needed()
         state = self.snapshot()
         self.bus.publish("state", **state)
         return state

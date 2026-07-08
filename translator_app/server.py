@@ -45,10 +45,10 @@ class FeedbackRequest(BaseModel):
     corrected_translation: str = ""
 
 
-def create_app(cfg: AppConfig | None = None, start_backend: bool = True) -> FastAPI:
+def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recognizer=None) -> FastAPI:
     config = cfg or load_config()
     bus = EventBus()
-    controller = ConversationController(config, bus)
+    controller = ConversationController(config, bus, recognizer=recognizer)
     feedback = FeedbackStore(config.data_root)
 
     # Every supported customer language is selectable immediately. There is no
@@ -122,7 +122,14 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True) -> Fast
     @app.get("/api/devices")
     def devices():
         try:
-            result = list_audio_devices()
+            if os.environ.get("REMOTEPLUS_ENUMERATE_AUDIO_DEVICES") == "1":
+                result = list_audio_devices()
+            else:
+                result = {
+                    "inputs": [{"id": "default", "name": "System default input"}],
+                    "outputs": [],
+                    "warnings": ["Audio device enumeration is disabled for startup stability."],
+                }
             # Edge TTS audio is played by SDL/Pygame, so expose exactly the
             # device names SDL can open rather than legacy SAPI identifiers.
             edge_outputs = EdgeSpeaker.output_devices()

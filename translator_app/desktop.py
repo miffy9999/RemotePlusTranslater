@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import os
 import shutil
+import socket
 import subprocess
 import tempfile
 import threading
 import time
+import traceback
 import webbrowser
 from pathlib import Path
 
@@ -13,6 +15,28 @@ import uvicorn
 
 from .config import load_config
 from .server import create_app
+from .stt import WhisperRecognizer
+
+
+def _startup_log(message: str) -> None:
+    if os.environ.get("REMOTEPLUS_DEBUG_STARTUP") != "1":
+        return
+    path = Path(tempfile.gettempdir()) / "remoteplus-startup.log"
+    with path.open("a", encoding="utf-8") as handle:
+        handle.write(f"desktop: {message}\n")
+
+
+def _available_port(host: str, preferred: int) -> int:
+    bind_host = "::1" if host == "::1" else "127.0.0.1"
+    with socket.socket(socket.AF_INET6 if bind_host == "::1" else socket.AF_INET, socket.SOCK_STREAM) as probe:
+        try:
+            probe.bind((bind_host, preferred))
+            return preferred
+        except OSError:
+            pass
+    with socket.socket(socket.AF_INET6 if bind_host == "::1" else socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind((bind_host, 0))
+        return int(probe.getsockname()[1])
 
 
 def _candidate_app_browsers() -> list[Path]:
@@ -99,6 +123,8 @@ def run_desktop() -> int:
     cfg = load_config()
     cfg.data_root.mkdir(parents=True, exist_ok=True)
     cfg.server.open_browser = False
+    cfg.server.port = _available_port(cfg.server.host, cfg.server.port)
+    _startup_log(f"using port {cfg.server.port}")
 
     display_host = "127.0.0.1" if cfg.server.host in {"0.0.0.0", "::"} else cfg.server.host
     url = f"http://{display_host}:{cfg.server.port}"
@@ -107,7 +133,12 @@ def run_desktop() -> int:
     # app-window process below, so closing the window stops the hidden server.
     os.environ["REMOTEPLUS_DESKTOP_AUTO_SHUTDOWN"] = "1"
 
-    app = create_app(cfg)
+    _startup_log("loading STT model on launcher thread")
+    recognizer = WhisperRecognizer(cfg.stt, lambda phase, message: _startup_log(f"stt {phase}: {message}"), label="final")
+    recognizer.load()
+    _startup_log("STT model loaded")
+
+    app = create_app(cfg, recognizer=recognizer)
     server_config = uvicorn.Config(
         app,
         host=cfg.server.host,
@@ -118,23 +149,40 @@ def run_desktop() -> int:
         access_log=False,
     )
     server = uvicorn.Server(server_config)
-    server_thread = threading.Thread(target=server.run, name="remoteplus-hidden-server", daemon=True)
+    server_error: list[str] = []
+
+    def run_server() -> None:
+        try:
+            server.run()
+            _startup_log("server.run returned")
+        except BaseException:
+            server_error.append(traceback.format_exc())
+            _startup_log("server failed:\n" + server_error[-1])
+
+    server_thread = threading.Thread(target=run_server, name="remoteplus-hidden-server", daemon=True)
     server_thread.start()
 
-    for _ in range(160):
+    for _ in range(600):
         if server.started:
             break
         if not server_thread.is_alive():
+            if server_error:
+                _startup_log("server thread exited before startup")
             return 1
         time.sleep(0.05)
+    if not server.started:
+        _startup_log("server did not report startup before timeout")
+        server.should_exit = True
+        server_thread.join(timeout=3.0)
+        return 1
 
-    window_process = _launch_app_window(url, cfg.data_root)
+    _startup_log(f"server started at {url}")
+    _launch_app_window(url, cfg.data_root)
 
     try:
         while server_thread.is_alive():
-            if window_process is not None and window_process.poll() is not None:
-                break
             time.sleep(0.5)
+        _startup_log("server thread stopped")
     except KeyboardInterrupt:
         pass
     finally:

@@ -22,6 +22,7 @@ def _debug_startup(message: str) -> None:
 
 
 def doctor() -> int:
+    os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
     checks: list[tuple[str, bool, str]] = []
     version_ok = (3, 11) <= sys.version_info[:2] < (3, 14)
     checks.append(("Python", version_ok, platform.python_version()))
@@ -43,12 +44,15 @@ def doctor() -> int:
         checks.append(("live captions", True, "disabled for final-STT priority"))
     except Exception as exc:
         checks.append(("configuration", False, str(exc)))
-    try:
-        from .audio import list_audio_devices
-        devices = list_audio_devices()
-        checks.append(("audio input", bool(devices["inputs"]), f"{len(devices['inputs'])} devices"))
-    except Exception as exc:
-        checks.append(("audio", False, str(exc)))
+    if os.environ.get("REMOTEPLUS_ENUMERATE_AUDIO_DEVICES") == "1":
+        try:
+            from .audio import list_audio_devices
+            devices = list_audio_devices()
+            checks.append(("audio input", bool(devices["inputs"]), f"{len(devices['inputs'])} devices"))
+        except Exception as exc:
+            checks.append(("audio", False, str(exc)))
+    else:
+        checks.append(("audio input", True, "native enumeration skipped; set REMOTEPLUS_ENUMERATE_AUDIO_DEVICES=1 to inspect"))
     width = max(len(name) for name, _, _ in checks)
     for name, ok, detail in checks:
         print(f"[{'OK' if ok else 'FAIL'}] {name:<{width}}  {detail}")

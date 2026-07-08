@@ -10,8 +10,11 @@ dependencies = [
   "SoundCard==0.4.6",
   "pywin32==310",
   "fastapi==0.116.1",
+  "pydantic==2.11.7",
   "uvicorn[standard]==0.35.0",
   "pywebview==6.2.1",
+  "edge-tts==7.2.3",
+  "pygame==2.6.1",
 ]
 
 [project.optional-dependencies]

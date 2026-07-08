@@ -24,8 +24,6 @@ if (-not (Test-Path '.venv')) {
 }
 & '.\.venv\Scripts\python.exe' -m pip install --upgrade pip setuptools wheel
 & '.\.venv\Scripts\python.exe' -m pip install -e '.[dev]'
-# Online neural TTS. No Windows speech language pack is installed or required.
-& '.\.venv\Scripts\python.exe' -m pip install --upgrade edge-tts pygame
 & '.\.venv\Scripts\python.exe' -m translator_app.cli doctor
 Write-Host "`nInstallation complete. The live-caption model downloads automatically on first prepare/run; Windows speech language packs are not required." -ForegroundColor Green
 Read-Host 'Press Enter to close'

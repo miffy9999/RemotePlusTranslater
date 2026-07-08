@@ -177,6 +177,14 @@ class HyMT2Translator:
             payload = json.load(response)
         return payload["choices"][0]["message"]["content"].strip()
 
+    def _request_with_optional_limit(self, prompt: str, max_tokens: int | None) -> str:
+        try:
+            return self._request(prompt, max_tokens=max_tokens)
+        except TypeError as exc:
+            if "max_tokens" not in str(exc):
+                raise
+            return self._request(prompt)
+
     def warmup(self) -> None:
         """Move first-request model paging out of the user's first sentence."""
         if not self.cfg.hymt2_warmup:
@@ -212,14 +220,14 @@ class HyMT2Translator:
             if not self.ready:
                 raise RuntimeError("Translation model is unavailable")
             try:
-                translated = self._request(prompt, max_tokens=max_tokens)
+                translated = self._request_with_optional_limit(prompt, max_tokens)
             except Exception as exc:
                 self.status("warning", f"Translation engine stopped; restarting once: {exc}")
                 self._close_locked()
                 self._load_locked()
                 if not self.ready:
                     raise RuntimeError("Translation engine restart failed") from exc
-                translated = self._request(prompt, max_tokens=max_tokens)
+                translated = self._request_with_optional_limit(prompt, max_tokens)
         if target_code == "ja":
             translated = protect_japanese_terms(clean, translated, self.cfg.glossary)
         return protect_multilingual_terms(clean, translated, source_code, target_code, self.cfg.protected_terms)

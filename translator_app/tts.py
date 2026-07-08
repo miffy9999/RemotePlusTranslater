@@ -173,6 +173,8 @@ class EdgeSpeaker(threading.Thread):
     @staticmethod
     def output_devices() -> list[dict[str, str]]:
         """Return output choices understood by the SDL mixer used for Edge TTS."""
+        if os.environ.get("REMOTEPLUS_ENUMERATE_TTS_OUTPUTS") != "1":
+            return []
         initialized_here = False
         try:
             import pygame

@@ -76,6 +76,7 @@ def test_manual_reply_language_works_without_recent_partner():
 
 def test_disabled_reply_language_is_rejected_and_removed_language_resets_auto():
     controller, _, _ = make_controller()
+    controller.control(enabled_languages=["en", "ko", "es"])
     with pytest.raises(ValueError, match="Reply language"):
         controller.control(reply_language="fr")
     controller.control(reply_language="es")

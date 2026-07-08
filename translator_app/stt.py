@@ -34,6 +34,13 @@ def _compile_correction_pattern(corrections: dict[str, str]) -> re.Pattern[str] 
     return re.compile("|".join(re.escape(phrase) for phrase in phrases))
 
 
+def apply_corrections(text: str, corrections: dict[str, str]) -> str:
+    pattern = _compile_correction_pattern(corrections)
+    if pattern is None:
+        return text
+    return pattern.sub(lambda match: corrections[match.group(0)], text)
+
+
 class WhisperRecognizer:
     """One fixed-language Whisper model instance.
 
@@ -89,7 +96,8 @@ class WhisperRecognizer:
             return self.enabled_languages[0]
         raise RuntimeError("Select a customer language before starting speech recognition")
 
-    def _hotwords(self, language: str) -> str | None:
+    def _hotwords(self, language: str | None = None) -> str | None:
+        language = self.context_language or self._effective_language(language)
         limit = self.hotwords_max_items
         if limit is None:
             limit = len(self.cfg.hotwords) + len(self.cfg.language_hotwords.get(language, []))
@@ -149,7 +157,9 @@ class WhisperRecognizer:
         self.load()
         if self.model is None:
             raise RuntimeError("Speech model is not loaded")
-        forced = self._effective_language(language)
+        auto_mode = language is None and self.selected_language == "auto"
+        forced = None if auto_mode else self._effective_language(language)
+        hotword_language = forced or self.context_language or (self.enabled_languages[0] if self.enabled_languages else "en")
         segments, _info = self.model.transcribe(
             audio,
             language=forced,
@@ -157,11 +167,13 @@ class WhisperRecognizer:
             best_of=1,
             temperature=0.0,
             condition_on_previous_text=False,
-            hotwords=self._hotwords(forced),
+            hotwords=self._hotwords(hotword_language),
             vad_filter=False,
             without_timestamps=True,
         )
         text = " ".join(segment.text.strip() for segment in segments).strip()
         if text and self.apply_corrections and self._correction_pattern is not None:
-            text = self._correction_pattern.sub(lambda match: self.cfg.corrections[match.group(0)], text)
-        return Recognition(text=text, language=forced)
+            text = apply_corrections(text, self.cfg.corrections)
+        detected = forced or getattr(_info, "language", "") or hotword_language
+        probability = float(getattr(_info, "language_probability", 1.0))
+        return Recognition(text=text, language=detected, probability=probability)

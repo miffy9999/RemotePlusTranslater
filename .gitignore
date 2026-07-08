@@ -4,6 +4,7 @@ cache/
 logs/
 __pycache__/
 .pytest_cache/
+.ruff_cache/
 *.pyc
 *.wav
 config.local.toml
@@ -13,3 +14,5 @@ build/local_bridge/
 feedback/
 user-settings.json
 benchmarks/results/
+browser-app-profile/
+desktop_browser_profile/

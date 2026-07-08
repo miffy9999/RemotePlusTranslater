@@ -1,13 +1,30 @@
-from translator_app.tts import _device_guid, _lcids
+from translator_app.audio import PlaybackGate
+from translator_app.config import AudioConfig, TtsConfig
+from translator_app.tts import EDGE_OUTPUT_PREFIX, EdgeSpeaker
 
 
-def test_sapi_multiple_language_ids_are_split():
-    assert _lcids("0411;0409") == {"411", "409"}
-
-
-def test_audio_output_matching_uses_final_guid():
-    value = (
-        r"HKEY_LOCAL_MACHINE\Audio\{0.0.0.00000000}."
-        r"{3D488D95-E2C6-4D0F-833B-3F525310D6B0}"
+def _speaker(audio: AudioConfig | None = None) -> EdgeSpeaker:
+    return EdgeSpeaker(
+        TtsConfig(),
+        audio or AudioConfig(),
+        PlaybackGate(),
+        lambda _phase, _message: None,
     )
-    assert _device_guid(value) == "{3d488d95-e2c6-4d0f-833b-3f525310d6b0}"
+
+
+def test_edge_voice_uses_language_mapping():
+    assert _speaker()._voice("ja") == "ja-JP-NanamiNeural"
+
+
+def test_edge_voice_falls_back_to_english():
+    assert _speaker()._voice("unknown") == "en-US-JennyNeural"
+
+
+def test_edge_output_device_prefix_is_unwrapped():
+    speaker = _speaker(AudioConfig(output_device=f"{EDGE_OUTPUT_PREFIX}Speakers"))
+
+    assert speaker._requested_output_name() == "Speakers"
+
+
+def test_legacy_output_device_values_use_system_default():
+    assert _speaker(AudioConfig(output_device=3))._requested_output_name() is None
