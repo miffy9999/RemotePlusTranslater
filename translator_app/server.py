@@ -97,7 +97,7 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
     @app.post("/api/desktop/close")
     async def desktop_close():
         # Only the hidden desktop launcher enables this. Normal debug/server mode ignores it.
-        if os.environ.get("REMOTEPLUS_DESKTOP_AUTO_SHUTDOWN") != "1":
+        if os.environ.get("REMOTEPLUS_DEBUG") == "1" or os.environ.get("REMOTEPLUS_DESKTOP_AUTO_SHUTDOWN") != "1":
             return {"ok": False, "ignored": True}
 
         def _shutdown_soon() -> None:

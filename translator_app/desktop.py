@@ -120,9 +120,12 @@ def run_desktop() -> int:
     display_host = "127.0.0.1" if cfg.server.host in {"0.0.0.0", "::"} else cfg.server.host
     url = f"http://{display_host}:{cfg.server.port}"
 
-    # The app window sends /api/desktop/close on unload. We also wait for the
-    # app-window process below, so closing the window stops the hidden server.
-    os.environ["REMOTEPLUS_DESKTOP_AUTO_SHUTDOWN"] = "1"
+    # Hidden launch should exit with the app window. Debug launch keeps the
+    # visible console alive so page reloads/unloads do not look like a crash.
+    if os.environ.get("REMOTEPLUS_DEBUG") == "1":
+        os.environ["REMOTEPLUS_DESKTOP_AUTO_SHUTDOWN"] = "0"
+    else:
+        os.environ["REMOTEPLUS_DESKTOP_AUTO_SHUTDOWN"] = "1"
 
     _startup_log("loading STT model on launcher thread")
     recognizer = WhisperRecognizer(cfg.stt, lambda phase, message: _startup_log(f"stt {phase}: {message}"), label="final")

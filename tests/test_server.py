@@ -85,3 +85,13 @@ def test_devices_endpoint_falls_back_when_audio_enumeration_fails(tmp_path, monk
     assert data["inputs"] == [{"id": "default", "name": "System default input"}]
     assert data["outputs"] == []
     assert "driver failed" in data["warnings"][0]
+
+
+def test_desktop_close_is_ignored_in_debug_mode(tmp_path, monkeypatch):
+    monkeypatch.setenv("REMOTEPLUS_DEBUG", "1")
+    monkeypatch.setenv("REMOTEPLUS_DESKTOP_AUTO_SHUTDOWN", "1")
+    with make_client(tmp_path) as client:
+        client.get("/")
+        response = client.post("/api/desktop/close")
+    assert response.status_code == 200
+    assert response.json() == {"ok": False, "ignored": True}
