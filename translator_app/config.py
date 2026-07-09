@@ -139,8 +139,8 @@ class ServerConfig:
     host: str = "127.0.0.1"
     port: int = 8765
     open_browser: bool = True
-    # Run the local server as a hidden background process and exit it when the
-    # browser/app window disconnects. This does not force Edge or Chrome.
+    # Legacy config kept for compatibility with existing config.toml files.
+    # Desktop launch now keeps the server in the visible launcher console.
     shutdown_when_idle: bool = True
     auto_shutdown_no_clients_seconds: int = 10
 

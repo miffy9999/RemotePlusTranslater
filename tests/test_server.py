@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from translator_app.config import load_config
+from translator_app.desktop import _wait_for_http
 from translator_app.server import create_app
 
 
@@ -87,11 +88,32 @@ def test_devices_endpoint_falls_back_when_audio_enumeration_fails(tmp_path, monk
     assert "driver failed" in data["warnings"][0]
 
 
-def test_desktop_close_is_ignored_in_debug_mode(tmp_path, monkeypatch):
-    monkeypatch.setenv("REMOTEPLUS_DEBUG", "1")
-    monkeypatch.setenv("REMOTEPLUS_DESKTOP_AUTO_SHUTDOWN", "1")
+def test_health_endpoint_identifies_remoteplus(tmp_path):
     with make_client(tmp_path) as client:
-        client.get("/")
-        response = client.post("/api/desktop/close")
+        response = client.get("/remoteplus-health")
     assert response.status_code == 200
-    assert response.json() == {"ok": False, "ignored": True}
+    assert response.json() == {"app": "remoteplus-translator", "ok": True}
+
+
+def test_wait_for_http_waits_until_server_answers(monkeypatch):
+    class FakeResponse:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+    calls = iter([OSError("not yet"), FakeResponse()])
+
+    def fake_urlopen(*_args, **_kwargs):
+        result = next(calls)
+        if isinstance(result, Exception):
+            raise result
+        return result
+
+    monkeypatch.setattr("translator_app.desktop.urllib.request.urlopen", fake_urlopen)
+    monkeypatch.setattr("translator_app.desktop.time.sleep", lambda _seconds: None)
+
+    assert _wait_for_http("http://127.0.0.1:8765", timeout_seconds=1)

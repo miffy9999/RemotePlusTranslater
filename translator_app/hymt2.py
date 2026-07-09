@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import atexit
 import hashlib
 import json
 import os
@@ -104,6 +105,7 @@ class HyMT2Translator:
         self.ready = False
         self._lock = threading.RLock()
         self._api_key = secrets.token_urlsafe(32)
+        self._atexit_registered = False
 
     def _health(self) -> bool:
         if self.port is None:
@@ -146,6 +148,9 @@ class HyMT2Translator:
         ]
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
         self.process = subprocess.Popen(command, cwd=runtime, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags)
+        if not self._atexit_registered:
+            atexit.register(self.close)
+            self._atexit_registered = True
         deadline = time.monotonic() + self.cfg.hymt2_timeout_seconds
         interval = max(0.02, self.cfg.hymt2_startup_poll_ms / 1000)
         while time.monotonic() < deadline:

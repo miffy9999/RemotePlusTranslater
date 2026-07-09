@@ -12,5 +12,9 @@ if not exist ".venv\Scripts\python.exe" (
   exit /b 1
 )
 
-powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0run_app.ps1"
-exit /b 0
+set "PYTHONUTF8=1"
+set "PYGAME_HIDE_SUPPORT_PROMPT=1"
+set "REMOTEPLUS_START_PAUSED=1"
+
+".venv\Scripts\python.exe" -m translator_app.cli desktop
+pause

@@ -8,6 +8,8 @@ import tempfile
 import threading
 import time
 import traceback
+import urllib.error
+import urllib.request
 import webbrowser
 from pathlib import Path
 
@@ -37,6 +39,18 @@ def _available_port(host: str, preferred: int) -> int:
     with socket.socket(socket.AF_INET6 if bind_host == "::1" else socket.AF_INET, socket.SOCK_STREAM) as probe:
         probe.bind((bind_host, 0))
         return int(probe.getsockname()[1])
+
+
+def _wait_for_http(url: str, timeout_seconds: float = 10.0) -> bool:
+    deadline = time.monotonic() + timeout_seconds
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(url, timeout=0.75) as response:
+                if response.status == 200:
+                    return True
+        except (OSError, urllib.error.URLError, TimeoutError):
+            time.sleep(0.1)
+    return False
 
 
 def _candidate_app_browsers() -> list[Path]:
@@ -72,9 +86,9 @@ def _candidate_app_browsers() -> list[Path]:
 def _launch_app_window(url: str, data_root: Path) -> subprocess.Popen | None:
     """Open the UI as a separate app window and return its process handle.
 
-    The server is already running hidden inside pythonw. This function must not
-    open a normal browser tab. A dedicated profile prevents Chrome/Edge from
-    handing the URL to an existing browser window and exiting immediately.
+    The server remains visible in the launcher console. A dedicated browser
+    profile prevents Chrome/Edge from handing the URL to an existing browser
+    window and exiting immediately.
     """
     browser = next(iter(_candidate_app_browsers()), None)
     if browser is None:
@@ -109,23 +123,17 @@ def _launch_app_window(url: str, data_root: Path) -> subprocess.Popen | None:
 
 
 def run_desktop() -> int:
-    """Start the local server hidden and open the UI in an app-like window."""
+    """Start the local server in the current console and open the UI."""
     os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
     cfg = load_config()
     cfg.data_root.mkdir(parents=True, exist_ok=True)
     cfg.server.open_browser = False
+
     cfg.server.port = _available_port(cfg.server.host, cfg.server.port)
     _startup_log(f"using port {cfg.server.port}")
 
     display_host = "127.0.0.1" if cfg.server.host in {"0.0.0.0", "::"} else cfg.server.host
     url = f"http://{display_host}:{cfg.server.port}"
-
-    # Hidden launch should exit with the app window. Debug launch keeps the
-    # visible console alive so page reloads/unloads do not look like a crash.
-    if os.environ.get("REMOTEPLUS_DEBUG") == "1":
-        os.environ["REMOTEPLUS_DESKTOP_AUTO_SHUTDOWN"] = "0"
-    else:
-        os.environ["REMOTEPLUS_DESKTOP_AUTO_SHUTDOWN"] = "1"
 
     _startup_log("loading STT model on launcher thread")
     recognizer = WhisperRecognizer(cfg.stt, lambda phase, message: _startup_log(f"stt {phase}: {message}"), label="final")
@@ -153,7 +161,7 @@ def run_desktop() -> int:
             server_error.append(traceback.format_exc())
             _startup_log("server failed:\n" + server_error[-1])
 
-    server_thread = threading.Thread(target=run_server, name="remoteplus-hidden-server", daemon=True)
+    server_thread = threading.Thread(target=run_server, name="remoteplus-server", daemon=True)
     server_thread.start()
 
     for _ in range(600):
@@ -170,7 +178,15 @@ def run_desktop() -> int:
         server_thread.join(timeout=3.0)
         return 1
 
+    if not _wait_for_http(url, timeout_seconds=10.0):
+        _startup_log(f"server did not answer HTTP at {url}")
+        server.should_exit = True
+        server_thread.join(timeout=3.0)
+        return 1
+
     _startup_log(f"server started at {url}")
+    print(f"RemotePlus server: {url}", flush=True)
+    print("Keep this console open while using RemotePlus. Press Ctrl+C to stop.", flush=True)
     _launch_app_window(url, cfg.data_root)
 
     try:

@@ -4,8 +4,6 @@ import asyncio
 import os
 import queue
 import secrets
-import threading
-import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -94,21 +92,9 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
         response.set_cookie(cookie_name, auth_token, httponly=True, samesite="strict", secure=False)
         return response
 
-    @app.post("/api/desktop/close")
-    async def desktop_close():
-        # Only the hidden desktop launcher enables this. Normal debug/server mode ignores it.
-        if os.environ.get("REMOTEPLUS_DEBUG") == "1" or os.environ.get("REMOTEPLUS_DESKTOP_AUTO_SHUTDOWN") != "1":
-            return {"ok": False, "ignored": True}
-
-        def _shutdown_soon() -> None:
-            time.sleep(0.25)
-            try:
-                controller.stop()
-            finally:
-                os._exit(0)
-
-        threading.Thread(target=_shutdown_soon, name="remoteplus-ui-close-shutdown", daemon=True).start()
-        return {"ok": True}
+    @app.get("/remoteplus-health")
+    def health():
+        return {"app": "remoteplus-translator", "ok": True}
 
     @app.get("/api/state")
     def state():
