@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import importlib
+import json
 import os
 import platform
 import sys
@@ -82,6 +83,23 @@ def prepare() -> int:
     return 0
 
 
+def device_probe(kind: str) -> int:
+    os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
+    if kind == "input":
+        from .audio import list_audio_devices
+
+        result = list_audio_devices()
+        payload = {"inputs": result.get("inputs", []), "warnings": result.get("warnings", [])}
+    elif kind == "output":
+        from .tts import EdgeSpeaker
+
+        payload = {"outputs": EdgeSpeaker.output_devices(), "warnings": []}
+    else:
+        return 2
+    print(json.dumps(payload), flush=True)
+    return 0
+
+
 def serve() -> int:
     _debug_startup("serve loading config")
     cfg = load_config()
@@ -115,6 +133,8 @@ def main() -> int:
     sub.add_parser("desktop", help="open the translator as a desktop application")
     sub.add_parser("doctor", help="check installation and audio input")
     sub.add_parser("prepare", help="download local speech and translation models")
+    probe = sub.add_parser("device-probe", help=argparse.SUPPRESS)
+    probe.add_argument("kind", choices=("input", "output"))
     args = parser.parse_args()
     if args.command is None or args.command == "desktop":
         return desktop()
@@ -124,6 +144,8 @@ def main() -> int:
         return doctor()
     if args.command == "prepare":
         return prepare()
+    if args.command == "device-probe":
+        return device_probe(args.kind)
     return 2
 
 

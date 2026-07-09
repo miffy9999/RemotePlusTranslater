@@ -3,7 +3,7 @@ from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
 
 from translator_app.config import load_config
-from translator_app.desktop import _wait_for_http
+from translator_app.desktop import _desktop_client_idle_seconds, _wait_for_http
 from translator_app.server import create_app
 
 
@@ -47,7 +47,21 @@ def test_websocket_requires_local_origin_and_cookie(tmp_path):
                 "host": "127.0.0.1:8765",
             },
         ) as websocket:
+            assert client.app.state.desktop_client_count == 1
+            assert client.app.state.desktop_client_seen is True
             assert websocket.receive_json()["type"] == "snapshot"
+        assert client.app.state.desktop_client_count == 0
+        assert client.app.state.desktop_last_disconnect > 0
+
+
+def test_desktop_client_idle_seconds_uses_websocket_state(tmp_path, monkeypatch):
+    with make_client(tmp_path) as client:
+        client.app.state.desktop_client_seen = True
+        client.app.state.desktop_client_count = 0
+        client.app.state.desktop_last_disconnect = 10.0
+        monkeypatch.setattr("translator_app.desktop.time.monotonic", lambda: 16.5)
+
+        assert _desktop_client_idle_seconds(client.app) == 6.5
 
 
 def test_devices_endpoint_uses_edge_outputs_only(tmp_path, monkeypatch):

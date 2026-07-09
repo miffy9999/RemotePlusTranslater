@@ -53,6 +53,21 @@ def _wait_for_http(url: str, timeout_seconds: float = 10.0) -> bool:
     return False
 
 
+def _desktop_client_idle_seconds(app) -> float | None:
+    lock = getattr(app.state, "desktop_client_lock", None)
+    if lock is None:
+        return None
+    with lock:
+        if not getattr(app.state, "desktop_client_seen", False):
+            return None
+        if int(getattr(app.state, "desktop_client_count", 0)) > 0:
+            return None
+        disconnected_at = float(getattr(app.state, "desktop_last_disconnect", 0.0))
+    if disconnected_at <= 0:
+        return None
+    return time.monotonic() - disconnected_at
+
+
 def _candidate_app_browsers() -> list[Path]:
     """Return browsers that can open a chrome-style app window.
 
@@ -187,10 +202,18 @@ def run_desktop() -> int:
     _startup_log(f"server started at {url}")
     print(f"RemotePlus server: {url}", flush=True)
     print("Keep this console open while using RemotePlus. Press Ctrl+C to stop.", flush=True)
-    _launch_app_window(url, cfg.data_root)
+    app_process = _launch_app_window(url, cfg.data_root)
 
     try:
         while server_thread.is_alive():
+            if app_process is not None and app_process.poll() is not None:
+                _startup_log("app window process exited; stopping server")
+                break
+            if cfg.server.shutdown_when_idle:
+                idle_seconds = _desktop_client_idle_seconds(app)
+                if idle_seconds is not None and idle_seconds >= cfg.server.auto_shutdown_no_clients_seconds:
+                    _startup_log(f"desktop client disconnected for {idle_seconds:.1f}s; stopping server")
+                    break
             time.sleep(0.5)
         _startup_log("server thread stopped")
     except KeyboardInterrupt:

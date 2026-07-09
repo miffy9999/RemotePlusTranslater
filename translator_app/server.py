@@ -7,6 +7,7 @@ import queue
 import secrets
 import subprocess
 import sys
+import threading
 import time
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -31,20 +32,19 @@ def _fallback_devices(message: str) -> dict[str, list]:
     }
 
 
-def _run_device_probe(root: Path, code: str, timeout_seconds: float) -> dict[str, list]:
+def _run_device_probe(root: Path, kind: str, code: str, timeout_seconds: float) -> dict[str, list]:
     env = os.environ.copy()
     env["PYTHONUTF8"] = "1"
     env["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
     env["PYTHONPATH"] = str(root) + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
     flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+    command = [sys.executable, "device-probe", kind] if getattr(sys, "frozen", False) else [sys.executable, "-c", code]
     try:
         completed = subprocess.run(
-            [sys.executable, "-c", code],
+            command,
             cwd=root,
             env=env,
             capture_output=True,
-            text=True,
-            encoding="utf-8",
             timeout=timeout_seconds,
             creationflags=flags,
             check=False,
@@ -53,12 +53,15 @@ def _run_device_probe(root: Path, code: str, timeout_seconds: float) -> dict[str
         return _fallback_devices("Audio device enumeration timed out; system default remains available.")
     except Exception as exc:
         return _fallback_devices(f"Audio device enumeration failed; system default remains available: {exc}")
+    stdout = (completed.stdout or b"").decode("utf-8", errors="replace")
+    stderr = (completed.stderr or b"").decode("utf-8", errors="replace")
     if completed.returncode != 0:
-        detail = (completed.stderr or completed.stdout or "").strip()
+        detail = (stderr or stdout).strip()
         return _fallback_devices(f"Audio device enumeration failed; system default remains available: {detail or completed.returncode}")
     try:
-        return json.loads(completed.stdout)
-    except ValueError:
+        lines = [line.strip() for line in stdout.splitlines() if line.strip()]
+        return json.loads(lines[-1] if lines else "")
+    except (TypeError, ValueError):
         return _fallback_devices("Audio device enumeration returned invalid data; system default remains available.")
 
 
@@ -74,8 +77,8 @@ def _enumerate_devices(root: Path, timeout_seconds: float = 8.0) -> dict[str, li
         "from translator_app.tts import EdgeSpeaker;"
         "print(json.dumps({'outputs':EdgeSpeaker.output_devices(),'warnings':[]}, ensure_ascii=False), flush=True)"
     )
-    input_result = _run_device_probe(root, input_code, timeout_seconds)
-    output_result = _run_device_probe(root, output_code, timeout_seconds)
+    input_result = _run_device_probe(root, "input", input_code, timeout_seconds)
+    output_result = _run_device_probe(root, "output", output_code, timeout_seconds)
     return {
         "inputs": input_result.get("inputs") or [{"id": "default", "name": "System default input"}],
         "outputs": output_result.get("outputs") or [],
@@ -135,6 +138,10 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
     app = FastAPI(title="RemotePlus Translator", lifespan=lifespan)
     app.state.controller = controller
     app.state.auth_token = auth_token
+    app.state.desktop_client_count = 0
+    app.state.desktop_client_seen = False
+    app.state.desktop_last_disconnect = 0.0
+    app.state.desktop_client_lock = threading.Lock()
 
     @app.middleware("http")
     async def protect_local_api(request: Request, call_next):
@@ -236,6 +243,9 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
             await websocket.close(code=1008)
             return
         await websocket.accept()
+        with app.state.desktop_client_lock:
+            app.state.desktop_client_count += 1
+            app.state.desktop_client_seen = True
         subscriber = bus.subscribe()
         try:
             await websocket.send_json({
@@ -252,6 +262,9 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
         except (WebSocketDisconnect, RuntimeError):
             pass
         finally:
+            with app.state.desktop_client_lock:
+                app.state.desktop_client_count = max(0, app.state.desktop_client_count - 1)
+                app.state.desktop_last_disconnect = time.monotonic()
             bus.unsubscribe(subscriber)
 
     return app

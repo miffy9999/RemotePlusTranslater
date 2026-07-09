@@ -7,7 +7,10 @@ if (-not (Test-Path '.venv\Scripts\python.exe')) {
 
 & '.\.venv\Scripts\python.exe' -m pip install -e '.[dev]'
 Remove-Item -Recurse -Force '.\dist\RemotePlusTranslator' -ErrorAction SilentlyContinue
-& '.\.venv\Scripts\pyinstaller.exe' --noconfirm --clean '.\build\local_bridge.spec'
+& '.\.venv\Scripts\python.exe' -m PyInstaller --noconfirm --clean '.\build\local_bridge.spec'
+if ($LASTEXITCODE -ne 0) {
+    throw "PyInstaller failed with exit code $LASTEXITCODE"
+}
 Copy-Item '.\config.toml' '.\dist\RemotePlusTranslator\config.toml' -Force
 Copy-Item '.\README.md' '.\dist\RemotePlusTranslator\README.md' -Force
 Copy-Item '.\FIXES_REVIEW.md' '.\dist\RemotePlusTranslator\FIXES_REVIEW.md' -Force
