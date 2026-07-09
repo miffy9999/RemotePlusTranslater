@@ -12,13 +12,13 @@ from datetime import datetime
 from pathlib import Path
 from typing import Protocol
 
-from .audio import AudioCapture, LiveSnapshot, PlaybackGate, Utterance
-from .config import AppConfig, sounddevice_value
+from .audio import AudioCapture, LiveSnapshot, PlaybackGate, Utterance, validate_input_device
+from .config import AppConfig
 from .events import EventBus
 from .hymt2 import create_translator
 from .languages import get_language
 from .stt import Recognition, WhisperRecognizer, contains_japanese_kana
-from .tts import EdgeSpeaker
+from .tts import EDGE_OUTPUT_PREFIX, EdgeSpeaker
 
 
 class RecognizerLike(Protocol):
@@ -748,14 +748,13 @@ class ConversationController:
                 self.state.tts_enabled = tts_enabled
                 self.speaker.cfg.enabled = tts_enabled
             if input_device is not None and input_device != self.state.input_device:
-                if isinstance(input_device, str) and input_device.startswith("loopback:"):
-                    pass
-                else:
-                    sounddevice_value(input_device)
+                validate_input_device(input_device)
                 self.state.input_device = input_device
                 self.cfg.audio.input_device = input_device
                 restart_capture = True
             if output_device is not None:
+                if output_device != "default" and not str(output_device).startswith(EDGE_OUTPUT_PREFIX):
+                    raise ValueError("output_device must be 'default' or an Edge TTS output device")
                 self.state.output_device = output_device
                 self.cfg.audio.output_device = output_device
             forced = self.cfg.conversation.japanese_code if self.state.speech_mode == "staff" else self.state.input_language

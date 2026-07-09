@@ -47,3 +47,41 @@ def test_websocket_requires_local_origin_and_cookie(tmp_path):
             },
         ) as websocket:
             assert websocket.receive_json()["type"] == "snapshot"
+
+
+def test_devices_endpoint_uses_edge_outputs_only(tmp_path, monkeypatch):
+    monkeypatch.setenv("REMOTEPLUS_ENUMERATE_AUDIO_DEVICES", "1")
+    monkeypatch.setattr(
+        "translator_app.server.list_audio_devices",
+        lambda: {
+            "inputs": [{"id": 1, "name": "Mic"}],
+            "outputs": [{"id": "output:legacy", "name": "Legacy output"}],
+            "warnings": [],
+        },
+    )
+    monkeypatch.setattr(
+        "translator_app.server.EdgeSpeaker.output_devices",
+        lambda: [{"id": "edge:Speakers", "name": "Speakers"}],
+    )
+    with make_client(tmp_path) as client:
+        client.get("/")
+        data = client.get("/api/devices").json()
+    assert data["inputs"] == [{"id": 1, "name": "Mic"}]
+    assert data["outputs"] == [{"id": "edge:Speakers", "name": "Speakers"}]
+
+
+def test_devices_endpoint_falls_back_when_audio_enumeration_fails(tmp_path, monkeypatch):
+    monkeypatch.setenv("REMOTEPLUS_ENUMERATE_AUDIO_DEVICES", "1")
+    monkeypatch.setattr(
+        "translator_app.server.list_audio_devices",
+        lambda: (_ for _ in ()).throw(RuntimeError("driver failed")),
+    )
+    monkeypatch.setattr("translator_app.server.EdgeSpeaker.output_devices", lambda: [])
+    with make_client(tmp_path) as client:
+        client.get("/")
+        response = client.get("/api/devices")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["inputs"] == [{"id": "default", "name": "System default input"}]
+    assert data["outputs"] == []
+    assert "driver failed" in data["warnings"][0]

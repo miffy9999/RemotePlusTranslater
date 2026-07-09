@@ -516,3 +516,37 @@ def list_audio_devices() -> dict[str, list]:
         if com_initialized:
             pythoncom.CoUninitialize()
     return {"inputs": inputs, "outputs": outputs, "warnings": warnings_list}
+
+
+def validate_input_device(value: str | int) -> None:
+    """Fail early when a selected input cannot be opened by the active backend."""
+    if value == "default":
+        return
+    if isinstance(value, str) and value.startswith(LOOPBACK_PREFIX):
+        device_id = value[len(LOOPBACK_PREFIX):]
+        com_initialized = False
+        try:
+            import pythoncom
+            pythoncom.CoInitialize()
+            com_initialized = True
+            sc = _load_soundcard()
+            microphone = sc.get_microphone(device_id, include_loopback=True)
+            if microphone is None or not microphone.isloopback:
+                raise ValueError("Selected PC playback device is unavailable")
+            return
+        except ValueError:
+            raise
+        except Exception as exc:
+            raise ValueError(f"Selected PC playback device is unavailable: {exc}") from exc
+        finally:
+            if com_initialized:
+                pythoncom.CoUninitialize()
+
+    device = sounddevice_value(value)
+    try:
+        import sounddevice as sd
+        info = sd.query_devices(device, "input")
+    except Exception as exc:
+        raise ValueError(f"Selected microphone is unavailable: {exc}") from exc
+    if int(info.get("max_input_channels", 0)) <= 0:
+        raise ValueError("Selected device has no input channels")

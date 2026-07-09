@@ -122,24 +122,32 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
     @app.get("/api/devices")
     def devices():
         try:
+            warnings: list[str] = []
             if os.environ.get("REMOTEPLUS_ENUMERATE_AUDIO_DEVICES") == "1":
-                result = list_audio_devices()
+                try:
+                    result = list_audio_devices()
+                except Exception as exc:
+                    result = {
+                        "inputs": [{"id": "default", "name": "System default input"}],
+                        "outputs": [],
+                        "warnings": [f"Audio device enumeration failed; system default remains available: {exc}"],
+                    }
             else:
                 result = {
                     "inputs": [{"id": "default", "name": "System default input"}],
                     "outputs": [],
                     "warnings": ["Audio device enumeration is disabled for startup stability."],
                 }
+            warnings.extend(result.get("warnings", []))
             # Edge TTS audio is played by SDL/Pygame, so expose exactly the
             # device names SDL can open rather than legacy SAPI identifiers.
             edge_outputs = EdgeSpeaker.output_devices()
             if edge_outputs:
                 result["outputs"] = edge_outputs
             else:
-                result.setdefault("warnings", []).append(
-                    "Could not enumerate Edge TTS output devices; system default remains available."
-                )
+                warnings.append("Could not enumerate Edge TTS output devices; system default remains available.")
                 result["outputs"] = []
+            result["warnings"] = warnings
             return result
         except Exception as exc:
             raise HTTPException(500, str(exc)) from exc

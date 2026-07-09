@@ -100,8 +100,9 @@ def test_manual_input_language_controls_recognizer_and_routing():
     assert translator.calls[-1][1] == "ko"
 
 
-def test_input_device_can_change_before_audio_starts():
+def test_input_device_can_change_before_audio_starts(monkeypatch):
     controller, _, _ = make_controller()
+    monkeypatch.setattr("translator_app.conversation.validate_input_device", lambda _device: None)
     old_capture = controller.capture
     state = controller.control(input_device=3)
     assert state["input_device"] == 3
@@ -112,11 +113,17 @@ def test_input_device_can_change_before_audio_starts():
 def test_output_device_can_change_without_restarting_capture():
     controller, _, _ = make_controller()
     old_capture = controller.capture
-    device = "output:{speaker-guid}"
+    device = "edge:Speakers"
     state = controller.control(output_device=device)
     assert state["output_device"] == device
     assert controller.cfg.audio.output_device == device
     assert controller.capture is old_capture
+
+
+def test_legacy_output_device_is_rejected():
+    controller, _, _ = make_controller()
+    with pytest.raises(ValueError, match="output_device"):
+        controller.control(output_device="output:{speaker-guid}")
 
 
 def test_kana_reply_overrides_low_confidence_manual_language():
