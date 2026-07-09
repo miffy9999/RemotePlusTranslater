@@ -51,18 +51,13 @@ def test_websocket_requires_local_origin_and_cookie(tmp_path):
 
 
 def test_devices_endpoint_uses_edge_outputs_only(tmp_path, monkeypatch):
-    monkeypatch.setenv("REMOTEPLUS_ENUMERATE_AUDIO_DEVICES", "1")
     monkeypatch.setattr(
-        "translator_app.server.list_audio_devices",
-        lambda: {
+        "translator_app.server._enumerate_devices",
+        lambda _root: {
             "inputs": [{"id": 1, "name": "Mic"}],
-            "outputs": [{"id": "output:legacy", "name": "Legacy output"}],
+            "outputs": [{"id": "edge:Speakers", "name": "Speakers"}],
             "warnings": [],
         },
-    )
-    monkeypatch.setattr(
-        "translator_app.server.EdgeSpeaker.output_devices",
-        lambda: [{"id": "edge:Speakers", "name": "Speakers"}],
     )
     with make_client(tmp_path) as client:
         client.get("/")
@@ -72,12 +67,14 @@ def test_devices_endpoint_uses_edge_outputs_only(tmp_path, monkeypatch):
 
 
 def test_devices_endpoint_falls_back_when_audio_enumeration_fails(tmp_path, monkeypatch):
-    monkeypatch.setenv("REMOTEPLUS_ENUMERATE_AUDIO_DEVICES", "1")
     monkeypatch.setattr(
-        "translator_app.server.list_audio_devices",
-        lambda: (_ for _ in ()).throw(RuntimeError("driver failed")),
+        "translator_app.server._enumerate_devices",
+        lambda _root: {
+            "inputs": [{"id": "default", "name": "System default input"}],
+            "outputs": [],
+            "warnings": ["Audio device enumeration failed; system default remains available: driver failed"],
+        },
     )
-    monkeypatch.setattr("translator_app.server.EdgeSpeaker.output_devices", lambda: [])
     with make_client(tmp_path) as client:
         client.get("/")
         response = client.get("/api/devices")

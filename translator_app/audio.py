@@ -501,9 +501,6 @@ def list_audio_devices() -> dict[str, list]:
         pythoncom.CoInitialize()
         com_initialized = True
         sc = _load_soundcard()
-        stable_outputs = [{"id": f"{OUTPUT_PREFIX}{speaker.id}", "name": speaker.name} for speaker in sc.all_speakers()]
-        if stable_outputs:
-            outputs = stable_outputs
         known_ids = {str(item["id"]) for item in inputs}
         for microphone in sc.all_microphones(include_loopback=True):
             if microphone.isloopback:

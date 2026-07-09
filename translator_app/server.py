@@ -1,9 +1,13 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import os
 import queue
 import secrets
+import subprocess
+import sys
+import time
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -12,13 +16,71 @@ from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
-from .audio import list_audio_devices
 from .config import AppConfig, load_config
 from .conversation import ConversationController
 from .events import EventBus
 from .feedback import FeedbackStore
 from .languages import CUSTOMER_LANGUAGE_CODES, public_languages
-from .tts import EdgeSpeaker
+
+
+def _fallback_devices(message: str) -> dict[str, list]:
+    return {
+        "inputs": [{"id": "default", "name": "System default input"}],
+        "outputs": [],
+        "warnings": [message],
+    }
+
+
+def _run_device_probe(root: Path, code: str, timeout_seconds: float) -> dict[str, list]:
+    env = os.environ.copy()
+    env["PYTHONUTF8"] = "1"
+    env["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
+    env["PYTHONPATH"] = str(root) + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
+    flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+    try:
+        completed = subprocess.run(
+            [sys.executable, "-c", code],
+            cwd=root,
+            env=env,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=timeout_seconds,
+            creationflags=flags,
+            check=False,
+        )
+    except subprocess.TimeoutExpired:
+        return _fallback_devices("Audio device enumeration timed out; system default remains available.")
+    except Exception as exc:
+        return _fallback_devices(f"Audio device enumeration failed; system default remains available: {exc}")
+    if completed.returncode != 0:
+        detail = (completed.stderr or completed.stdout or "").strip()
+        return _fallback_devices(f"Audio device enumeration failed; system default remains available: {detail or completed.returncode}")
+    try:
+        return json.loads(completed.stdout)
+    except ValueError:
+        return _fallback_devices("Audio device enumeration returned invalid data; system default remains available.")
+
+
+def _enumerate_devices(root: Path, timeout_seconds: float = 8.0) -> dict[str, list]:
+    input_code = (
+        "import json;"
+        "from translator_app.audio import list_audio_devices;"
+        "result=list_audio_devices();"
+        "print(json.dumps({'inputs':result.get('inputs',[]),'warnings':result.get('warnings',[])}, ensure_ascii=False), flush=True)"
+    )
+    output_code = (
+        "import json;"
+        "from translator_app.tts import EdgeSpeaker;"
+        "print(json.dumps({'outputs':EdgeSpeaker.output_devices(),'warnings':[]}, ensure_ascii=False), flush=True)"
+    )
+    input_result = _run_device_probe(root, input_code, timeout_seconds)
+    output_result = _run_device_probe(root, output_code, timeout_seconds)
+    return {
+        "inputs": input_result.get("inputs") or [{"id": "default", "name": "System default input"}],
+        "outputs": output_result.get("outputs") or [],
+        "warnings": [*input_result.get("warnings", []), *output_result.get("warnings", [])],
+    }
 
 WEB = Path(__file__).resolve().parent / "web"
 
@@ -48,6 +110,7 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
     bus = EventBus()
     controller = ConversationController(config, bus, recognizer=recognizer)
     feedback = FeedbackStore(config.data_root)
+    devices_cache: dict[str, object] = {"expires_at": 0.0, "payload": None}
 
     # Every supported customer language is selectable immediately. There is no
     # Windows voice pack setup because Edge Neural TTS is online.
@@ -107,33 +170,20 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
 
     @app.get("/api/devices")
     def devices():
+        now = time.monotonic()
+        cached = devices_cache.get("payload")
+        if cached is not None and now < float(devices_cache["expires_at"]):
+            return cached
         try:
             warnings: list[str] = []
-            if os.environ.get("REMOTEPLUS_ENUMERATE_AUDIO_DEVICES") == "1":
-                try:
-                    result = list_audio_devices()
-                except Exception as exc:
-                    result = {
-                        "inputs": [{"id": "default", "name": "System default input"}],
-                        "outputs": [],
-                        "warnings": [f"Audio device enumeration failed; system default remains available: {exc}"],
-                    }
-            else:
-                result = {
-                    "inputs": [{"id": "default", "name": "System default input"}],
-                    "outputs": [],
-                    "warnings": ["Audio device enumeration is disabled for startup stability."],
-                }
+            result = _enumerate_devices(config.root)
             warnings.extend(result.get("warnings", []))
-            # Edge TTS audio is played by SDL/Pygame, so expose exactly the
-            # device names SDL can open rather than legacy SAPI identifiers.
-            edge_outputs = EdgeSpeaker.output_devices()
-            if edge_outputs:
-                result["outputs"] = edge_outputs
-            else:
+            if not result.get("outputs"):
                 warnings.append("Could not enumerate Edge TTS output devices; system default remains available.")
                 result["outputs"] = []
             result["warnings"] = warnings
+            devices_cache["payload"] = result
+            devices_cache["expires_at"] = time.monotonic() + 30
             return result
         except Exception as exc:
             raise HTTPException(500, str(exc)) from exc
