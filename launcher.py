@@ -1,8 +1,16 @@
 import faulthandler
 import os
+import sys
 import tempfile
 from pathlib import Path
 
+from translator_app.process_cleanup import enable_windows_process_cleanup
+
+enable_windows_process_cleanup()
+
+if getattr(sys, "frozen", False):
+    os.environ.setdefault("REMOTEPLUS_DEBUG", "1")
+    os.environ.setdefault("REMOTEPLUS_DEBUG_STARTUP", "1")
 
 debug_handle = None
 if os.environ.get("REMOTEPLUS_DEBUG_STARTUP") == "1":

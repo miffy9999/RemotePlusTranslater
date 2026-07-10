@@ -12,6 +12,10 @@ import webbrowser
 from pathlib import Path
 
 from .config import load_config
+from .process_cleanup import enable_windows_process_cleanup
+
+
+enable_windows_process_cleanup()
 
 
 def _debug_startup(message: str) -> None:
