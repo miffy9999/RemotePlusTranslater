@@ -17,7 +17,7 @@ from .config import AudioConfig, sounddevice_value
 LOOPBACK_PREFIX = "loopback:"
 OUTPUT_PREFIX = "output:"
 MetricsCallback = Callable[..., None]
-SpeechContext = Callable[[], tuple[str, str]]
+SpeechContext = Callable[[], tuple[str, str, str, bool]]
 SpeechStartedSink = Callable[[int, str, str], None]
 LiveSnapshotSink = Callable[["LiveSnapshot"], None]
 
@@ -64,6 +64,8 @@ class Utterance:
     utterance_id: int = 0
     speech_mode: str = "customer"
     recognition_language: str = "en"
+    reply_language: str = "en"
+    tts_enabled: bool = True
 
 
 @dataclass(slots=True)
@@ -87,6 +89,8 @@ class _SegmentResult:
     ready_at: float
     speech_mode: str
     recognition_language: str
+    reply_language: str
+    tts_enabled: bool
 
     def __len__(self) -> int:
         return len(self.audio)
@@ -140,6 +144,8 @@ class SpeechSegmenter:
         self.speech_ended_at = 0.0
         self.speech_mode = "customer"
         self.recognition_language = "en"
+        self.reply_language = "en"
+        self.tts_enabled = True
         self.live_revision = 0
         self.last_live_emit_at = 0.0
 
@@ -154,6 +160,8 @@ class SpeechSegmenter:
         self.speech_ended_at = 0.0
         self.speech_mode = "customer"
         self.recognition_language = "en"
+        self.reply_language = "en"
+        self.tts_enabled = True
         self.live_revision = 0
         self.last_live_emit_at = 0.0
 
@@ -165,6 +173,8 @@ class SpeechSegmenter:
         candidate_utterance_id: int | None = None,
         speech_mode: str = "customer",
         recognition_language: str = "en",
+        reply_language: str = "en",
+        tts_enabled: bool = True,
     ) -> _SegmentResult | None:
         frame_ended_at = time.monotonic() if frame_ended_at is None else frame_ended_at
         candidate_utterance_id = self.utterance_id + 1 if candidate_utterance_id is None else candidate_utterance_id
@@ -189,6 +199,8 @@ class SpeechSegmenter:
                 self.speech_ended_at = frame_ended_at
                 self.speech_mode = "staff" if speech_mode == "staff" else "customer"
                 self.recognition_language = recognition_language
+                self.reply_language = reply_language
+                self.tts_enabled = bool(tts_enabled)
             return None
 
         self.frames.append(frame.copy())
@@ -226,6 +238,8 @@ class SpeechSegmenter:
                 ready_at=frame_ended_at,
                 speech_mode=self.speech_mode,
                 recognition_language=self.recognition_language,
+                reply_language=self.reply_language,
+                tts_enabled=self.tts_enabled,
             )
         self.reset()
         return result
@@ -271,6 +285,7 @@ class AudioCapture(threading.Thread):
         context: SpeechContext | None = None,
         speech_started_sink: SpeechStartedSink | None = None,
         live_snapshot_sink: LiveSnapshotSink | None = None,
+        initial_utterance_id: int = 0,
     ):
         super().__init__(name="audio-capture", daemon=True)
         self.cfg = cfg
@@ -282,13 +297,16 @@ class AudioCapture(threading.Thread):
         self.speech_started_sink = speech_started_sink
         self.live_snapshot_sink = live_snapshot_sink
         self.segmenter = SpeechSegmenter(cfg)
-        self._frames: queue.Queue[tuple[np.ndarray, float]] = queue.Queue(maxsize=100)
+        self._frames: queue.Queue[tuple[np.ndarray, float, bool]] = queue.Queue(maxsize=100)
         self._stop_event = threading.Event()
         self.dropped_utterances = 0
         self._failure_count = 0
         self._capture_error = "Audio device unavailable"
-        self._next_utterance_id = 0
+        self._next_utterance_id = max(0, int(initial_utterance_id))
         self._next_overflow_log_at = 0.0
+        self._frame_gap = threading.Event()
+        self.dropped_frames = 0
+        self._next_gap_warning_at = 0.0
 
     def _metric(self, event: str, **fields: object) -> None:
         if self.metrics is None:
@@ -298,44 +316,63 @@ class AudioCapture(threading.Thread):
         except Exception:
             pass
 
-    def _speech_context(self) -> tuple[str, str]:
+    @property
+    def last_utterance_id(self) -> int:
+        return self._next_utterance_id
+
+    def _speech_context(self) -> tuple[str, str, str, bool]:
         if self.context is None:
-            return "customer", "en"
+            return "customer", "en", "en", True
         try:
-            mode, language = self.context()
+            mode, language, reply_language, tts_enabled = self.context()
             mode = "staff" if mode == "staff" else "customer"
             language = str(language or "en").strip().lower()
-            return mode, language or "en"
+            reply_language = str(reply_language or "en").strip().lower()
+            return mode, language or "en", reply_language or "en", bool(tts_enabled)
         except Exception:
-            return "customer", "en"
+            return "customer", "en", "en", True
 
     def _callback(self, indata, frames, time_info, callback_status) -> None:
+        discontinuity = False
         if callback_status:
             warning = str(callback_status)
             # Input overflow is noisy during CPU spikes and does not require a UI warning.
             # Drop the oldest pending frame and keep listening; throttle debug logging.
             if "overflow" in warning.lower():
+                self.dropped_frames += 1
+                discontinuity = True
                 now = time.monotonic()
                 if now >= self._next_overflow_log_at:
                     self._metric("audio_input_overflow_ignored", warning=warning)
                     self._next_overflow_log_at = now + 5.0
             else:
                 self.status("warning", f"Audio input warning: {callback_status}")
-        item = (indata[:, 0].copy(), time.monotonic())
+        item = (indata[:, 0].copy(), time.monotonic(), discontinuity)
         try:
             self._frames.put_nowait(item)
         except queue.Full:
+            self.dropped_frames += 1
+            self._frame_gap.set()
             try:
                 self._frames.get_nowait()
                 self._frames.put_nowait(item)
             except (queue.Empty, queue.Full):
                 pass
 
-    def _process_frame(self, frame: np.ndarray, ended_at: float) -> None:
+    def _process_frame(self, frame: np.ndarray, ended_at: float, discontinuity: bool = False) -> None:
+        if discontinuity or self._frame_gap.is_set():
+            self._frame_gap.clear()
+            was_speaking = self.segmenter.speaking
+            self.segmenter.reset()
+            self._metric("audio_frame_gap", dropped_frames=self.dropped_frames, discarded_active_utterance=was_speaking)
+            now = time.monotonic()
+            if was_speaking and now >= self._next_gap_warning_at:
+                self.status("warning", "Audio frames were lost; the incomplete utterance was discarded")
+                self._next_gap_warning_at = now + 10.0
         if self.gate.muted():
             self.segmenter.reset()
             return
-        mode, language = self._speech_context()
+        mode, language, reply_language, tts_enabled = self._speech_context()
         was_speaking = self.segmenter.speaking
         result = self.segmenter.process(
             frame,
@@ -343,6 +380,8 @@ class AudioCapture(threading.Thread):
             candidate_utterance_id=self._next_utterance_id + 1,
             speech_mode=mode,
             recognition_language=language,
+            reply_language=reply_language,
+            tts_enabled=tts_enabled,
         )
         if self.segmenter.speaking and self.segmenter.utterance_id > self._next_utterance_id:
             self._next_utterance_id = self.segmenter.utterance_id
@@ -394,10 +433,10 @@ class AudioCapture(threading.Thread):
                 self.status("listening", "Listening")
                 while not self._stop_event.is_set():
                     try:
-                        frame, ended_at = self._frames.get(timeout=0.2)
+                        frame, ended_at, discontinuity = self._frames.get(timeout=0.2)
                     except queue.Empty:
                         continue
-                    self._process_frame(frame, ended_at)
+                    self._process_frame(frame, ended_at, discontinuity)
         except Exception as exc:
             self._capture_error = f"Microphone failed: {exc}"
 
@@ -443,6 +482,8 @@ class AudioCapture(threading.Thread):
             utterance_id=result.utterance_id,
             speech_mode=result.speech_mode,
             recognition_language=result.recognition_language,
+            reply_language=result.reply_language,
+            tts_enabled=result.tts_enabled,
         )
         before = self.output.qsize()
         self._metric(

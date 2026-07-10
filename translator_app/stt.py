@@ -21,6 +21,7 @@ class Recognition:
     text: str
     language: str
     probability: float = 1.0
+    quality_retry_used: bool = False
 
 
 def contains_japanese_kana(text: str) -> bool:
@@ -39,6 +40,21 @@ def apply_corrections(text: str, corrections: dict[str, str]) -> str:
     if pattern is None:
         return text
     return pattern.sub(lambda match: corrections[match.group(0)], text)
+
+
+_REPEATED_WORD = re.compile(
+    r"(?iu)(?<!\w)(?P<word>[\w'-]{2,})(?:[\s,，、]+(?P=word)){2,}(?!\w)"
+)
+_REPEATED_PHRASE = re.compile(
+    r"(?iu)(?<!\w)(?P<phrase>[\w'-]+(?:\s+[\w'-]+){1,4})(?:\s+(?P=phrase)){2,}(?!\w)"
+)
+
+
+def collapse_repetitions(text: str) -> str:
+    """Remove only obvious 3+ adjacent STT loops, preserving normal emphasis."""
+    result = _REPEATED_WORD.sub(lambda match: match.group("word"), text)
+    result = _REPEATED_PHRASE.sub(lambda match: match.group("phrase"), result)
+    return re.sub(r"\s+", " ", result).strip()
 
 
 class WhisperRecognizer:
@@ -153,27 +169,66 @@ class WhisperRecognizer:
                     num_workers=max(1, int(self.cfg.num_workers)),
                 )
 
-    def transcribe(self, audio: np.ndarray, *, language: str | None = None) -> Recognition:
-        self.load()
+    def _decode(self, audio: np.ndarray, forced: str | None, hotword_language: str, beam_size: int):
         if self.model is None:
             raise RuntimeError("Speech model is not loaded")
-        auto_mode = language is None and self.selected_language == "auto"
-        forced = None if auto_mode else self._effective_language(language)
-        hotword_language = forced or self.context_language or (self.enabled_languages[0] if self.enabled_languages else "en")
         segments, _info = self.model.transcribe(
             audio,
             language=forced,
-            beam_size=self.beam_size,
+            beam_size=beam_size,
             best_of=1,
             temperature=0.0,
+            repetition_penalty=self.cfg.repetition_penalty,
+            no_repeat_ngram_size=self.cfg.no_repeat_ngram_size,
             condition_on_previous_text=False,
             hotwords=self._hotwords(hotword_language),
             vad_filter=False,
             without_timestamps=True,
         )
-        text = " ".join(segment.text.strip() for segment in segments).strip()
+        rows = list(segments)
+        text = " ".join(segment.text.strip() for segment in rows).strip()
+        confidence = min(
+            (float(segment.avg_logprob) for segment in rows if hasattr(segment, "avg_logprob")),
+            default=None,
+        )
+        return text, _info, confidence
+
+    def transcribe(self, audio: np.ndarray, *, language: str | None = None) -> Recognition:
+        self.load()
+        auto_mode = language is None and self.selected_language == "auto"
+        forced = None if auto_mode else self._effective_language(language)
+        hotword_language = forced or self.context_language or (self.enabled_languages[0] if self.enabled_languages else "en")
+        raw_text, _info, confidence = self._decode(audio, forced, hotword_language, self.beam_size)
+        text = collapse_repetitions(raw_text)
+        quality_retry_used = False
+        should_retry = (
+            self.cfg.quality_retry_enabled
+            and self.cfg.quality_retry_beam_size > self.beam_size
+            and (
+                text != raw_text
+                or (
+                    confidence is not None
+                    and confidence <= self.cfg.quality_retry_log_prob_threshold
+                )
+            )
+        )
+        if should_retry:
+            retry_text, retry_info, _ = self._decode(
+                audio,
+                forced,
+                hotword_language,
+                self.cfg.quality_retry_beam_size,
+            )
+            if retry_text:
+                text, _info = collapse_repetitions(retry_text), retry_info
+                quality_retry_used = True
         if text and self.apply_corrections and self._correction_pattern is not None:
             text = apply_corrections(text, self.cfg.corrections)
         detected = forced or getattr(_info, "language", "") or hotword_language
         probability = float(getattr(_info, "language_probability", 1.0))
-        return Recognition(text=text, language=detected, probability=probability)
+        return Recognition(
+            text=text,
+            language=detected,
+            probability=probability,
+            quality_retry_used=quality_retry_used,
+        )

@@ -8,6 +8,7 @@ from translator_app.hymt2 import (
     HyMT2Translator,
     _verify_sha256,
     build_hymt2_prompt,
+    TranslationResponseError,
 )
 from translator_app.languages import public_languages
 
@@ -68,3 +69,18 @@ def test_checksum_accepts_matching_file(tmp_path):
     path.write_bytes(b"valid bytes")
     _verify_sha256(path, hashlib.sha256(b"valid bytes").hexdigest())
     assert path.exists()
+
+
+def test_invalid_completion_shape_has_clear_error(monkeypatch):
+    cfg = SimpleNamespace(max_new_tokens=128, hymt2_request_timeout_seconds=1)
+    translator = HyMT2Translator(cfg, lambda *_: None)
+    translator.port = 9999
+
+    class Response:
+        def __enter__(self): return self
+        def __exit__(self, *_args): pass
+        def read(self, *_args): return b'{"choices": []}'
+
+    monkeypatch.setattr("urllib.request.urlopen", lambda *_args, **_kwargs: Response())
+    with pytest.raises(TranslationResponseError, match="no completion"):
+        translator._request("prompt")

@@ -1,7 +1,7 @@
 [project]
 name = "local-conversation-translator"
-version = "0.4.1"
-description = "Offline bidirectional speech translator centered on Japanese"
+version = "0.5.0"
+description = "Local-first bidirectional hotel speech translator centered on Japanese"
 requires-python = ">=3.11,<3.14"
 dependencies = [
   "faster-whisper==1.2.1",
@@ -12,7 +12,6 @@ dependencies = [
   "fastapi==0.116.1",
   "pydantic==2.11.7",
   "uvicorn[standard]==0.35.0",
-  "pywebview==6.2.1",
   "edge-tts==7.2.3",
   "pygame==2.6.1",
 ]

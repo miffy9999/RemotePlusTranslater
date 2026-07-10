@@ -1,21 +1,21 @@
 # Third-party notices
 
-RemotePlus Translator 0.3.0 is intended to run locally without paid APIs. The application code and bundled components remain subject to their own licenses.
+RemotePlus Translator source code is distributed under the MIT License. The bundled application also uses software and model artifacts with their own licenses and service terms.
 
-- Tencent Hy-MT2-1.8B-GGUF — Apache License 2.0
-- llama.cpp runtime — MIT License
-- M2M100 development-only comparison backend — MIT License (not bundled in the lightweight build)
-- faster-whisper, CTranslate2 and PyInstaller runtime — MIT/GPL-exception terms supplied by each project
-- SoundCard — BSD 3-Clause License
-- NumPy, FastAPI, Uvicorn, pywebview, Transformers and their transitive dependencies — their respective open-source licenses
-- Windows SAPI voices — installed Windows component and language-pack terms; voices are not redistributed by this project
+- faster-whisper and CTranslate2 — MIT
+- Whisper model weights — MIT
+- Tencent Hy-MT2 model and GGUF distribution — Apache-2.0; verify the model card shipped/linked for the exact artifact
+- llama.cpp runtime — MIT
+- FastAPI, Uvicorn, Pydantic, NumPy, SoundDevice, SoundCard, pygame, edge-tts and their transitive dependencies — their respective open-source licenses
+- Microsoft Edge online speech service — remotely accessed service; Microsoft service terms, availability and data handling apply. No voice model is redistributed by this project.
 
-Authoritative project/license pages:
+Primary references:
 
+- https://github.com/SYSTRAN/faster-whisper
+- https://github.com/OpenNMT/CTranslate2
+- https://huggingface.co/openai/whisper-small
 - https://huggingface.co/tencent/Hy-MT2-1.8B-GGUF
 - https://github.com/ggml-org/llama.cpp
-- https://huggingface.co/facebook/m2m100_418M
-- https://github.com/SYSTRAN/faster-whisper
-- https://pypi.org/project/SoundCard/
+- https://github.com/rany2/edge-tts
 
-This notice is not legal advice. Before distributing to customers, retain this file and complete a dependency-license export for the exact build.
+Before commercial deployment, the distributor/operator must re-check the current licenses and online-service terms. This file is a technical inventory, not legal advice.

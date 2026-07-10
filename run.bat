@@ -17,4 +17,7 @@ set "PYGAME_HIDE_SUPPORT_PROMPT=1"
 set "REMOTEPLUS_START_PAUSED=1"
 
 ".venv\Scripts\python.exe" -m translator_app.cli desktop
-pause
+if errorlevel 1 (
+  echo RemotePlus exited with code %errorlevel%.
+  pause
+)

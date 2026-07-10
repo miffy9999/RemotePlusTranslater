@@ -3,7 +3,12 @@ from types import SimpleNamespace
 import numpy as np
 
 from translator_app.config import SttConfig
-from translator_app.stt import WhisperRecognizer, apply_corrections, contains_japanese_kana
+from translator_app.stt import (
+    WhisperRecognizer,
+    apply_corrections,
+    collapse_repetitions,
+    contains_japanese_kana,
+)
 
 
 def test_domain_corrections_are_deterministic():
@@ -16,6 +21,12 @@ def test_domain_corrections_are_deterministic():
 def test_longer_correction_runs_first():
     corrections = {"진저": "생강", "진저일": "진저에일"}
     assert apply_corrections("진저일", corrections) == "진저에일"
+
+
+def test_obvious_stt_repetition_is_collapsed_without_removing_normal_emphasis():
+    assert collapse_repetitions("check check check check") == "check"
+    assert collapse_repetitions("please check in please check in please check in") == "please check in"
+    assert collapse_repetitions("very very good") == "very very good"
 
 
 def test_context_language_selects_hotel_hotwords():
@@ -68,3 +79,41 @@ def test_low_probability_enabled_language_is_not_forced():
     recognizer.set_enabled_languages(["en", "ko"])
     result = recognizer.transcribe(np.zeros(16000, dtype=np.float32))
     assert result.language == "fr"
+
+
+def test_repetition_controls_are_sent_to_whisper():
+    class FakeModel:
+        def transcribe(self, audio, **kwargs):
+            assert kwargs["repetition_penalty"] == 1.08
+            assert kwargs["no_repeat_ngram_size"] == 2
+            return [SimpleNamespace(text="check check check")], SimpleNamespace(
+                language="en", language_probability=1.0
+            )
+
+    recognizer = WhisperRecognizer(SttConfig(), lambda *_: None)
+    recognizer.model = FakeModel()
+    result = recognizer.transcribe(np.zeros(16000, dtype=np.float32), language="en")
+    assert result.text == "check"
+
+
+def test_low_confidence_result_gets_a_quality_retry_only_when_needed():
+    class FakeModel:
+        def __init__(self):
+            self.calls = 0
+
+        def transcribe(self, audio, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                return [SimpleNamespace(text="unclear", avg_logprob=-1.2)], SimpleNamespace(
+                    language="en", language_probability=0.4
+                )
+            assert kwargs["beam_size"] == 2
+            return [SimpleNamespace(text="clear answer", avg_logprob=-0.1)], SimpleNamespace(
+                language="en", language_probability=0.9
+            )
+
+    recognizer = WhisperRecognizer(SttConfig(), lambda *_: None)
+    recognizer.model = FakeModel()
+    result = recognizer.transcribe(np.zeros(16000, dtype=np.float32), language="en")
+    assert result.text == "clear answer"
+    assert result.quality_retry_used is True

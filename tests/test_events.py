@@ -23,3 +23,10 @@ def test_history_can_be_cleared():
     bus.publish("translation", translated="private")
     bus.clear_history()
     assert bus.history() == []
+
+
+def test_history_never_grows_beyond_configured_limit():
+    bus = EventBus(history_size=3)
+    for number in range(10):
+        bus.publish("translation", number=number)
+    assert [item["data"]["number"] for item in bus.history()] == [7, 8, 9]

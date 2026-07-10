@@ -1,46 +1,22 @@
-# 품질 검증 보고서 — 0.4.0
+# 품질 검증 현황 (0.5.0)
 
-검증일: 2026-07-04
+자동 검증:
 
-## 결과
+- pytest 전체 통과가 release 조건
+- Ruff 전체 통과가 release 조건
+- en/ko/ja/zh/es 공개 음성 fixed-language 경로 benchmark
+- Hy-MT2 hotel validation/holdout benchmark
+- 실제 모델 반복 실행용 `scripts/stress_runtime.py`
+- EXE build 후 `doctor` 실행
 
-- 호텔 합성 음성 STT 32문장 평균 문자열 유사도: 0.961
-- 공개 실제 음성 영어·한국어·중국어·스페인어 자동/수동 감지와 일본어 직원 답변 분기: 9/9 성공
-- 호텔 번역 확장 회귀 60문장: 핵심정보 보존 정방향 1.000, 역방향 1.000
-- 별도 호텔 홀드아웃 40문장: 조정 전 정방향 0.617/역방향 0.850, 조정 후 1.000/1.000
-- 2차 검증 28문장: 조정 전 정방향 0.717/역방향 0.805, 조정 후 1.000/1.000
-- 실제 Windows 스피커 TTS를 WASAPI loopback으로 수집: 통과
-- 단위·보안 테스트 48개와 정적 검사 통과
-- 쿠키 없는 REST 401, 악성 Host 403, 외부 WebSocket Origin 거부 검증
-- 프로젝트 외 작업 폴더에서 Hy-MT2 절대경로 기동 검증
+구조 회귀 항목:
 
-점수는 자연스러움 점수가 아니라 예약, 시간, 수량, 알레르기, 물품 등 미리 지정한 업무 핵심정보가 결과에 남았는지를 뜻한다. 보호 기능이 개입하면 UI에 주황색으로 표시한다.
+- 발화 시작 시 language/mode/reply/TTS snapshot
+- queue supersede와 실행 중 오래된 결과 폐기
+- llama process death와 malformed/empty JSON
+- EventBus/DOM bounded history
+- WebSocket 인증·disconnect subscriber 정리
+- user setting schema와 다른 PC 장치 fallback
+- Edge synthesis cancel/retry
 
-2026-07-05 보안·경계 처리 수정 후 60/40/28문장 세트를 다시 실행했으며 모두 정방향 1.000, 역방향 1.000, 실패 0건이었다.
-
-## 발견하고 막은 위험 사례
-
-- cola → カラス, ginger ale → ガンジャー
-- towel → handwaps/화장실/手套
-- peanut → kitchen/carrot/apple
-- airport shuttle → airport flight
-- 오전 8시 → 오후 8시
-- front desk → 전선/신체의 앞부분
-- 조식 종료 10시 → 10시 30분
-- 금연 객실 → 흡연자용 객실
-
-## 모델 비교 결정
-
-M2M100 MIT 모델은 다국어 범위와 배포 조건은 적합하지만 호텔 고유 명사와 짧은 안내에서 흔들린다. Apache-2.0 OPUS 영어→일본어 모델은 시험 문장에서 의미가 크게 붕괴해 기각했다. OPUS 일본어→영어는 좋았지만 이를 한국어·중국어·스페인어로 다시 번역하는 피벗은 시간과 핵심 명사를 바꾸어 전체 적용하지 않았다.
-
-현재는 Apache-2.0 Hy-MT2 1.8B Q4 자유 번역, 양방향 보호 용어, 검증된 일본어 답변 문장집의 3단 구조다. 경량 배포본은 중복 M2M100/Torch를 제외하고 Hy-MT2 장애 시 자동 재시작한다. 원본 Hy-MT2의 128문장 핵심정보 점수는 0.848, 제품 보호 계층을 포함한 60/40/28문장 세 세트는 모두 1.000이었다.
-
-## 아직 필요한 실기 검증
-
-- 실제 호텔 통화 압축이 적용된 영어·한국어·중국어·스페인어 음성
-- 객실 소음, 통화 압축, 빠른 말, 억양, 고유명사
-- 중국어·스페인어 Windows 음성팩을 설치한 TTS 왕복
-- 30분 이상 실제 상담 연속 실행
-- 직원 검수로 문장 자연스러움과 존댓말 평가
-
-검증 원본은 `benchmarks/latest_hotel_report.json`, `latest_translation_extended_report.json`, `latest_translation_holdout_report.json`, `latest_translation_validation_report.json`에 보존한다.
+아직 자동 점수가 보증하지 않는 영역은 실제 30~60분 통화, 겹쳐 말하기, 저속/불안정 인터넷 Edge TTS, 호텔별 전화 코덱, 강한 억양과 뭉개진 발음이다. 공개 음원만으로 이 조건을 대표할 수 없으므로 상업 사용 권리가 확보된 현장 샘플을 익명화해 회귀 세트로 유지해야 한다.

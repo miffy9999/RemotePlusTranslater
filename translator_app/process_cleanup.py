@@ -6,6 +6,23 @@ from ctypes import wintypes
 
 
 _JOB_HANDLE = None
+_INSTANCE_HANDLE = None
+
+
+def acquire_single_instance(name: str = "Local\\RemotePlusTranslator") -> bool:
+    """Keep one desktop backend per Windows login session."""
+    global _INSTANCE_HANDLE
+    if os.name != "nt" or _INSTANCE_HANDLE is not None:
+        return True
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    handle = kernel32.CreateMutexW(None, False, name)
+    if not handle:
+        return True
+    if ctypes.get_last_error() == 183:  # ERROR_ALREADY_EXISTS
+        kernel32.CloseHandle(handle)
+        return False
+    _INSTANCE_HANDLE = handle
+    return True
 
 
 def enable_windows_process_cleanup() -> None:

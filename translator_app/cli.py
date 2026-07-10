@@ -18,6 +18,11 @@ from .process_cleanup import enable_windows_process_cleanup
 enable_windows_process_cleanup()
 
 
+def _emit(*values, **kwargs) -> None:
+    if sys.stdout is not None:
+        print(*values, **kwargs)
+
+
 def _debug_startup(message: str) -> None:
     if os.environ.get("REMOTEPLUS_DEBUG_STARTUP") != "1":
         return
@@ -59,8 +64,12 @@ def doctor() -> int:
     else:
         checks.append(("audio input", True, "native enumeration skipped; set REMOTEPLUS_ENUMERATE_AUDIO_DEVICES=1 to inspect"))
     width = max(len(name) for name, _, _ in checks)
-    for name, ok, detail in checks:
-        print(f"[{'OK' if ok else 'FAIL'}] {name:<{width}}  {detail}")
+    report = "\n".join(f"[{'OK' if ok else 'FAIL'}] {name:<{width}}  {detail}" for name, ok, detail in checks)
+    _emit(report)
+    if getattr(sys, "frozen", False):
+        cfg_root = Path(os.environ.get("LOCALAPPDATA", tempfile.gettempdir())) / "RemotePlusTranslator"
+        cfg_root.mkdir(parents=True, exist_ok=True)
+        (cfg_root / "doctor-report.txt").write_text(report + "\n", encoding="utf-8")
     return 0 if all(ok for _, ok, _ in checks) else 1
 
 
@@ -71,11 +80,11 @@ def prepare() -> int:
     from .hymt2 import create_translator, prepare_hymt2_files
 
     def report(phase: str, message: str) -> None:
-        print(f"[{phase.upper()}] {message}")
+        _emit(f"[{phase.upper()}] {message}")
 
-    print("Final speech model is downloaded once and then used locally.")
-    print("Live preview is disabled for queue stability and CPU priority.")
-    print("Reply speech uses Edge online neural voices; Windows language packs are not required.")
+    _emit("Final speech model is downloaded once and then used locally.")
+    _emit("Live preview is disabled for queue stability and CPU priority.")
+    _emit("Reply speech uses Edge online neural voices; Windows language packs are not required.")
     WhisperRecognizer(cfg.stt, report, label="final").load()
     if cfg.translation.backend == "hymt2":
         prepare_hymt2_files(cfg.translation, report)
@@ -83,7 +92,7 @@ def prepare() -> int:
     translator.load()
     if hasattr(translator, "close"):
         translator.close()
-    print("Preparation complete.")
+    _emit("Preparation complete.")
     return 0
 
 
@@ -100,7 +109,12 @@ def device_probe(kind: str) -> int:
         payload = {"outputs": EdgeSpeaker.output_devices(), "warnings": []}
     else:
         return 2
-    print(json.dumps(payload), flush=True)
+    encoded = json.dumps(payload, ensure_ascii=False)
+    output = os.environ.get("REMOTEPLUS_PROBE_OUTPUT")
+    if output:
+        Path(output).write_text(encoded, encoding="utf-8")
+    else:
+        _emit(encoded, flush=True)
     return 0
 
 
@@ -117,11 +131,11 @@ def serve() -> int:
     url = f"http://{display_host}:{cfg.server.port}"
     if cfg.server.open_browser:
         threading.Timer(1.2, lambda: webbrowser.open(url)).start()
-    print(f"Local Bridge: {url}")
+    _emit(f"Local Bridge: {url}")
     _debug_startup("serve creating app")
     app = create_app(cfg)
     _debug_startup("serve entering uvicorn")
-    uvicorn.run(app, host=cfg.server.host, port=cfg.server.port, log_level="warning", loop="asyncio", http="h11")
+    uvicorn.run(app, host=cfg.server.host, port=cfg.server.port, log_level="warning", loop="asyncio", http="h11", log_config=None)
     return 0
 
 

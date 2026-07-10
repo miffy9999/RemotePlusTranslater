@@ -4,6 +4,7 @@ import os
 import shutil
 import socket
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -18,6 +19,7 @@ import uvicorn
 from .config import load_config
 from .server import create_app
 from .stt import WhisperRecognizer
+from .process_cleanup import acquire_single_instance
 
 
 def _startup_log(message: str) -> None:
@@ -74,6 +76,14 @@ def _desktop_client_seen(app) -> bool:
         return False
     with lock:
         return bool(getattr(app.state, "desktop_client_seen", False))
+
+
+def _desktop_client_active(app) -> bool:
+    lock = getattr(app.state, "desktop_client_lock", None)
+    if lock is None:
+        return False
+    with lock:
+        return int(getattr(app.state, "desktop_client_count", 0)) > 0
 
 
 def _candidate_app_browsers() -> list[Path]:
@@ -148,6 +158,12 @@ def _launch_app_window(url: str, data_root: Path) -> subprocess.Popen | None:
 def run_desktop() -> int:
     """Start the local server in the current console and open the UI."""
     os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
+    if not acquire_single_instance():
+        _startup_log("another desktop instance is already running")
+        if os.name == "nt":
+            import ctypes
+            ctypes.windll.user32.MessageBoxW(0, "RemotePlus Translator is already running.", "RemotePlus Translator", 0x40)
+        return 3
     cfg = load_config()
     cfg.data_root.mkdir(parents=True, exist_ok=True)
     cfg.server.open_browser = False
@@ -172,6 +188,7 @@ def run_desktop() -> int:
         loop="asyncio",
         http="h11",
         access_log=False,
+        log_config=None,
     )
     server = uvicorn.Server(server_config)
     server_error: list[str] = []
@@ -193,30 +210,33 @@ def run_desktop() -> int:
         if not server_thread.is_alive():
             if server_error:
                 _startup_log("server thread exited before startup")
-            return 1
+                raise RuntimeError("Local server failed to start:\n" + server_error[-1])
+            raise RuntimeError("Local server exited before startup")
         time.sleep(0.05)
     if not server.started:
         _startup_log("server did not report startup before timeout")
         server.should_exit = True
         server_thread.join(timeout=3.0)
-        return 1
+        raise RuntimeError("Local server did not start before timeout")
 
     if not _wait_for_http(url, timeout_seconds=10.0):
         _startup_log(f"server did not answer HTTP at {url}")
         server.should_exit = True
         server_thread.join(timeout=3.0)
-        return 1
+        raise RuntimeError(f"Local server did not answer at {url}")
 
     _startup_log(f"server started at {url}")
-    print(f"RemotePlus server: {url}", flush=True)
-    print("Keep this console open while using RemotePlus. Press Ctrl+C to stop.", flush=True)
+    if sys.stdout is not None:
+        print(f"RemotePlus server: {url}", flush=True)
+        print("Close the app window to stop RemotePlus.", flush=True)
     app_process = _launch_app_window(url, cfg.data_root)
+    profile_root = Path(tempfile.gettempdir()) / f"remoteplus-app-profile-{os.getpid()}"
     app_launched_at = time.monotonic()
     no_client_shutdown_seconds = max(60, cfg.server.auto_shutdown_no_clients_seconds * 3)
 
     try:
         while server_thread.is_alive():
-            if app_process is not None and app_process.poll() is not None:
+            if app_process is not None and app_process.poll() is not None and not _desktop_client_active(app):
                 _startup_log("app window process exited; stopping server")
                 break
             if cfg.server.shutdown_when_idle:
@@ -233,11 +253,12 @@ def run_desktop() -> int:
         pass
     finally:
         server.should_exit = True
-        server_thread.join(timeout=3.0)
+        server_thread.join(timeout=12.0)
         if app_process is not None and app_process.poll() is None:
             app_process.terminate()
             try:
                 app_process.wait(timeout=3.0)
             except subprocess.TimeoutExpired:
                 app_process.kill()
+        shutil.rmtree(profile_root, ignore_errors=True)
     return 0

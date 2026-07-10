@@ -21,6 +21,10 @@ from .languages import get_language
 from .phrasebook import translate_hotel_phrase
 from .translation import M2M100Translator, contains_alias, protect_japanese_terms, protect_multilingual_terms
 
+
+class TranslationResponseError(RuntimeError):
+    """The local server answered, but not with a usable completion."""
+
 LANGUAGE_NAMES = {
     "ja": "Japanese", "en": "English", "ko": "Korean", "zh": "Chinese",
     "es": "Spanish", "fr": "French", "de": "German", "it": "Italian",
@@ -106,6 +110,11 @@ class HyMT2Translator:
         self._lock = threading.RLock()
         self._api_key = secrets.token_urlsafe(32)
         self._atexit_registered = False
+        self._log_handle = None
+        self._request_active = threading.Event()
+        self._request_aborted = threading.Event()
+        self._response_lock = threading.Lock()
+        self._active_response = None
 
     def _health(self) -> bool:
         if self.port is None:
@@ -117,8 +126,30 @@ class HyMT2Translator:
             )
             with urllib.request.urlopen(request, timeout=0.75) as response:
                 return json.load(response).get("status") == "ok"
-        except (OSError, urllib.error.URLError, TimeoutError):
+        except Exception:
             return False
+
+    def is_available(self) -> bool:
+        process = self.process
+        available = bool(self.ready and process is not None and process.poll() is None)
+        if not available:
+            self.ready = False
+        return available
+
+    def _open_log(self):
+        log_dir = self.cfg.data_root / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        path = log_dir / "llama-server.log"
+        try:
+            if path.exists() and path.stat().st_size > 2 * 1024 * 1024:
+                backup = path.with_suffix(".previous.log")
+                backup.unlink(missing_ok=True)
+                path.replace(backup)
+            self._log_handle = path.open("ab", buffering=0)
+            return self._log_handle
+        except OSError:
+            self._log_handle = None
+            return subprocess.DEVNULL
 
     @staticmethod
     def _free_port() -> int:
@@ -131,7 +162,7 @@ class HyMT2Translator:
             self._load_locked()
 
     def _load_locked(self) -> None:
-        if self.ready:
+        if self.is_available():
             return
         model = _app_path(self.cfg.root, self.cfg.hymt2_model).resolve()
         runtime = _app_path(self.cfg.root, self.cfg.hymt2_runtime).resolve()
@@ -140,29 +171,33 @@ class HyMT2Translator:
             self.status("error", "Hy-MT2 model or runtime is missing")
             return
         self.status("loading", "Loading high-quality Hy-MT2 translation model")
-        self.port = self._free_port()
-        command = [
-            str(executable), "-m", str(model), "--host", "127.0.0.1", "--port", str(self.port),
-            "-c", str(self.cfg.hymt2_context), "-t", str(self.cfg.hymt2_threads), "-ngl", "0",
-            "--api-key", self._api_key,
-        ]
         flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-        self.process = subprocess.Popen(command, cwd=runtime, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, creationflags=flags)
         if not self._atexit_registered:
             atexit.register(self.close)
             self._atexit_registered = True
-        deadline = time.monotonic() + self.cfg.hymt2_timeout_seconds
-        interval = max(0.02, self.cfg.hymt2_startup_poll_ms / 1000)
-        while time.monotonic() < deadline:
-            if self.process.poll() is not None:
-                break
-            if self._health():
-                self.ready = True
-                self.status("loading", "Hy-MT2 translation model ready")
-                return
-            time.sleep(interval)
+        for attempt in range(2):
+            self.port = self._free_port()
+            command = [
+                str(executable), "-m", str(model), "--host", "127.0.0.1", "--port", str(self.port),
+                "-c", str(self.cfg.hymt2_context), "-t", str(self.cfg.hymt2_threads), "-ngl", "0",
+                "--api-key", self._api_key,
+            ]
+            log_target = self._open_log()
+            self.process = subprocess.Popen(command, cwd=runtime, stdin=subprocess.DEVNULL, stdout=log_target, stderr=log_target, creationflags=flags)
+            deadline = time.monotonic() + self.cfg.hymt2_timeout_seconds
+            interval = max(0.02, self.cfg.hymt2_startup_poll_ms / 1000)
+            while time.monotonic() < deadline:
+                if self.process.poll() is not None:
+                    break
+                if self._health():
+                    self.ready = True
+                    self.status("loading", "Hy-MT2 translation model ready")
+                    return
+                time.sleep(interval)
+            self._close_locked()
+            if attempt == 0:
+                self.status("loading", "Retrying translation engine startup on a new port")
         self.status("error", "Hy-MT2 failed to start")
-        self._close_locked()
 
     def _request(self, prompt: str, *, max_tokens: int | None = None) -> str:
         body = json.dumps({
@@ -178,9 +213,26 @@ class HyMT2Translator:
             data=body,
             headers={"Content-Type": "application/json", "Authorization": f"Bearer {self._api_key}"},
         )
-        with urllib.request.urlopen(request, timeout=self.cfg.hymt2_request_timeout_seconds) as response:
-            payload = json.load(response)
-        return payload["choices"][0]["message"]["content"].strip()
+        self._request_active.set()
+        try:
+            with urllib.request.urlopen(request, timeout=self.cfg.hymt2_request_timeout_seconds) as response:
+                with self._response_lock:
+                    self._active_response = response
+                try:
+                    payload = json.load(response)
+                except (ValueError, UnicodeError) as exc:
+                    raise TranslationResponseError("Translation server returned invalid JSON") from exc
+        finally:
+            with self._response_lock:
+                self._active_response = None
+            self._request_active.clear()
+        try:
+            content = payload["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError) as exc:
+            raise TranslationResponseError("Translation server returned no completion") from exc
+        if not isinstance(content, str) or not content.strip():
+            raise TranslationResponseError("Translation server returned an empty completion")
+        return content.strip()
 
     def _request_with_optional_limit(self, prompt: str, max_tokens: int | None) -> str:
         try:
@@ -209,6 +261,10 @@ class HyMT2Translator:
 
     def _translate(self, text: str, source_code: str, target_code: str, *, max_tokens: int | None = None) -> str:
         clean = text.strip()
+        if not clean:
+            raise ValueError("Translation source is empty")
+        if len(clean) > 2000:
+            raise ValueError("Translation source is too long for the local model context")
         if source_code == target_code:
             return clean
         if get_language(source_code) is None or get_language(target_code) is None:
@@ -227,6 +283,18 @@ class HyMT2Translator:
             try:
                 translated = self._request_with_optional_limit(prompt, max_tokens)
             except Exception as exc:
+                if self._request_aborted.is_set():
+                    self._request_aborted.clear()
+                    raise InterruptedError("Superseded translation was cancelled") from exc
+                if isinstance(exc, TimeoutError):
+                    self._close_locked()
+                    raise RuntimeError("Translation timed out; the stuck local engine was stopped") from exc
+                process_dead = self.process is None or self.process.poll() is not None
+                connection_lost = isinstance(exc, (ConnectionError, ConnectionResetError, BrokenPipeError))
+                if isinstance(exc, urllib.error.URLError) and not isinstance(exc, urllib.error.HTTPError):
+                    connection_lost = True
+                if not (process_dead or connection_lost):
+                    raise
                 self.status("warning", f"Translation engine stopped; restarting once: {exc}")
                 self._close_locked()
                 self._load_locked()
@@ -247,16 +315,37 @@ class HyMT2Translator:
         with self._lock:
             self._close_locked()
 
+    def cancel_active_request(self) -> bool:
+        """Stop CPU work for a translation superseded by a newer utterance."""
+        if not self._request_active.is_set():
+            return False
+        with self._response_lock:
+            response = self._active_response
+        if response is None:
+            return False
+        self._request_aborted.set()
+        try:
+            response.close()
+        except (OSError, ValueError):
+            pass
+        return True
+
     def _close_locked(self) -> None:
         self.ready = False
         process, self.process = self.process, None
-        if process is None or process.poll() is not None:
-            return
-        process.terminate()
-        try:
-            process.wait(timeout=5)
-        except subprocess.TimeoutExpired:
-            process.kill()
+        if process is not None and process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait(timeout=2)
+        if self._log_handle is not None:
+            try:
+                self._log_handle.close()
+            except OSError:
+                pass
+            self._log_handle = None
 
 
 def create_translator(cfg: TranslationConfig, status: Callable[[str, str], None]) -> M2M100Translator | HyMT2Translator:

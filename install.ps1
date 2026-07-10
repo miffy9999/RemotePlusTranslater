@@ -25,5 +25,5 @@ if (-not (Test-Path '.venv')) {
 & '.\.venv\Scripts\python.exe' -m pip install --upgrade pip setuptools wheel
 & '.\.venv\Scripts\python.exe' -m pip install -e '.[dev]'
 & '.\.venv\Scripts\python.exe' -m translator_app.cli doctor
-Write-Host "`nInstallation complete. The live-caption model downloads automatically on first prepare/run; Windows speech language packs are not required." -ForegroundColor Green
+Write-Host "`nInstallation complete. Run prepare_models.bat once to download/verify the local STT and translation models. Edge TTS is online; Windows speech language packs are not required." -ForegroundColor Green
 Read-Host 'Press Enter to close'

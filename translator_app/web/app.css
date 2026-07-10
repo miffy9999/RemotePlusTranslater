@@ -566,28 +566,28 @@ main {
 }
 
 .reading-guide .reading-base {
-  color: #4A3728
+  color: #f8fafc
 }
 
 .reading-guide rt {
   font-size: .72em;
-  color: #4A3728 !important;
+  color: #f8fafc !important;
   font-weight: 900;
   letter-spacing: .02em;
   text-shadow: 0 1px 1px rgba(0, 0, 0, .55)
 }
 
 .reading-guide .reading-kana {
-  color: #4A3728 !important
+  color: #f8fafc !important
 }
 
 .reading-guide .reading-token {
-  color: #4A3728;
+  color: #f8fafc;
   font-weight: 760
 }
 
 .reading-guide .reading-punctuation {
-  color: #4A3728;
+  color: #f8fafc;
   font-weight: 800
 }
 

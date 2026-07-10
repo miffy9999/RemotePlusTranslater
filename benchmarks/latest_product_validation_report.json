@@ -26,7 +26,7 @@
       "translated": "明日の朝までに洗濯物を返すことができますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.729
+      "seconds": 1.224
     },
     {
       "id": "f-en-v2",
@@ -58,7 +58,7 @@
       "translated": "私のフライトが遅延しています。空港送迎の時間を変更してください。",
       "score": 1.0,
       "missed": [],
-      "seconds": 2.708
+      "seconds": 1.605
     },
     {
       "id": "f-en-v3",
@@ -79,10 +79,10 @@
           "匂い"
         ]
       ],
-      "translated": "これは禁煙ルームですが、タバコのにおいがします。",
+      "translated": "これは禁煙ルームですが、タバコのにおいがあります。",
       "score": 1.0,
       "missed": [],
-      "seconds": 2.452
+      "seconds": 1.678
     },
     {
       "id": "f-en-v4",
@@ -106,7 +106,7 @@
       "translated": "私の子供が発熱しています。医師を呼んでもらえますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 2.518
+      "seconds": 1.823
     },
     {
       "id": "f-ko-v1",
@@ -128,7 +128,7 @@
       "translated": "明日の朝まで洗濯物を受け取ることができますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.452
+      "seconds": 0.972
     },
     {
       "id": "f-ko-v2",
@@ -159,7 +159,7 @@
       "translated": "フライトが遅延したので、空港送迎の時間を変更してください。",
       "score": 1.0,
       "missed": [],
-      "seconds": 3.165
+      "seconds": 2.239
     },
     {
       "id": "f-ko-v3",
@@ -183,7 +183,7 @@
       "translated": "禁煙の客室ですが、タバコのにおいがあります。",
       "score": 1.0,
       "missed": [],
-      "seconds": 2.832
+      "seconds": 1.922
     },
     {
       "id": "f-ko-v4",
@@ -207,7 +207,7 @@
       "translated": "子供が発熱しているのですが、医師を呼んでいただけますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 2.914
+      "seconds": 1.862
     },
     {
       "id": "f-zh-v1",
@@ -230,7 +230,7 @@
       "translated": "洗った服を明日の朝に届けてもいいですか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.369
+      "seconds": 0.835
     },
     {
       "id": "f-zh-v2",
@@ -260,7 +260,7 @@
       "translated": "私のフライトが遅延しましたので、空港送迎時間を変更してください。",
       "score": 1.0,
       "missed": [],
-      "seconds": 3.235
+      "seconds": 2.103
     },
     {
       "id": "f-zh-v3",
@@ -283,7 +283,7 @@
       "translated": "これは禁煙室ですが、タバコのにおいがあります。",
       "score": 1.0,
       "missed": [],
-      "seconds": 2.753
+      "seconds": 1.858
     },
     {
       "id": "f-zh-v4",
@@ -307,7 +307,7 @@
       "translated": "私の子供が発熱したんですが、医師を呼ぶことができますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 2.987
+      "seconds": 1.763
     },
     {
       "id": "f-es-v1",
@@ -327,10 +327,10 @@
           "朝"
         ]
       ],
-      "translated": "明日の朝、洗った服を返すことができますか？",
+      "translated": "明日の朝に洗った服を返すことができますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.461
+      "seconds": 0.895
     },
     {
       "id": "f-es-v2",
@@ -361,7 +361,7 @@
       "translated": "私のフライトが遅延しました。空港送迎の時間を変更してください。",
       "score": 1.0,
       "missed": [],
-      "seconds": 3.687
+      "seconds": 2.284
     },
     {
       "id": "f-es-v3",
@@ -385,7 +385,7 @@
       "translated": "禁煙用の部屋ですが、タバコのにおいがあります。",
       "score": 1.0,
       "missed": [],
-      "seconds": 3.151
+      "seconds": 2.044
     },
     {
       "id": "f-es-v4",
@@ -406,10 +406,10 @@
           "医師"
         ]
       ],
-      "translated": "私の子供が発熱しています。医師を呼ぶことができますか？",
+      "translated": "私の子供が発熱しています。医師を呼ぶことはできますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 3.016
+      "seconds": 1.985
     },
     {
       "id": "r-en-v1",

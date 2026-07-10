@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 import time
 from pathlib import Path
 
@@ -21,6 +22,8 @@ def score(text: str, groups: list[list[str]]) -> tuple[float, list[list[str]]]:
 
 
 def main() -> None:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser()
     parser.add_argument("--corpus", type=Path, default=CORPUS)
     parser.add_argument("--report", type=Path, default=REPORT)

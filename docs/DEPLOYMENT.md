@@ -1,46 +1,22 @@
-# 배포 아키텍처 결정
+# 배포 결정 (0.5.0)
 
-## 납품 형태
+납품 기준은 Windows x64 PyInstaller `onedir` 포터블 폴더다. Python, Whisper small, Hy-MT2 GGUF, llama.cpp runtime과 네이티브 DLL을 함께 넣는다. 수 GB 파일을 실행마다 임시 해제하는 onefile보다 시작·백신 예외·장애 분석이 안정적이다.
 
-최종 고객은 Python을 설치하지 않습니다. Windows x64용 포터블 폴더 또는 `RemotePlusTranslator-Setup-x.y.z.exe`에 프로그램, Python 런타임, 네이티브 라이브러리와 오프라인 모델이 함께 들어갑니다. PyInstaller의 onedir 방식을 택한 이유는 수 GB 런타임을 매 실행마다 임시 폴더에 푸는 onefile 방식보다 시작과 장애 분석이 안정적이기 때문입니다.
+대상 PC에는 Python이나 Windows TTS 언어팩이 필요 없다. Chrome 또는 Edge가 있으면 독립 app 창으로 열고, 없으면 기본 브라우저를 사용한다. Edge Neural TTS 때문에 인터넷은 필요하다.
 
-0.4.0 포터블 납품본은 USB 복사만으로 동작하도록 모델을 `models` 폴더에 포함합니다. 첫 실행에서 고객 언어를 선택하며, Windows TTS 음성은 OS 버전별 Features on Demand로 설치합니다. Windows 음성 CAB/DLL 자체는 앱에 재배포하지 않습니다.
+배포 절차:
 
-배포 파이프라인은 다음 순서입니다.
+1. `pytest`와 Ruff 통과
+2. 공개 fixed-language 음성 회귀와 호텔 번역 holdout 확인
+3. `build.ps1` 실행
+4. `dist\RemotePlusTranslator`의 EXE doctor exit code 확인
+5. 폴더 전체를 깨끗한 Windows Intel PC로 복사
+6. 시작/장치 검색/STT/양방향 번역/TTS/다시 듣기/창 종료 확인
+7. 작업 관리자에서 EXE, llama-server, 브라우저 전용 profile 프로세스 잔존 확인
+8. 가능하면 조직 인증서로 EXE와 Setup 서명
 
-1. 깨끗한 Windows x64 빌드 머신에서 테스트
-2. PyInstaller portable 폴더 생성
-3. 모델 없는 상태와 모델 설치 상태 모두 수용 테스트
-4. Inno Setup으로 `Setup.exe` 생성
-5. 가능하면 조직의 코드 서명 인증서로 EXE와 설치 파일 서명
-6. Intel 8GB/16GB/32GB 기준 PC에서 설치·삭제·업데이트 회귀 테스트
+권장 최소 RAM은 16GB다. 8GB는 OS와 다른 상담 프로그램까지 함께 쓰면 paging으로 지연이 크게 흔들릴 수 있다. CPU 세대·코어 수에 따라 같은 Intel PC라도 성능이 다르므로 실제 납품 기종에서 30~60분 수용 시험이 필요하다.
 
-## 다른 Intel PC
+설정과 로그는 `%LOCALAPPDATA%\RemotePlusTranslator`에 저장하므로 Program Files 설치 권한과 분리된다. 모델 경로만 배포 폴더 기준 상대 경로다. USB 전달 시 EXE만이 아니라 폴더 전체를 복사한다.
 
-Intel CPU라는 사실만으로 성능이 같지는 않습니다. 세 가지 프로필을 수용 테스트합니다.
-
-| 등급 | 권장 조건 | STT | 예상 용도 |
-|---|---|---|---|
-| Lite | 4코어, RAM 8GB | tiny 또는 base INT8 | 짧은 대화, 정확도 양보 |
-| Standard | 6코어 이상, RAM 16GB | small INT8 | 기본 납품 사양 |
-| Quality | 8코어 이상, RAM 32GB | medium INT8 | 정확도 우선 |
-
-Hy-MT2 1.8B Q4와 Whisper-small이 주 메모리 부담입니다. 0.3.0 경량 배포본은 중복 번역 모델과 Torch를 제외하고, Hy-MT2 프로세스 장애 시 한 번 자동 재시작합니다. RAM 16GB를 기본 권장 사양으로 두고, 8GB PC는 동시 상주와 장시간 안정성을 별도 검증해야 합니다.
-
-## Vercel 검토
-
-Vercel에는 정적 소개 페이지, 설치 파일 다운로드 링크, 사용자 문서를 올릴 수 있습니다. 그러나 현재 로컬 AI 엔진을 Vercel Function으로 옮기는 것은 납품 목표와 맞지 않습니다.
-
-- Python Function 번들 제한보다 모델 묶음이 큼
-- Hobby 메모리는 2GB라 번역+Whisper 동시 상주에 부족
-- 지속적인 모델 상주와 음성 스트리밍은 cold start와 실행시간 비용 발생
-- 음성이 외부 서버로 나가므로 “완전 로컬” 요구가 사라짐
-- 트래픽 증가 시 기존 유료 API와 같은 사용량 비용 문제가 재발
-
-권장 구성은 `Vercel = 배포 포털`, `Windows 앱 = 로컬 엔진과 실제 UI`입니다. Vercel 페이지가 HTTPS에서 localhost API를 직접 조작하는 방식은 브라우저의 사설망 접근 정책, 인증서, CORS 문제 때문에 핵심 실행 경로로 사용하지 않습니다. 설치 앱이 자체적으로 `127.0.0.1` 화면을 여는 현재 구조가 안전합니다.
-
-브라우저 WebGPU에 Whisper·번역·TTS를 모두 넣는 방식은 연구용 데모로는 가능하지만, 다중 모델 다운로드 크기, 브라우저별 WebGPU 차이, 메모리 회수, 첫 실행 시간 때문에 고객 납품 기준선으로 삼지 않습니다.
-
-## 네트워크에서 보는 기능
-
-같은 LAN의 다른 장치에서 자막을 보게 할 수는 있습니다. 이 경우 서버 host를 `0.0.0.0`으로 바꾸기 전에 세션 토큰, Windows 방화벽 규칙, 허용 IP, TLS 또는 신뢰된 내부망 조건을 구현해야 합니다. 현재 버전은 개인정보 보호를 위해 localhost만 허용합니다.
+Vercel은 소개/다운로드 페이지로만 사용할 수 있다. 브라우저 정적 페이지는 WASAPI, native CTranslate2/llama DLL, 장기 상주 수 GB 모델을 현재 납품 품질로 실행하지 못한다. 현재 서버는 DNS rebinding, origin, session cookie를 검사하고 localhost만 허용한다. LAN 공개는 별도 인증·TLS·방화벽·개인정보 설계 없이는 허용하지 않는다.

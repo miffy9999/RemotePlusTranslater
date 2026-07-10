@@ -92,6 +92,20 @@ class EdgeSpeaker(threading.Thread):
         self._synthesis_task: asyncio.Task[None] | None = None
         self._next_request_id = 0
         self._mixer_device_name: str | None = None
+        self._cleanup_orphan_files()
+
+    @staticmethod
+    def _cleanup_orphan_files() -> None:
+        cutoff = time.time() - 3600
+        try:
+            for path in Path(tempfile.gettempdir()).glob("remoteplus-edge-*.mp3"):
+                try:
+                    if path.stat().st_mtime < cutoff:
+                        path.unlink(missing_ok=True)
+                except OSError:
+                    continue
+        except OSError:
+            pass
 
     def _metric(self, event: str, **fields: object) -> None:
         if self.metrics is None:
@@ -354,34 +368,35 @@ class EdgeSpeaker(threading.Thread):
             path.unlink(missing_ok=True)
 
     def run(self) -> None:
-        while not self._stop_event.is_set():
-            try:
-                request = self._requests.get(timeout=0.2)
-            except queue.Empty:
-                continue
+        try:
+            while not self._stop_event.is_set():
+                try:
+                    request = self._requests.get(timeout=0.2)
+                except queue.Empty:
+                    continue
 
-            self._interrupt_event.clear()
-            self._playing.set()
-            dequeued_at = time.monotonic()
-            self._metric(
+                self._interrupt_event.clear()
+                self._playing.set()
+                dequeued_at = time.monotonic()
+                self._metric(
                 "tts_dequeued",
                 request_id=request.request_id,
                 utterance_id=request.utterance_id or 0,
                 queue_wait_seconds=f"{max(0.0, dequeued_at - request.queued_at):.3f}",
                 queue_depth_after=self._requests.qsize(),
             )
-            gate_started = False
-            started_at = 0.0
+                gate_started = False
+                started_at = 0.0
 
-            def begin_playback() -> None:
-                nonlocal gate_started, started_at
-                if gate_started:
-                    return
-                gate_started = True
-                started_at = time.monotonic()
-                self.gate.begin()
-                self.status("speaking", "Speaking translated reply")
-                self._metric(
+                def begin_playback() -> None:
+                    nonlocal gate_started, started_at
+                    if gate_started:
+                        return
+                    gate_started = True
+                    started_at = time.monotonic()
+                    self.gate.begin()
+                    self.status("speaking", "Speaking translated reply")
+                    self._metric(
                     "tts_playback_started",
                     request_id=request.request_id,
                     utterance_id=request.utterance_id or 0,
@@ -394,12 +409,12 @@ class EdgeSpeaker(threading.Thread):
                         f"{max(0.0, started_at - request.translation_ready_at):.3f}"
                         if request.translation_ready_at else "0.000"
                     ),
-                )
+                    )
 
-            try:
-                self._play(request, begin_playback)
-                finished_at = time.monotonic()
-                self._metric(
+                try:
+                    self._play(request, begin_playback)
+                    finished_at = time.monotonic()
+                    self._metric(
                     "tts_playback_finished",
                     request_id=request.request_id,
                     utterance_id=request.utterance_id or 0,
@@ -409,23 +424,31 @@ class EdgeSpeaker(threading.Thread):
                         f"{max(0.0, finished_at - request.speech_ended_at):.3f}"
                         if request.speech_ended_at else "0.000"
                     ),
-                )
-                self.status("listening", "Listening")
-            except InterruptedError:
-                self._metric(
+                    )
+                    self.status("listening", "Listening")
+                except InterruptedError:
+                    self._metric(
                     "tts_interrupted",
                     request_id=request.request_id,
                     utterance_id=request.utterance_id or 0,
                     stage="synthesis",
-                )
-                self.status("listening", "Listening")
-            except Exception as exc:
-                self._metric("tts_failed", request_id=request.request_id, utterance_id=request.utterance_id or 0, error=repr(exc))
-                self.status("warning", f"Online TTS failed: {exc}")
-            finally:
-                self._playing.clear()
-                if gate_started:
-                    self.gate.end()
+                    )
+                    self.status("listening", "Listening")
+                except Exception as exc:
+                    self._metric("tts_failed", request_id=request.request_id, utterance_id=request.utterance_id or 0, error=repr(exc))
+                    self.status("warning", f"Online TTS failed: {exc}")
+                finally:
+                    self._playing.clear()
+                    if gate_started:
+                        self.gate.end()
+        finally:
+            try:
+                import pygame
+                if pygame.mixer.get_init():
+                    pygame.mixer.music.stop()
+                    pygame.mixer.quit()
+            except Exception:
+                pass
 
     def stop(self) -> None:
         self._stop_event.set()

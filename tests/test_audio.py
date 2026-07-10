@@ -55,3 +55,34 @@ def test_loopback_device_prefix_is_stable():
 def test_invalid_sounddevice_value_has_clear_error():
     with pytest.raises(ValueError, match="audio.input_device"):
         sounddevice_value("broken")
+
+
+def test_segmenter_snapshots_reply_language_and_tts_at_speech_start():
+    cfg = AudioConfig(end_silence_ms=60, staff_end_silence_ms=60, min_speech_ms=20)
+    vad = SpeechSegmenter(cfg)
+    vad.process(
+        frame(0.05),
+        candidate_utterance_id=7,
+        speech_mode="staff",
+        recognition_language="ja",
+        reply_language="ko",
+        tts_enabled=True,
+    )
+    result = None
+    for _ in range(4):
+        candidate = vad.process(
+            frame(0.0),
+            speech_mode="customer",
+            recognition_language="en",
+            reply_language="es",
+            tts_enabled=False,
+        )
+        if candidate is not None:
+            result = candidate
+            break
+    assert result is not None
+    assert result.utterance_id == 7
+    assert result.speech_mode == "staff"
+    assert result.recognition_language == "ja"
+    assert result.reply_language == "ko"
+    assert result.tts_enabled is True

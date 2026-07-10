@@ -7,6 +7,7 @@ import queue
 import secrets
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from contextlib import asynccontextmanager
@@ -22,6 +23,7 @@ from .conversation import ConversationController
 from .events import EventBus
 from .feedback import FeedbackStore
 from .languages import CUSTOMER_LANGUAGE_CODES, public_languages
+from .settings import UserSettings
 
 
 def _fallback_devices(message: str) -> dict[str, list]:
@@ -38,6 +40,8 @@ def _run_device_probe(root: Path, kind: str, code: str, timeout_seconds: float) 
     env["PYGAME_HIDE_SUPPORT_PROMPT"] = "1"
     env["PYTHONPATH"] = str(root) + (os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else "")
     flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
+    output_file = Path(tempfile.gettempdir()) / f"remoteplus-device-{os.getpid()}-{kind}-{secrets.token_hex(4)}.json"
+    env["REMOTEPLUS_PROBE_OUTPUT"] = str(output_file)
     command = [sys.executable, "device-probe", kind] if getattr(sys, "frozen", False) else [sys.executable, "-c", code]
     try:
         completed = subprocess.run(
@@ -50,19 +54,25 @@ def _run_device_probe(root: Path, kind: str, code: str, timeout_seconds: float) 
             check=False,
         )
     except subprocess.TimeoutExpired:
+        output_file.unlink(missing_ok=True)
         return _fallback_devices("Audio device enumeration timed out; system default remains available.")
     except Exception as exc:
+        output_file.unlink(missing_ok=True)
         return _fallback_devices(f"Audio device enumeration failed; system default remains available: {exc}")
-    stdout = (completed.stdout or b"").decode("utf-8", errors="replace")
-    stderr = (completed.stderr or b"").decode("utf-8", errors="replace")
-    if completed.returncode != 0:
-        detail = (stderr or stdout).strip()
-        return _fallback_devices(f"Audio device enumeration failed; system default remains available: {detail or completed.returncode}")
     try:
+        stdout = (completed.stdout or b"").decode("utf-8", errors="replace")
+        stderr = (completed.stderr or b"").decode("utf-8", errors="replace")
+        if completed.returncode != 0:
+            detail = (stderr or stdout).strip()
+            return _fallback_devices(f"Audio device enumeration failed; system default remains available: {detail or completed.returncode}")
+        if output_file.exists():
+            return json.loads(output_file.read_text(encoding="utf-8"))
         lines = [line.strip() for line in stdout.splitlines() if line.strip()]
         return json.loads(lines[-1] if lines else "")
     except (TypeError, ValueError):
         return _fallback_devices("Audio device enumeration returned invalid data; system default remains available.")
+    finally:
+        output_file.unlink(missing_ok=True)
 
 
 def _enumerate_devices(root: Path, timeout_seconds: float = 8.0) -> dict[str, list]:
@@ -119,11 +129,24 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
     bus = EventBus()
     controller = ConversationController(config, bus, recognizer=recognizer)
     feedback = FeedbackStore(config.data_root)
+    user_settings = UserSettings(config.data_root)
     devices_cache: dict[str, object] = {"expires_at": 0.0, "payload": None}
+    devices_lock = threading.Lock()
 
     # Every supported customer language is selectable immediately. There is no
     # Windows voice pack setup because Edge Neural TTS is online.
     controller.control(enabled_languages=list(CUSTOMER_LANGUAGE_CODES))
+    saved = user_settings.load()
+    for key in ("active_language", "reply_language", "tts_enabled", "output_device", "input_device"):
+        if key not in saved:
+            continue
+        try:
+            controller.control(**{key: saved[key]})
+        except (TypeError, ValueError):
+            # Device names and language codes can disappear after moving the
+            # portable build to another PC. Invalid persisted values never
+            # prevent startup; the configured/default value remains active.
+            continue
 
     auth_token = secrets.token_urlsafe(32)
     cookie_name = "remoteplus_session"
@@ -183,23 +206,24 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
 
     @app.get("/api/devices")
     def devices():
-        now = time.monotonic()
-        cached = devices_cache.get("payload")
-        if cached is not None and now < float(devices_cache["expires_at"]):
-            return cached
-        try:
-            warnings: list[str] = []
-            result = _enumerate_devices(config.root)
-            warnings.extend(result.get("warnings", []))
-            if not result.get("outputs"):
-                warnings.append("Could not enumerate Edge TTS output devices; system default remains available.")
-                result["outputs"] = []
-            result["warnings"] = warnings
-            devices_cache["payload"] = result
-            devices_cache["expires_at"] = time.monotonic() + DEVICE_CACHE_SECONDS
-            return result
-        except Exception as exc:
-            raise HTTPException(500, str(exc)) from exc
+        with devices_lock:
+            now = time.monotonic()
+            cached = devices_cache.get("payload")
+            if cached is not None and now < float(devices_cache["expires_at"]):
+                return cached
+            try:
+                warnings: list[str] = []
+                result = _enumerate_devices(config.root)
+                warnings.extend(result.get("warnings", []))
+                if not result.get("outputs"):
+                    warnings.append("Could not enumerate Edge TTS output devices; system default remains available.")
+                    result["outputs"] = []
+                result["warnings"] = warnings
+                devices_cache["payload"] = result
+                devices_cache["expires_at"] = time.monotonic() + DEVICE_CACHE_SECONDS
+                return result
+            except Exception as exc:
+                raise HTTPException(500, str(exc)) from exc
 
     @app.post("/api/control")
     def control(request: ControlRequest):
@@ -209,7 +233,9 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
             # the supported language set accidentally.
             if payload.get("enabled_languages") is not None:
                 payload["enabled_languages"] = list(CUSTOMER_LANGUAGE_CODES)
-            return controller.control(**payload)
+            state = controller.control(**payload)
+            user_settings.save(state)
+            return state
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
 
@@ -269,7 +295,7 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
                 try:
                     event = await asyncio.to_thread(subscriber.get, True, 1.0)
                 except queue.Empty:
-                    await websocket.send_json({"type": "ping"})
+                    await websocket.send_json({"type": "state", "data": controller.snapshot()})
                     continue
                 await websocket.send_json(event.as_dict())
         except (WebSocketDisconnect, RuntimeError):

@@ -8,14 +8,25 @@ datas = [(os.path.join(project_root, "config.toml"), ".")]
 datas += collect_data_files("translator_app")
 datas += collect_data_files("faster_whisper")
 datas += collect_data_files("soundcard")
+datas += collect_data_files("edge_tts")
+datas += collect_data_files("pygame")
 
 binaries = collect_dynamic_libs("ctranslate2")
 binaries += collect_dynamic_libs("onnxruntime")
+system32 = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "System32")
+for runtime_dll in (
+    "msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll", "msvcp140_atomic_wait.dll",
+    "vcruntime140.dll", "vcruntime140_1.dll",
+):
+    runtime_path = os.path.join(system32, runtime_dll)
+    if os.path.exists(runtime_path):
+        binaries.append((runtime_path, "."))
 
 hiddenimports = []
 hiddenimports += collect_submodules("uvicorn")
-hiddenimports += collect_submodules("webview")
 hiddenimports += collect_submodules("soundcard")
+hiddenimports += collect_submodules("edge_tts")
+hiddenimports += collect_submodules("pygame")
 
 a = Analysis(
     [os.path.join(project_root, "launcher.py")],
@@ -40,7 +51,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    console=True,
+    console=False,
 )
 coll = COLLECT(
     exe,

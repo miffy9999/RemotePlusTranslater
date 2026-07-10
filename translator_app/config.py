@@ -4,6 +4,7 @@ import copy
 import os
 import sys
 import tomllib
+import warnings
 from dataclasses import dataclass, field, fields
 from pathlib import Path
 from typing import Any, TypeVar
@@ -72,6 +73,11 @@ class SttConfig:
     compute_type: str = "int8"
     # Final priority: beam 1 cuts CPU decode time substantially.
     beam_size: int = 1
+    repetition_penalty: float = 1.08
+    no_repeat_ngram_size: int = 2
+    quality_retry_enabled: bool = True
+    quality_retry_beam_size: int = 2
+    quality_retry_log_prob_threshold: float = -0.9
     cpu_threads: int = 6
     num_workers: int = 1
     # Dedicated accuracy-balanced live model. It never blocks the final model.
@@ -110,6 +116,7 @@ class TranslationConfig:
     glossary: dict[str, list[str]] = field(default_factory=dict)
     protected_terms: list[dict[str, list[str]]] = field(default_factory=list)
     root: Path = field(default=ROOT, init=False, repr=False)
+    data_root: Path = field(default=DATA_ROOT, init=False, repr=False)
 
 
 @dataclass(slots=True)
@@ -182,22 +189,37 @@ def load_config(path: Path | None = None) -> AppConfig:
         raise FileNotFoundError(f"Configuration not found: {primary}")
     with primary.open("rb") as handle:
         data = tomllib.load(handle)
+    primary_data = copy.deepcopy(data)
     local = DATA_ROOT / "config.local.toml"
     if local.exists() and local != primary:
-        with local.open("rb") as handle:
-            data = _merge(data, tomllib.load(handle))
-    cfg = AppConfig(
-        audio=_make(AudioConfig, data.get("audio", {})),
-        stt=_make(SttConfig, data.get("stt", {})),
-        translation=_make(TranslationConfig, data.get("translation", {})),
-        tts=_make(TtsConfig, data.get("tts", {})),
-        conversation=_make(ConversationConfig, data.get("conversation", {})),
-        server=_make(ServerConfig, data.get("server", {})),
-        root=primary.resolve().parent,
-        data_root=DATA_ROOT,
-    )
+        try:
+            with local.open("rb") as handle:
+                data = _merge(data, tomllib.load(handle))
+        except (OSError, tomllib.TOMLDecodeError) as exc:
+            warnings.warn(f"Ignoring invalid local configuration {local}: {exc}", RuntimeWarning)
+            data = primary_data
+
+    def build(values: dict[str, Any]) -> AppConfig:
+        return AppConfig(
+            audio=_make(AudioConfig, values.get("audio", {})),
+            stt=_make(SttConfig, values.get("stt", {})),
+            translation=_make(TranslationConfig, values.get("translation", {})),
+            tts=_make(TtsConfig, values.get("tts", {})),
+            conversation=_make(ConversationConfig, values.get("conversation", {})),
+            server=_make(ServerConfig, values.get("server", {})),
+            root=primary.resolve().parent,
+            data_root=DATA_ROOT,
+        )
+    try:
+        cfg = build(data)
+    except (TypeError, ValueError) as exc:
+        if not local.exists() or data == primary_data:
+            raise
+        warnings.warn(f"Ignoring incompatible local configuration {local}: {exc}", RuntimeWarning)
+        cfg = build(primary_data)
     cfg.stt.root = cfg.root
     cfg.translation.root = cfg.root
+    cfg.translation.data_root = cfg.data_root
     validate_config(cfg)
     return cfg
 
@@ -238,6 +260,8 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("tts.edge_retry_count must be between 0 and 3")
     if cfg.translation.backend not in {"m2m100", "hymt2"}:
         raise ValueError("translation.backend must be m2m100 or hymt2")
+    if FROZEN and cfg.translation.backend != "hymt2":
+        raise ValueError("The packaged application includes only the Hy-MT2 translation backend")
     if not 1 <= cfg.server.port <= 65535:
         raise ValueError("server.port must be between 1 and 65535")
     if cfg.server.auto_shutdown_no_clients_seconds < 3:
@@ -246,6 +270,14 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("server.host must be a loopback address")
     if min(cfg.stt.cpu_threads, cfg.stt.num_workers, cfg.stt.live_cpu_threads) < 1:
         raise ValueError("stt thread counts must be at least 1")
+    if cfg.stt.repetition_penalty < 1:
+        raise ValueError("stt.repetition_penalty must be at least 1")
+    if not 0 <= cfg.stt.no_repeat_ngram_size <= 5:
+        raise ValueError("stt.no_repeat_ngram_size must be between 0 and 5")
+    if not 1 <= cfg.stt.quality_retry_beam_size <= 5:
+        raise ValueError("stt.quality_retry_beam_size must be between 1 and 5")
+    if not -5 <= cfg.stt.quality_retry_log_prob_threshold <= 0:
+        raise ValueError("stt.quality_retry_log_prob_threshold must be between -5 and 0")
     if cfg.translation.hymt2_threads < 1:
         raise ValueError("translation.hymt2_threads must be at least 1")
     if cfg.translation.hymt2_request_timeout_seconds < 1:

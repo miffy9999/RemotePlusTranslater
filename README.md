@@ -1,135 +1,150 @@
-# RemotePlus Translator 0.4.1 — 로컬 양방향 실시간 통역기
+# RemotePlus Translator 0.5.0
 
-일본 콜센터 상담원이 외국어 고객과 통화하기 위한 로컬 중심 양방향 음성 통역기입니다.
+일본 호텔·콜센터용 로컬 우선 양방향 음성 번역기입니다. 고객이 선택된 외국어로 말하면 로컬 Whisper가 받아쓰고 로컬 Hy-MT2가 일본어 텍스트로 번역합니다. 직원이 `Space`를 누른 채 일본어로 답하면 같은 대화의 고객 언어로 번역하고 Edge Neural TTS로 읽습니다.
 
-1. 상대방이 영어·한국어·스페인어·중국어 등으로 말합니다.
-2. 화면에 원문과 일본어 번역이 표시됩니다.
-3. 사용자가 일본어로 답합니다.
-4. 답변이 직전에 감지한 상대방 언어로 번역되고, 그 언어의 음성으로 재생됩니다.
+Python이 없는 다른 Windows PC에서도 `dist\RemotePlusTranslator` 폴더 전체를 복사하면 실행할 수 있습니다. STT와 번역은 PC 안에서 처리되며 사용량 과금이 없습니다. TTS만 Microsoft Edge의 무료 온라인 음성 서비스를 사용하므로 인터넷 연결이 필요하고, 서비스 정책·가용성은 Microsoft 측에 의존합니다.
 
-음성 인식과 번역은 PC 안의 로컬 모델로 처리합니다. TTS는 현재 Microsoft Edge online neural 음성을 사용하므로, 음성 합성을 켠 상태에서는 번역된 답변 텍스트가 Edge TTS 서비스로 전송될 수 있습니다.
+## 현재 제품 범위
 
-로컬 API와 WebSocket은 실행할 때 생성한 세션 쿠키, localhost Host, 브라우저 Origin을 함께 검사합니다. 다른 웹사이트나 LAN 장치에서는 대화 기록과 제어 API에 접근할 수 없습니다.
+- Windows 10/11 x64, Intel CPU 기준
+- 고객 언어 수동 선택: 영어, 한국어, 중국어, 스페인어, 프랑스어, 독일어, 이탈리아어, 포르투갈어, 러시아어, 아랍어, 힌디어, 베트남어, 태국어, 인도네시아어, 말레이어, 튀르키예어, 네덜란드어, 폴란드어, 우크라이나어, 체코어, 히브리어
+- 고객 음성 → 일본어 텍스트
+- 직원 일본어 음성 → 선택된 고객 언어 텍스트 + TTS
+- 마이크와 Windows WASAPI `PC playback` 입력 선택
+- Edge/pygame 출력 장치 선택 및 시스템 기본 장치 fallback
+- 한국어·영어·일본어·중국어·스페인어 UI
+- 번역 기록 지우기, 번역 교정 저장, 완료된 답변 다시 듣기
 
-## 처음 설치
+자동 언어 감지는 속도와 오감지 비용 때문에 제품 경로에서 제거했습니다. 일본어 고객 입력을 처리하는 제품도 아닙니다. 일본 직원 발화는 `Space`를 누른 동안만 일본어 모드로 고정됩니다.
 
-Windows에서 다음 순서대로 더블클릭합니다.
+## 가장 빠른 실행 방법
 
-1. `install.bat` — 전용 환경과 프로그램 설치
-2. `prepare_models.bat` — 음성 인식·번역 모델과 llama.cpp 런타임 다운로드
-3. `run.bat` — 실행
+### 완성 EXE
 
-`run.bat`을 누르면 서버 콘솔과 주소창 없는 전용 프로그램 창이 함께 열립니다. 콘솔에는 실제 접속 주소가 표시되며, 프로그램을 사용하는 동안 닫지 말아야 합니다. 종료할 때는 콘솔에서 `Ctrl+C`를 누르거나 창을 닫습니다. 최초 모델 준비는 다운로드 속도에 따라 오래 걸릴 수 있고 수 GB의 공간을 사용합니다.
+1. `dist\RemotePlusTranslator` 폴더 전체를 대상 PC로 복사합니다. EXE 하나만 떼어 복사하면 모델과 DLL을 찾지 못합니다.
+2. `RemotePlusTranslator.exe`를 실행합니다.
+3. `입력 언어`, `입력 장치`, `출력 장치`를 고릅니다.
+4. 상단 상태가 `Models ready`/준비 완료인지 확인합니다.
+5. 고객 음성을 들려주고 일본어 번역을 확인합니다.
+6. 답변할 때 `Space`를 누른 채 일본어로 말하고, 발화를 끝낸 뒤 놓습니다.
+7. TTS가 잘렸다면 해당 답변 카드의 소리/다시 듣기 버튼을 누릅니다.
 
-문제 분석이 필요할 때는 `run_debug.bat`을 실행합니다. 동작은 `run.bat`과 같지만 시작 로그와 실행 상태 확인용 로그를 더 남깁니다.
+첫 실행은 Whisper와 Hy-MT2를 메모리에 올리므로 일반 발화보다 오래 걸립니다. 준비 완료 전에 마이크 스트림은 열리지 않습니다.
 
-오른쪽 위 `화면 언어`는 일본어·한국어·영어·중국어·스페인어로 바꿀 수 있으며 마지막 선택을 이 PC에 기억합니다. 이 설정은 고객의 `입력 언어`와 독립적입니다.
+### 소스 개발 실행
 
-납품용 `dist\RemotePlusTranslator` 폴더는 Python 설치 없이 실행되는 휴대용 제품입니다. 폴더 전체를 USB나 다른 PC로 복사한 뒤 `RemotePlusTranslator.exe`를 실행합니다. `models` 폴더를 포함해야 음성 인식과 번역이 로컬에서 작동합니다.
+```bat
+install.bat
+run_debug.bat
+```
 
-## 실제 사용법
+`run_debug.bat`은 이번 실행의 타이밍 로그만 분석합니다. 일반 실행은 `run.bat`, 설치 점검은 `doctor.bat`을 사용합니다.
 
-- 상대방이 말한 뒤 약 0.55초 쉬면 문장이 확정되고 일본어가 표시됩니다.
-- 일본어 번역을 읽은 다음 일본어로 답하면 직전 상대 언어로 번역되고 Edge online neural 음성으로 재생됩니다.
-- `입력 언어`에서 자동 감지 또는 영어·한국어·중국어·스페인어 등을 직접 선택합니다. 직접 선택해도 직원의 일본어 답변은 별도로 감지합니다.
-- `음성 입력 장치`에서 마이크나 `PC playback · 스피커 이름`을 선택할 수 있습니다. PC playback은 별도 가상 케이블 없이 Windows에서 재생되는 통화 음성을 직접 받습니다.
-- `TTS 출력 장치`에는 실행 중인 PC에 연결된 스피커·헤드셋이 표시됩니다. 장치 목록은 서버 안정성을 위해 별도 자식 프로세스에서 입력과 출력을 분리해 가져오고, 짧게 캐시합니다. 목록 열거에 실패해도 시스템 기본 장치로 계속 사용할 수 있습니다.
-- 첫 실행 이후 지원 언어는 기본 목록에서 바로 선택할 수 있습니다. Windows 음성팩 설치는 필요하지 않습니다.
-- 스피커 소리가 다시 마이크로 들어가는 동안에는 입력을 자동 차단합니다. TTS가 끝난 뒤 0.5초가 지나야 다시 듣습니다.
-- 헤드셋을 사용하면 반향과 상대방 음성 재입력을 크게 줄일 수 있습니다.
+## 올바른 통화 테스트
 
-`doctor.bat`은 마이크·스피커·설치 상태를 검사합니다.
+- 노트북 마이크 테스트: `입력 장치 = System default input`
+- PC에서 재생되는 통화/영상: `입력 장치 = PC playback · ...`
+- 처음에는 영어처럼 확실한 한 언어를 선택하고 1~2초 문장으로 확인합니다.
+- 직원 답변은 반드시 `Space`를 누른 상태에서 말하기 시작합니다. 발화 중 언어·모드·TTS 설정은 시작 순간 값으로 고정됩니다.
+- TTS 재생 중 캡처는 음성 되먹임을 막기 위해 잠깐 mute됩니다. 고객과 TTS가 겹치면 고객 음성이 잘릴 수 있으므로 실제 통화 연결 시 echo cancellation 또는 송수신 분리가 필요합니다.
 
-## 기본 지원
+## 처리 구조
 
-번역은 일본어를 포함해 설정된 30개 언어를 지원합니다. 영어, 한국어, 스페인어, 중국어, 프랑스어, 독일어, 이탈리아어, 포르투갈어, 러시아어 등이 포함됩니다. TTS는 Edge online neural 음성 매핑이 있는 언어를 우선 사용합니다.
+```text
+마이크/WASAPI loopback
+  → 20 ms frame + RMS VAD
+  → 최신 발화 1개 큐
+  → faster-whisper small CPU INT8
+  → 최신 번역 1개 큐
+  → llama-server + Hy-MT2 Q4
+  → UI 최종 텍스트
+  → 직원 답변일 때 Edge TTS → pygame 출력
+```
 
-기본 번역 엔진은 Hy-MT2 1.8B GGUF이며, 포함된 llama.cpp 서버를 로컬 HTTP API로 실행합니다. 예비 백엔드로 M2M100 설정이 남아 있지만 기본 실행 경로는 Hy-MT2입니다.
+큐, WebSocket subscriber, 이벤트 기록, UI 카드 수는 모두 상한이 있습니다. 새 발화가 시작되면 대기 중인 이전 작업을 버리고, 실행 중이던 이전 결과도 UI나 TTS에 게시하지 않습니다. llama 응답 스트림을 닫을 수 있는 시점에는 실행 중 생성도 취소합니다. Whisper의 네이티브 CPU 디코드는 안전한 중간 취소 API가 없으므로 이미 시작된 한 번의 디코드는 끝까지 계산하되 결과는 폐기합니다.
+
+준비 상태는 `Whisper loaded`와 실제 `llama-server` 프로세스 생존을 함께 확인합니다. 서버가 죽으면 UI도 준비 완료로 남지 않으며, 다음 번역 요청에서 한 번 복구합니다. 포트 충돌 시 새 포트로 재시도하고 llama 출력은 로그에 남깁니다.
+
+## 정확도와 지연 설정
+
+기본값은 CPU 지연을 우선한 실사용 프로필입니다.
+
+- Whisper `small`, INT8, beam 1
+- 명백한 반복 루프와 낮은 log probability에서만 beam 2 재시도
+- 언어별 호텔 hotword와 보수적 교정 사전
+- Hy-MT2 Q4, context 1024, 8 threads
+- live preview 비활성화
+
+일반 발화는 추가 STT 패스를 실행하지 않습니다. 뭉개진 발음처럼 의심스러운 결과에만 정확도 재시도가 들어가므로 그 발화만 느려질 수 있습니다. `config.toml`의 threshold를 무작정 낮추면 조용한 방 잡음과 TTS 되먹임이 발화로 잡힙니다.
+
+호텔 용어는 `[stt.language_hotwords]`, `[stt.corrections]`, `[translation.glossary]`, `translation.protected_terms`에서 관리합니다. UI의 교정 저장은 `%LOCALAPPDATA%\RemotePlusTranslator\feedback\corrections.jsonl`에 원자료를 축적하지만 자동 재학습은 하지 않습니다. 충분한 권리 확보 실통화 자료와 정답 전사가 모이기 전에는 Colab fine-tuning보다 hotword·교정·회귀 샘플 관리가 비용 대비 안전합니다.
+
+## 설정과 데이터 위치
+
+우선순위는 다음과 같습니다.
+
+1. 배포 폴더의 `config.toml`: 모델·성능·기본값
+2. `%LOCALAPPDATA%\RemotePlusTranslator\config.local.toml`: 관리자가 선택적으로 덮어쓰는 고급 설정
+3. `%LOCALAPPDATA%\RemotePlusTranslator\user-settings.json`: UI에서 선택한 언어·TTS·장치
+
+손상되거나 구버전인 local/user 설정은 시작을 막지 않고 무시됩니다. 다른 PC에서 존재하지 않는 장치명도 자동으로 건너뛰며 기본 장치를 사용합니다. 사용자 설정은 임시 파일을 거친 atomic replace로 저장하므로 설치 폴더 쓰기 권한이 필요하지 않습니다.
+
+로그:
+
+- 일반 시작 오류: `%LOCALAPPDATA%\RemotePlusTranslator\logs\startup-error.log`
+- llama-server: `%LOCALAPPDATA%\RemotePlusTranslator\logs\llama-server.log`
+- 디버그 타이밍: `%LOCALAPPDATA%\RemotePlusTranslator\logs\timing-*.log`
+- EXE doctor 결과: `%LOCALAPPDATA%\RemotePlusTranslator\doctor-report.txt`
+
+## 장시간 운영과 종료
+
+- 앱은 Windows named mutex로 중복 실행을 막습니다.
+- 앱 창 WebSocket이 끊긴 뒤 설정된 유예 시간이 지나면 FastAPI가 종료됩니다.
+- 정상 종료 시 audio, STT/translation/TTS worker, pygame mixer, uvicorn, llama-server를 차례로 닫습니다.
+- Windows Job Object가 부모 프로세스 비정상 종료 때 llama-server 같은 자식 프로세스를 함께 정리합니다.
+- Edge 임시 MP3는 재생 직후 삭제하고, 비정상 종료로 남은 1시간 이상 파일은 다음 실행 때 청소합니다.
+- 이벤트 기록은 100개, 화면 카드는 20개로 제한됩니다. 기록 지우기는 개인정보 정리에 유용하지만 수 GB 모델 메모리에는 거의 영향을 주지 않습니다.
+
+## 문제 해결
+
+### 계속 준비 중
+
+`llama-server.log`를 확인합니다. 모델 GGUF와 `models\hymt2\llama\llama-server.exe` 및 같은 폴더 DLL이 모두 있어야 합니다. 준비 상태는 매 WebSocket heartbeat마다 실제 프로세스 생존과 다시 맞춰집니다.
+
+### 음성이 중간에 잘림
+
+입력 overflow나 내부 frame queue drop이 나면 잘린 발화를 억지로 번역하지 않고 폐기하며 UI 경고와 디버그 metric을 남깁니다. 다른 CPU 작업을 줄이고 올바른 장치를 선택하세요. 직원 모드는 최대 20초, 고객 모드는 최대 12초입니다.
+
+### TTS가 안 나옴
+
+인터넷 연결, TTS 토글, Windows 기본 출력과 선택 출력 장치를 확인합니다. 일시 네트워크 오류는 한 번만 재시도하며, 새 답변이 들어오면 이전 합성과 재생을 취소합니다. 실패한 답변은 카드의 다시 듣기로 재시도할 수 있습니다.
+
+### `check check check` 같은 반복
+
+Whisper가 잡음·끊긴 음절을 반복 토큰으로 확장할 때 생깁니다. 3회 이상 연속되는 명백한 단어/구문 루프만 축약하고, 의심 결과는 작은 beam 재시도를 합니다. 정상적인 두 번 강조는 유지합니다.
+
+### 다른 PC에서 장치가 안 보임
+
+장치는 번역마다 찾지 않습니다. 앱 화면 시작 시 조회하고 60초 캐시/주기로 갱신합니다. 선택 변경 때 기존 stream을 먼저 닫고, 3초 안에 닫히지 않으면 새 stream을 중복으로 열지 않습니다.
+
+## 개발 검증과 빌드
 
 ```powershell
-.venv\Scripts\python.exe -m translator_app.cli prepare
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m ruff check translator_app tests scripts launcher.py
+.\.venv\Scripts\python.exe scripts\benchmark_public_audio.py
+.\.venv\Scripts\python.exe scripts\stress_runtime.py --help
+.\build.ps1
 ```
 
-## 설정
+`build.ps1`은 web/config, faster-whisper/ctranslate2, sounddevice/SoundCard, edge-tts/pygame와 DLL을 수집하고 Whisper·Hy-MT2·llama runtime을 복사한 뒤 완성 EXE로 doctor를 실행합니다. 모델 경로는 배포 폴더 기준 상대 경로라 USB 복사 후에도 유지됩니다.
 
-기본값은 `config.toml`에 있습니다. 개인 설정은 같은 형식의 `config.local.toml`에 필요한 항목만 적으면 됩니다. 이 파일은 업데이트에서 보존됩니다.
+## 웹 배포와 라이선스
 
-예를 들어 마이크를 5번 장치로 고정하려면:
+Vercel 같은 정적 호스팅만으로는 로컬 마이크/WASAPI, 1GB 이상 모델, 네이티브 llama/ctranslate2 DLL을 실행할 수 없습니다. 웹 UI를 원격 호스팅하면 고객 음성과 텍스트를 외부로 보내게 되어 현재의 로컬 우선·무사용량 과금 구조와 개인정보 경계가 달라집니다. 현재 구조에서는 portable EXE가 맞습니다.
 
-```toml
-[audio]
-input_device = 5
-```
-
-장치 번호와 `PC playback` 입력, Edge TTS 출력 장치는 `/api/devices` 또는 실행 화면의 장치 선택 목록에서 확인할 수 있습니다. `doctor.bat`은 설치 상태와 기본 오디오 환경을 점검합니다. `start_rms`를 높이면 소음에 덜 반응하고, `end_silence_ms`를 늘리면 문장을 덜 잘게 나눕니다.
-
-### 고유명사·상품명 인식
-
-`config.local.toml`에서 자주 쓰는 표현을 추가할 수 있습니다.
-
-```toml
-[stt]
-hotwords = ["진저에일", "콜라 주세요", "상품명"]
-
-[stt.corrections]
-"진저일" = "진저에일"
-```
-
-`hotwords`는 Whisper가 해당 표현을 선택하도록 유도하고, `corrections`는 반복해서 틀리는 결과를 확정 교정합니다. 일반 문장으로도 쓰일 수 있는 표현을 과도하게 교정하면 오히려 오인식이 생길 수 있습니다.
-
-번역 카드의 `교정 기록` 버튼은 음성을 저장하지 않고 수정된 원문·번역문만 `feedback/corrections.jsonl`에 남깁니다. 반복 오류만 검토해 hotword·교정 사전·평가셋에 반영합니다.
-
-설치본의 개인 설정과 교정 기록은 `%LOCALAPPDATA%\RemotePlusTranslator`에 저장됩니다. 모델은 USB 복사가 가능하도록 EXE 옆 `models` 폴더에서 읽습니다.
-
-번역 결과에 `重要語`가 붙고 주황색으로 표시되면 모델이 원문의 호텔 핵심 용어를 자연스럽게 번역하지 못해 안전 용어 보호 기능이 개입한 것입니다. 상담원은 원문과 중요 용어를 함께 확인해야 합니다. 예약번호 요청, 알레르기 전달, 공항 셔틀, 레이트 체크아웃, 조식 시간, 여권 수령, 응급차 등 반복되는 일본어 답변은 검증된 영어·한국어·중국어·스페인어 문장집을 우선 사용합니다.
-
-## 설계상 안전장치
-
-- 300ms pre-roll로 첫 음절 손실 완화
-- 발화 큐 크기 제한으로 지연이 끝없이 누적되는 현상 방지
-- 잡음 바닥을 따라가는 이중 음량 임계값
-- 짧은 문장의 낮은 언어 감지 신뢰도는 최근 상대 언어로 보정
-- TTS 재생 중 마이크 차단으로 자기 음성 무한 루프 방지
-- 브라우저가 늦게 열려도 최근 번역 내역 복원
-- 입력 장치와 출력 장치 열거를 별도 자식 프로세스로 격리해 오디오 드라이버 충돌이 서버를 끊지 않도록 방지
-- `/remoteplus-health`로 현재 포트의 RemotePlus 서버 응답 확인
-- 모델 엔진, 오디오, 대화 상태, UI를 분리해 개별 교체 가능
-- 호텔 핵심 용어가 모델 번역에서 사라지면 일본어 `重要語` 표기로 원문 용어를 보존
-- 반복되는 고위험 일본어 답변은 AI 자유 번역보다 검증된 다국어 호텔 문장집을 우선 적용
-- 서버는 기본적으로 이 PC(`127.0.0.1`)에서만 접근 가능
+프로젝트 코드는 MIT 라이선스입니다. 모델·런타임·Edge TTS에는 각 공급자의 별도 조건이 적용됩니다. 운영자는 배포 전 `THIRD_PARTY_NOTICES.md`와 현재 서비스 약관, 개인정보·통화녹음 관련 현지 법률을 직접 확인해야 합니다. “무료 API 키가 없다”와 “상업 운영에 아무 조건이 없다”는 같은 뜻이 아닙니다.
 
 ## 현실적인 한계
 
-- 현재 버전은 발화가 끝난 뒤 번역하는 **저지연 문장 단위** 방식입니다. 말하는 도중 일본어가 단어별로 확정되는 동시통역은 다음 단계입니다.
-- 작은 문장, 사람 이름, 여러 언어를 한 문장에 섞는 경우 자동 언어 감지가 틀릴 수 있습니다.
-- `重要語` 표시는 문장 전체가 자연스럽거나 완전히 정확하다는 보증이 아닙니다. 핵심 용어 보존을 위한 경고입니다.
-- 마이크가 스피커의 상대방 음성을 직접 듣는 방식보다, 통화 프로그램의 가상 오디오/스테레오 믹스를 입력으로 선택하는 편이 깨끗합니다.
-- `PC playback · 스피커`는 Windows WASAPI loopback으로 자동 생성됩니다. 드라이버가 loopback을 제공하지 않는 특수 환경에서만 Stereo Mix나 가상 오디오 케이블이 필요합니다.
-- Edge online neural TTS는 인터넷 연결이 필요할 수 있습니다. 오프라인 환경에서는 텍스트 번역은 계속 가능하지만 음성 재생은 제한될 수 있습니다.
-- 통화 녹음·전사 보관, 고지 및 개인정보 처리는 일본의 관련 법규와 고객사 정책 검토가 별도로 필요합니다.
-- Intel 내장 GPU는 현재 기본 경로에서 사용하지 않습니다. 이 PC에서는 검증 가능성과 안정성을 우선하여 CPU INT8 STT를 사용합니다.
-- Vercel 같은 정적 웹 호스팅은 수 GB 로컬 모델과 PC 오디오 장치를 실행할 수 없어 본체 배포에 사용하지 않습니다.
-
-## 개발과 검사
-
-```powershell
-.venv\Scripts\python.exe -m pytest
-.venv\Scripts\python.exe -m ruff check .
-.venv\Scripts\python.exe -m translator_app.cli doctor
-```
-
-개발 진행 상황과 다음 작업은 [ROADMAP.md](ROADMAP.md), 회차 간 인계 정보는 [CHECKPOINT.md](CHECKPOINT.md)에 기록합니다.
-실제 콜센터 연결 구조와 납품 조건은 [docs/CALL_CENTER.md](docs/CALL_CENTER.md)에 정리되어 있습니다.
-TTS와 출력 장치 구조는 [docs/TTS_PACKS.md](docs/TTS_PACKS.md)에 정리되어 있습니다.
-
-## 모델과 라이선스
-
-- faster-whisper / Whisper: MIT 계열
-- Hy-MT2 1.8B GGUF: 모델 배포처의 라이선스 조건 적용
-- llama.cpp 런타임: llama.cpp 배포 라이선스 조건 적용
-- M2M100 418M: 예비 백엔드, MIT
-- Microsoft Edge online neural TTS: Microsoft 서비스 조건 적용
-
-초기 시제품에서 검토했던 NLLB와 MMS-TTS는 비상업 라이선스이므로 콜센터 제품에서 제외했습니다. 완전 오프라인 TTS가 필요하면 별도 라이선스 검토 후 선택 백엔드로 추가해야 합니다.
-
-이 저장소의 프로그램 코드는 개인 프로젝트용으로 작성되었지만, 모델 파일에는 각 모델의 라이선스가 별도로 적용됩니다.
+이 시스템은 단일 혼합 음원에서 겹쳐 말하는 두 사람을 완벽히 분리하지 못하고, 강한 잡음·심한 발음 장애·전화 코덱 손실에서는 오인식할 수 있습니다. Edge TTS 장애는 로컬 코드만으로 완전히 제거할 수 없습니다. 따라서 긴급·의료·안전·결제 핵심 내용은 직원이 원문과 번역을 함께 확인하고 재질문하는 운영 절차가 필요합니다.
