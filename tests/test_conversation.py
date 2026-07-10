@@ -56,6 +56,16 @@ def test_japanese_reply_returns_to_last_partner_and_speaks():
     assert bus.history()[-1]["data"]["direction"] == "reply"
 
 
+def test_completed_reply_can_be_replayed_after_interruption():
+    controller, _, _ = make_controller()
+    controller.control(enabled_languages=["en", "ko", "es"])
+
+    request_id = controller.replay_tts("Please wait a moment.", "en")
+
+    assert request_id == 0
+    assert controller.speaker.calls == [("Please wait a moment.", "en")]
+
+
 def test_manual_reply_language_overrides_recent_partner():
     controller, translator, bus = make_controller()
     controller.process_recognition(Recognition("Hello", "en", 0.99))

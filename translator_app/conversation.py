@@ -709,6 +709,31 @@ class ConversationController:
         result["pipeline"] = "final_only_latest_queue_no_live"
         return result
 
+    def replay_tts(self, text: str, language: str) -> int:
+        """Speak a completed reply again when automatic playback was interrupted."""
+        clean = text.strip()
+        target = language.strip().lower()
+        if not clean or len(clean) > 1000:
+            raise ValueError("Replay text must contain 1 to 1000 characters")
+        with self._state_lock:
+            enabled = self.state.tts_enabled
+            allowed = set(self.state.enabled_languages or [])
+        if not enabled:
+            raise ValueError("Enable TTS before replaying a reply")
+        if target not in allowed or get_language(target) is None:
+            raise ValueError("Replay language is not enabled")
+        try:
+            request_id = self.speaker.speak(clean, target) or 0
+        except TypeError:
+            request_id = self.speaker.speak(clean, target) or 0
+        self._log_perf(
+            "tts_replay_queued",
+            request_id=request_id,
+            target_language=target,
+            text_characters=len(clean),
+        )
+        return request_id
+
     def control(self, *, paused: bool | None = None, tts_enabled: bool | None = None, active_language: str | None = None, reply_language: str | None = None, speech_mode: str | None = None, input_device: str | int | None = None, output_device: str | int | None = None, enabled_languages: list[str] | None = None) -> dict:
         if speech_mode is not None and speech_mode not in {"customer", "staff"}:
             raise ValueError("speech_mode must be 'customer' or 'staff'")

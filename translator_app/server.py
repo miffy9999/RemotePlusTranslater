@@ -86,6 +86,7 @@ def _enumerate_devices(root: Path, timeout_seconds: float = 8.0) -> dict[str, li
     }
 
 WEB = Path(__file__).resolve().parent / "web"
+DEVICE_CACHE_SECONDS = 60.0
 
 
 class ControlRequest(BaseModel):
@@ -106,6 +107,11 @@ class FeedbackRequest(BaseModel):
     translation: str
     corrected_source: str = ""
     corrected_translation: str = ""
+
+
+class ReplayRequest(BaseModel):
+    text: str
+    language: str
 
 
 def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recognizer=None) -> FastAPI:
@@ -190,7 +196,7 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
                 result["outputs"] = []
             result["warnings"] = warnings
             devices_cache["payload"] = result
-            devices_cache["expires_at"] = time.monotonic() + 30
+            devices_cache["expires_at"] = time.monotonic() + DEVICE_CACHE_SECONDS
             return result
         except Exception as exc:
             raise HTTPException(500, str(exc)) from exc
@@ -221,6 +227,13 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
         try:
             path = feedback.append(request.model_dump())
             return {"saved": True, "file": str(path)}
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.post("/api/replay")
+    def replay(request: ReplayRequest):
+        try:
+            return {"queued": True, "request_id": controller.replay_tts(request.text, request.language)}
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
 

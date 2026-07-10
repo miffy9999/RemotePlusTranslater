@@ -1,0 +1,91 @@
+{
+  "started_at": "2026-07-10T14:55:31",
+  "requested_minutes": 0.5,
+  "interval_seconds": 5.0,
+  "stt_threads": 6,
+  "hymt2_threads": 6,
+  "cycles": 6,
+  "failed_cycles": 0,
+  "stt_seconds": {
+    "median": 5.017,
+    "p95": 5.399,
+    "max": 5.399
+  },
+  "tts_seconds": {
+    "median": 0.803,
+    "p95": 1.256,
+    "max": 1.256
+  },
+  "memory": {
+    "samples": 6,
+    "start_total_rss_mib": 2497.8,
+    "end_total_rss_mib": 2519.1,
+    "peak_total_rss_mib": 2519.1
+  },
+  "rows": [
+    {
+      "cycle": 1,
+      "language": "en",
+      "stt_seconds": 5.015,
+      "translation_seconds": 3.661,
+      "stt_text_characters": 11,
+      "translation_characters": 21,
+      "ok": true,
+      "tts_seconds": 1.256,
+      "tts_bytes": 25920,
+      "total_rss_mib": 2497.8
+    },
+    {
+      "cycle": 2,
+      "language": "ko",
+      "stt_seconds": 5.155,
+      "translation_seconds": 3.445,
+      "stt_text_characters": 21,
+      "translation_characters": 19,
+      "ok": true,
+      "total_rss_mib": 2504.7
+    },
+    {
+      "cycle": 3,
+      "language": "zh",
+      "stt_seconds": 5.399,
+      "translation_seconds": 3.452,
+      "stt_text_characters": 19,
+      "translation_characters": 20,
+      "ok": true,
+      "total_rss_mib": 2508.1
+    },
+    {
+      "cycle": 4,
+      "language": "es",
+      "stt_seconds": 5.019,
+      "translation_seconds": 3.614,
+      "stt_text_characters": 40,
+      "translation_characters": 22,
+      "ok": true,
+      "tts_seconds": 0.351,
+      "tts_bytes": 25776,
+      "total_rss_mib": 2516.8
+    },
+    {
+      "cycle": 5,
+      "language": "ja",
+      "stt_seconds": 4.868,
+      "translation_seconds": 2.971,
+      "stt_text_characters": 7,
+      "translation_characters": 34,
+      "ok": true,
+      "total_rss_mib": 2517.7
+    },
+    {
+      "cycle": 6,
+      "language": "en",
+      "stt_seconds": 3.815,
+      "translation_seconds": 1.069,
+      "stt_text_characters": 11,
+      "translation_characters": 21,
+      "ok": true,
+      "total_rss_mib": 2519.1
+    }
+  ]
+}

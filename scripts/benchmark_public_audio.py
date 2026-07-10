@@ -29,28 +29,26 @@ def main() -> None:
     recognizer = WhisperRecognizer(cfg.stt, lambda phase, message: print(phase, message))
     recognizer.load()
     rows = []
-    for mode in ("auto", "manual"):
-        for expected, filename in FILES.items():
-            if mode == "auto" and expected == "ja":
-                continue
-            if mode == "manual" and expected == "ja":
-                selected = "en"
-            else:
-                selected = expected if mode == "manual" else "auto"
-            recognizer.set_selected_language(selected)
-            audio = decode_audio(str(WAV_ROOT / filename), sampling_rate=cfg.audio.sample_rate)
-            result = recognizer.transcribe(audio)
-            row = {
-                "mode": mode,
-                "selected": selected,
-                "expected": expected,
-                "detected": result.language,
-                "probability": round(result.probability, 3),
-                "text": result.text,
-                "passed": result.language == expected,
-            }
-            rows.append(row)
-            print(json.dumps(row, ensure_ascii=False), flush=True)
+    for expected, filename in FILES.items():
+        # Production uses a fixed customer language and a push-to-talk staff
+        # mode that forces Japanese. This benchmark follows that real routing
+        # instead of testing the removed automatic-language mode.
+        mode = "staff" if expected == "ja" else "customer"
+        selected = "ja" if mode == "staff" else expected
+        recognizer.set_selected_language(selected)
+        audio = decode_audio(str(WAV_ROOT / filename), sampling_rate=cfg.audio.sample_rate)
+        result = recognizer.transcribe(audio, language=selected)
+        row = {
+            "mode": mode,
+            "selected": selected,
+            "expected": expected,
+            "detected": result.language,
+            "probability": round(result.probability, 3),
+            "text": result.text,
+            "passed": result.language == expected,
+        }
+        rows.append(row)
+        print(json.dumps(row, ensure_ascii=False), flush=True)
     summary = {
         "samples": len(rows),
         "passed": sum(row["passed"] for row in rows),

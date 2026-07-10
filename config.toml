@@ -70,7 +70,9 @@ device = "cpu"
 max_new_tokens = 128
 hymt2_model = "models/hymt2/Hy-MT2-1.8B-Q4_K_M.gguf"
 hymt2_runtime = "models/hymt2/llama"
-hymt2_threads = 8
+# Keep Whisper (6 threads) and Hy-MT2 within this laptop's 12 logical CPUs
+# during overlapping customer speech and translation.
+hymt2_threads = 6
 hymt2_context = 1024
 hymt2_timeout_seconds = 45
 hymt2_request_timeout_seconds = 15
@@ -315,6 +317,7 @@ volume = 0.9
 backend = "edge"
 edge_rate = "+0%"
 edge_timeout_seconds = 15
+edge_retry_count = 1
 fallback_to_sapi = false # legacy compatibility only; SAPI is not used
 latest_only = true
 

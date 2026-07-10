@@ -87,6 +87,9 @@ class EdgeSpeaker(threading.Thread):
         self._interrupt_event = threading.Event()
         self._playing = threading.Event()
         self._request_lock = threading.Lock()
+        self._synthesis_lock = threading.Lock()
+        self._synthesis_loop: asyncio.AbstractEventLoop | None = None
+        self._synthesis_task: asyncio.Task[None] | None = None
         self._next_request_id = 0
         self._mixer_device_name: str | None = None
 
@@ -115,6 +118,20 @@ class EdgeSpeaker(threading.Thread):
         if self._playing.is_set():
             self._interrupt_event.set()
             self._metric("tts_interrupt_requested", reason=reason)
+        # A queued MP3 can be discarded immediately, but an older version left
+        # an in-flight Edge request blocking this one TTS worker until timeout.
+        # Cancel the task on its own event loop so the newest reply can start
+        # synthesis without waiting up to edge_timeout_seconds.
+        with self._synthesis_lock:
+            loop, task = self._synthesis_loop, self._synthesis_task
+        if loop is not None and task is not None and not task.done():
+            try:
+                loop.call_soon_threadsafe(task.cancel)
+                self._metric("tts_synthesis_cancel_requested", reason=reason)
+            except RuntimeError:
+                # The worker may have completed and closed the loop between
+                # the snapshot above and this cancellation request.
+                pass
         if clear_queue:
             self._clear_requests(reason=reason)
 
@@ -254,24 +271,61 @@ class EdgeSpeaker(threading.Thread):
         handle = tempfile.NamedTemporaryFile(prefix="remoteplus-edge-", suffix=".mp3", delete=False)
         output = Path(handle.name)
         handle.close()
+        loop = asyncio.new_event_loop()
+        task: asyncio.Task[None] | None = None
         try:
-            asyncio.run(asyncio.wait_for(
-                self._save_edge(request.text, self._voice(request.language), str(output)),
-                timeout=self.cfg.edge_timeout_seconds,
-            ))
+            task = loop.create_task(
+                self._save_edge(request.text, self._voice(request.language), str(output))
+            )
+            with self._synthesis_lock:
+                self._synthesis_loop = loop
+                self._synthesis_task = task
+            loop.run_until_complete(
+                asyncio.wait_for(task, timeout=self.cfg.edge_timeout_seconds)
+            )
             if not output.exists() or output.stat().st_size < 1024:
                 raise RuntimeError("Edge TTS returned an empty audio file")
             return output
+        except asyncio.CancelledError as exc:
+            output.unlink(missing_ok=True)
+            raise InterruptedError("Edge TTS synthesis was interrupted") from exc
         except Exception:
             output.unlink(missing_ok=True)
             raise
+        finally:
+            with self._synthesis_lock:
+                if self._synthesis_task is task:
+                    self._synthesis_task = None
+                    self._synthesis_loop = None
+            loop.close()
+
+    def _synthesize_with_retry(self, request: SpeechRequest) -> Path:
+        """Retry transient Edge failures once without delaying a newer reply."""
+        attempts = self.cfg.edge_retry_count + 1
+        for attempt in range(attempts):
+            try:
+                return self._synthesize(request)
+            except InterruptedError:
+                raise
+            except Exception:
+                if attempt + 1 >= attempts:
+                    raise
+                if self._interrupt_event.wait(0.25 * (attempt + 1)):
+                    raise InterruptedError("Edge TTS synthesis was interrupted")
+                self._metric(
+                    "tts_synthesis_retry",
+                    request_id=request.request_id,
+                    utterance_id=request.utterance_id or 0,
+                    retry_number=attempt + 1,
+                )
+        raise RuntimeError("Edge TTS retry loop ended unexpectedly")
 
     def _play(self, request: SpeechRequest, begin_playback: Callable[[], None]) -> None:
         import pygame
 
         self._ensure_mixer_output(pygame)
         synthesized_at = time.monotonic()
-        path = self._synthesize(request)
+        path = self._synthesize_with_retry(request)
         self._metric(
             "tts_edge_generated",
             request_id=request.request_id,
@@ -355,6 +409,14 @@ class EdgeSpeaker(threading.Thread):
                         f"{max(0.0, finished_at - request.speech_ended_at):.3f}"
                         if request.speech_ended_at else "0.000"
                     ),
+                )
+                self.status("listening", "Listening")
+            except InterruptedError:
+                self._metric(
+                    "tts_interrupted",
+                    request_id=request.request_id,
+                    utterance_id=request.utterance_id or 0,
+                    stage="synthesis",
                 )
                 self.status("listening", "Listening")
             except Exception as exc:

@@ -27,6 +27,19 @@ def test_api_requires_session_cookie(tmp_path):
         assert client.get("/api/state").status_code == 200
 
 
+def test_reply_replay_requires_enabled_language_and_queues_audio(tmp_path):
+    with make_client(tmp_path) as client:
+        client.get("/")
+        response = client.post(
+            "/api/replay",
+            json={"text": "Please wait a moment.", "language": "en"},
+        )
+        assert response.status_code == 200
+        assert response.json()["queued"] is True
+        invalid = client.post("/api/replay", json={"text": "test", "language": "ja"})
+        assert invalid.status_code == 400
+
+
 def test_dns_rebinding_host_is_rejected(tmp_path):
     with make_client(tmp_path) as client:
         assert client.get("/", headers={"host": "evil.example"}).status_code == 403

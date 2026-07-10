@@ -119,6 +119,7 @@ class TtsConfig:
     backend: str = "edge"
     edge_rate: str = "+0%"
     edge_timeout_seconds: int = 15
+    edge_retry_count: int = 1
     latest_only: bool = True
     edge_voice_overrides: dict[str, str] = field(default_factory=dict)
     fallback_to_sapi: bool = False
@@ -233,6 +234,8 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("tts.backend must be 'edge'. Windows language-pack TTS has been removed.")
     if cfg.tts.edge_timeout_seconds < 3:
         raise ValueError("tts.edge_timeout_seconds must be at least 3")
+    if not 0 <= cfg.tts.edge_retry_count <= 3:
+        raise ValueError("tts.edge_retry_count must be between 0 and 3")
     if cfg.translation.backend not in {"m2m100", "hymt2"}:
         raise ValueError("translation.backend must be m2m100 or hymt2")
     if not 1 <= cfg.server.port <= 65535:
