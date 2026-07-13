@@ -30,7 +30,7 @@ class EventBus:
     def publish(self, event_type: str, **data: Any) -> Event:
         event = Event(event_type, data)
         with self._lock:
-            if event_type in {"translation", "error", "warning"}:
+            if event_type in {"translation", "reading", "error", "warning"}:
                 self._history.append(event)
             self._fan_out_locked(event)
         return event

@@ -554,6 +554,88 @@ main {
   word-break: break-word
 }
 
+/* Typed staff replies stay attached to the conversation instead of using a
+   separate modal, so an operator can follow the call like a normal chat. */
+.reply-composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 14px 18px 6px;
+  border-top: 1px solid var(--line);
+  background: #fff;
+}
+
+.reply-composer textarea {
+  width: 100%;
+  min-height: 54px;
+  max-height: 150px;
+  resize: vertical;
+  border: 1px solid var(--line-strong, #c8d1dc);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--ink);
+  background: #fff;
+  font: inherit;
+  line-height: 1.45;
+}
+
+.reply-composer textarea:focus {
+  outline: 3px solid rgba(32, 111, 174, .14);
+  border-color: var(--accent, #206fae);
+}
+
+.reply-composer button {
+  min-width: 88px;
+  align-self: stretch;
+}
+
+.composer-hint,
+.mode-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.composer-hint {
+  padding: 0 18px 13px;
+  background: #fff;
+}
+
+.reading-guide > div {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.reading-guide > div + div {
+  margin-top: 7px;
+}
+
+.reading-kana,
+.reading-roman {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.reading-roman {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .reply-composer {
+    grid-template-columns: 1fr;
+  }
+
+  .reply-composer button {
+    min-height: 44px;
+  }
+}
+
 .reading-guide .reading-label {
   color: #93c5fd;
   font-weight: 780;

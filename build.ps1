@@ -103,16 +103,16 @@ function Write-SignatureReport([string[]]$Paths) {
 }
 
 Sign-CommercialArtifact '.\dist\RemotePlusTranslator\RemotePlusTranslator.exe'
-Sign-CommercialArtifact '.\dist\RemotePlusTranslator\RemotePlusTtsWorker.exe'
 New-Item -ItemType Directory '.\dist\RemotePlusTranslator\models' -Force | Out-Null
 Copy-Item '.\models\whisper' '.\dist\RemotePlusTranslator\models\whisper' -Recurse -Force
 New-Item -ItemType Directory '.\dist\RemotePlusTranslator\models\hymt2' -Force | Out-Null
 Copy-Item '.\models\hymt2\Hy-MT2-1.8B-Q4_K_M.gguf' '.\dist\RemotePlusTranslator\models\hymt2\Hy-MT2-1.8B-Q4_K_M.gguf' -Force
 Copy-Item '.\models\hymt2\llama' '.\dist\RemotePlusTranslator\models\hymt2\llama' -Recurse -Force
-& '.\.venv\Scripts\python.exe' '.\scripts\bundle_tts_packs.py' '.' '.\dist\RemotePlusTranslator'
-if ($LASTEXITCODE -ne 0) {
-    throw 'Reviewed TTS packs are missing or failed integrity verification.'
-}
+# The upstream llama.cpp archive contains many standalone tools, including a
+# llama-tts demo. RemotePlus needs only llama-server.exe plus the shared DLLs.
+Get-ChildItem '.\dist\RemotePlusTranslator\models\hymt2\llama' -File -Filter '*.exe' |
+    Where-Object Name -ne 'llama-server.exe' |
+    Remove-Item -Force
 $env:REMOTEPLUS_BUILD_DOCTOR = '1'
 $doctor = Start-Process -FilePath '.\dist\RemotePlusTranslator\RemotePlusTranslator.exe' -ArgumentList 'doctor' -WindowStyle Hidden -Wait -PassThru
 Remove-Item Env:\REMOTEPLUS_BUILD_DOCTOR -ErrorAction SilentlyContinue
@@ -127,11 +127,10 @@ if ($CommercialRelease -and $iscc) {
         throw "Inno Setup failed with exit code $LASTEXITCODE"
     }
     Write-Host 'Installer created in dist\installer' -ForegroundColor Green
-    Sign-CommercialArtifact ".\dist\installer\RemotePlusTranslator-Setup-0.6.0.exe"
+    Sign-CommercialArtifact ".\dist\installer\RemotePlusTranslator-Setup-0.7.0.exe"
     Write-SignatureReport @(
         '.\dist\RemotePlusTranslator\RemotePlusTranslator.exe',
-        '.\dist\RemotePlusTranslator\RemotePlusTtsWorker.exe',
-        '.\dist\installer\RemotePlusTranslator-Setup-0.6.0.exe'
+        '.\dist\installer\RemotePlusTranslator-Setup-0.7.0.exe'
     )
 } else {
     if ($CommercialRelease) { throw 'Inno Setup 6 is required for -CommercialRelease.' }

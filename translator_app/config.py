@@ -22,7 +22,7 @@ else:
     DATA_ROOT = ROOT
 
 T = TypeVar("T")
-CONFIG_SECTIONS = {"audio", "stt", "translation", "tts", "conversation", "server"}
+CONFIG_SECTIONS = {"audio", "stt", "translation", "conversation", "server"}
 
 
 @dataclass(slots=True)
@@ -30,8 +30,6 @@ class AudioConfig:
     sample_rate: int = 16000
     block_ms: int = 20
     input_device: str | int = "default"
-    # Retained for old config compatibility. Local TTS uses SDL output devices.
-    output_device: str | int = "default"
     start_rms: float = 0.012
     continue_rms: float = 0.007
     pre_roll_ms: int = 100
@@ -39,13 +37,6 @@ class AudioConfig:
     tail_keep_ms: int = 180
     min_speech_ms: int = 180
     max_utterance_ms: int = 12000
-    # Staff often speaks longer replies while holding Space. Keep the same
-    # silence cutoff as customer mode, but allow longer captured utterances and
-    # preserve a slightly longer ending tail.
-    staff_end_silence_ms: int = 360
-    staff_tail_keep_ms: int = 360
-    staff_max_utterance_ms: int = 20000
-    post_tts_mute_ms: int = 180
     # A base live model receives a longer snapshot after speech is
     # established. The small final model remains independent and authoritative.
     live_preview_enabled: bool = False
@@ -121,37 +112,6 @@ class TranslationConfig:
 
 
 @dataclass(slots=True)
-class TtsConfig:
-    enabled: bool = True
-    volume: float = 0.9
-    # Commercial builds never send reply text to a third-party speech service.
-    backend: str = "local"
-    # Portable releases bundle the reviewed packs. Keep automatic installation
-    # as a missing-pack repair path and for source/development runs.
-    auto_install_voice_packs: bool = True
-    local_threads: int = 2
-    # Kokoro benefits from four threads on typical Intel call-center PCs;
-    # Supertonic remains at two to avoid competing with STT/translation.
-    local_kokoro_threads: int = 4
-    local_speed: float = 1.0
-    local_steps: int = 5
-    local_speaker_id: int = 0
-    # Legacy config compatibility only. Automatic spoken disclosure was
-    # removed; hotel policy can provide any required notice separately.
-    disclose_synthetic_voice: bool = False
-    # Retained only so an old config.local.toml can be read and migrated. These
-    # values are ignored by the local backend and Edge is never imported.
-    edge_rate: str = "+0%"
-    edge_timeout_seconds: int = 15
-    edge_retry_count: int = 1
-    latest_only: bool = True
-    edge_voice_overrides: dict[str, str] = field(default_factory=dict)
-    fallback_to_sapi: bool = False
-    data_root: Path = field(default=DATA_ROOT, init=False, repr=False)
-    bundled_data_root: Path | None = field(default=None, init=False, repr=False)
-
-
-@dataclass(slots=True)
 class ConversationConfig:
     japanese_code: str = "ja"
     language_lock: str = "auto"
@@ -177,7 +137,6 @@ class AppConfig:
     audio: AudioConfig
     stt: SttConfig
     translation: TranslationConfig
-    tts: TtsConfig
     conversation: ConversationConfig
     server: ServerConfig
     root: Path = ROOT
@@ -228,7 +187,6 @@ def load_config(path: Path | None = None) -> AppConfig:
             audio=_make(AudioConfig, values.get("audio", {})),
             stt=_make(SttConfig, values.get("stt", {})),
             translation=_make(TranslationConfig, values.get("translation", {})),
-            tts=_make(TtsConfig, values.get("tts", {})),
             conversation=_make(ConversationConfig, values.get("conversation", {})),
             server=_make(ServerConfig, values.get("server", {})),
             root=primary.resolve().parent,
@@ -238,8 +196,6 @@ def load_config(path: Path | None = None) -> AppConfig:
         candidate.stt.root = candidate.root
         candidate.translation.root = candidate.root
         candidate.translation.data_root = candidate.data_root
-        candidate.tts.data_root = candidate.data_root
-        candidate.tts.bundled_data_root = candidate.root
         validate_config(candidate)
         return candidate
 
@@ -267,12 +223,6 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("audio pre-roll must be nonnegative and end silence at least one block")
     if audio.tail_keep_ms < 0 or audio.tail_keep_ms > audio.end_silence_ms:
         raise ValueError("audio.tail_keep_ms must be between 0 and end_silence_ms")
-    if audio.staff_end_silence_ms < audio.end_silence_ms:
-        raise ValueError("audio.staff_end_silence_ms must be greater than or equal to end_silence_ms")
-    if audio.staff_tail_keep_ms < 0 or audio.staff_tail_keep_ms > audio.staff_end_silence_ms:
-        raise ValueError("audio.staff_tail_keep_ms must be between 0 and staff_end_silence_ms")
-    if audio.staff_max_utterance_ms < audio.max_utterance_ms:
-        raise ValueError("audio.staff_max_utterance_ms must be greater than or equal to max_utterance_ms")
     if audio.live_preview_interval_ms < 250 or audio.live_preview_min_speech_ms < 300:
         raise ValueError("live preview intervals are too small")
     if audio.live_preview_max_audio_ms < 800:
@@ -281,24 +231,6 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("live_preview_max_revisions must be zero or greater")
     if not 0 <= audio.live_preview_final_grace_ms <= 500:
         raise ValueError("live_preview_final_grace_ms must be between 0 and 500")
-    if not 0 <= cfg.tts.volume <= 1:
-        raise ValueError("tts.volume must be between 0 and 1")
-    if cfg.tts.backend != "local":
-        raise ValueError("tts.backend must be 'local'; online Edge TTS is not allowed in commercial builds")
-    if not 1 <= cfg.tts.local_threads <= 8:
-        raise ValueError("tts.local_threads must be between 1 and 8")
-    if not 1 <= cfg.tts.local_kokoro_threads <= 8:
-        raise ValueError("tts.local_kokoro_threads must be between 1 and 8")
-    if not 0.7 <= cfg.tts.local_speed <= 2.0:
-        raise ValueError("tts.local_speed must be between 0.7 and 2.0")
-    if not 5 <= cfg.tts.local_steps <= 12:
-        raise ValueError("tts.local_steps must be between 5 and 12")
-    if not 0 <= cfg.tts.local_speaker_id <= 9:
-        raise ValueError("tts.local_speaker_id must be between 0 and 9")
-    if cfg.tts.edge_timeout_seconds < 3:
-        raise ValueError("tts.edge_timeout_seconds must be at least 3")
-    if not 0 <= cfg.tts.edge_retry_count <= 3:
-        raise ValueError("tts.edge_retry_count must be between 0 and 3")
     if cfg.translation.backend != "hymt2":
         raise ValueError("translation.backend must be hymt2")
     if not 1 <= cfg.server.port <= 65535:

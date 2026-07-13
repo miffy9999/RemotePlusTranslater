@@ -29,5 +29,5 @@ if ($LASTEXITCODE -ne 0) { throw "Packaging tool installation failed: $LASTEXITC
 if ($LASTEXITCODE -ne 0) { throw "Application dependency installation failed: $LASTEXITCODE" }
 & '.\.venv\Scripts\python.exe' -m translator_app.cli doctor
 if ($LASTEXITCODE -ne 0) { throw "Installation doctor failed: $LASTEXITCODE" }
-Write-Host "`nInstallation complete. Run prepare_models.bat once to download and verify the local STT, translation, and TTS models. Windows speech language packs are not required." -ForegroundColor Green
+Write-Host "`nInstallation complete. Run prepare_models.bat once to download and verify the local STT and translation models." -ForegroundColor Green
 Read-Host 'Press Enter to close'

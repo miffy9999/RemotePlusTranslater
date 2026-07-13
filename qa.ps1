@@ -29,7 +29,6 @@ Invoke-Python scripts\generate_compliance.py cache\qa-compliance
 if ($Models) {
     Invoke-Python scripts\benchmark_hymt2.py
     Invoke-Python scripts\benchmark_public_audio.py
-    Invoke-Python scripts\smoke_local_tts.py
 }
 
 Write-Host 'QA passed.' -ForegroundColor Green

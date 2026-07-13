@@ -7,7 +7,8 @@ from pathlib import Path
 
 
 class UserSettings:
-    SCHEMA_VERSION = 1
+    SCHEMA_VERSION = 2
+
     def __init__(self, data_root: Path):
         self.path = data_root / "user-settings.json"
         self._lock = threading.Lock()
@@ -39,7 +40,7 @@ class UserSettings:
                 data = json.loads(self.path.read_text(encoding="utf-8"))
             except (OSError, ValueError, TypeError):
                 return {}
-        if not isinstance(data, dict) or data.get("schema_version", 1) != self.SCHEMA_VERSION:
+        if not isinstance(data, dict) or data.get("schema_version", 1) not in {1, 2}:
             return {}
         # Treat this file as untrusted input. It can come from an older build,
         # a partial manual edit, or another PC with different device values.
@@ -47,19 +48,15 @@ class UserSettings:
         for key in ("active_language", "reply_language"):
             if isinstance(data.get(key), str):
                 result[key] = data[key]
-        if isinstance(data.get("tts_enabled"), bool):
-            result["tts_enabled"] = data["tts_enabled"]
         input_device = data.get("input_device")
         if isinstance(input_device, str) or (
             isinstance(input_device, int) and not isinstance(input_device, bool)
         ):
             result["input_device"] = input_device
-        if isinstance(data.get("output_device"), str):
-            result["output_device"] = data["output_device"]
         return result
 
     def save(self, state: dict) -> None:
-        allowed = ("active_language", "reply_language", "tts_enabled", "input_device", "output_device")
+        allowed = ("active_language", "reply_language", "input_device")
         payload = {"schema_version": self.SCHEMA_VERSION}
         payload.update({key: state[key] for key in allowed if key in state})
         encoded = json.dumps(payload, ensure_ascii=False, indent=2)

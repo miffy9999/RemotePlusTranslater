@@ -2,7 +2,6 @@
 sample_rate = 16000
 block_ms = 20
 input_device = "default"
-output_device = "default"
 start_rms = 0.012
 continue_rms = 0.007
 pre_roll_ms = 100
@@ -15,11 +14,6 @@ live_preview_max_audio_ms = 2200
 live_preview_max_revisions = 1
 live_preview_final_grace_ms = 0
 tail_keep_ms = 180
-# Staff mode keeps the same silence cutoff as customer mode, but allows longer
-# captured utterances and preserves a little more ending audio.
-staff_end_silence_ms = 360
-staff_tail_keep_ms = 360
-staff_max_utterance_ms = 20000
 # Legacy live-caption keys retained for old local config compatibility.
 # Legacy keys retained for old local config compatibility.
 preview_enabled = false
@@ -28,7 +22,6 @@ preview_min_speech_ms = 900
 preview_max_audio_ms = 3600
 min_speech_ms = 180
 max_utterance_ms = 12000
-post_tts_mute_ms = 500
 
 [stt]
 model = "small"
@@ -316,28 +309,6 @@ en = ["late check-out", "late checkout"]
 ko = ["레이트 체크아웃", "늦은 체크아웃"]
 zh = ["延迟退房", "延遲退房", "晚退房"]
 es = ["salida tardía", "salir más tarde"]
-
-[tts]
-enabled = true
-volume = 0.9
-# Verified local ONNX voices. No reply text leaves the computer and Windows
-# speech language packs are not required.
-backend = "local"
-# Portable releases include every reviewed voice pack. Automatic installation
-# remains enabled only as a repair/fallback path for a missing pack.
-auto_install_voice_packs = true
-local_threads = 2
-local_kokoro_threads = 4
-local_speed = 1.0
-local_steps = 5
-local_speaker_id = 0
-# Legacy compatibility setting. The app does not prepend an AI announcement.
-disclose_synthetic_voice = false
-edge_rate = "+0%"
-edge_timeout_seconds = 15
-edge_retry_count = 1
-fallback_to_sapi = false # legacy compatibility only; SAPI is not used
-latest_only = true
 
 [conversation]
 japanese_code = "ja"

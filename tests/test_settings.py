@@ -1,50 +1,39 @@
 from translator_app.settings import UserSettings
 
 
-def test_first_run_uses_defaults_then_persists_selection(tmp_path):
-    store = UserSettings(tmp_path)
-    languages, required = store.load_languages(["en", "ko", "zh", "es"])
-    assert languages == ["en", "ko", "zh", "es"]
-    assert required is True
-
-    store.save_languages(["en", "ko"])
-    languages, required = store.load_languages(["en"])
-    assert languages == ["en", "ko"]
-    assert required is False
-
-
-def test_runtime_settings_are_atomic_versioned_and_ignore_unknown_fields(tmp_path):
+def test_runtime_settings_are_atomic_and_drop_removed_tts_fields(tmp_path):
     store = UserSettings(tmp_path)
     store.save({
         "active_language": "ko",
         "reply_language": "auto",
-        "tts_enabled": True,
         "input_device": "default",
-        "output_device": "default",
-        "phase": "listening",
+        "tts_enabled": True,
+        "output_device": "old speaker",
     })
     assert store.load() == {
         "active_language": "ko",
         "reply_language": "auto",
-        "tts_enabled": True,
         "input_device": "default",
-        "output_device": "default",
     }
     assert not list(tmp_path.glob("*.tmp-*"))
 
 
-def test_incompatible_settings_schema_is_ignored(tmp_path):
-    store = UserSettings(tmp_path)
-    store.path.write_text('{"schema_version": 999, "active_language": "es"}', encoding="utf-8")
-    assert store.load() == {}
-
-
-def test_malformed_runtime_setting_types_are_filtered(tmp_path):
+def test_schema_one_is_safely_migrated_by_filtering_legacy_fields(tmp_path):
     store = UserSettings(tmp_path)
     store.path.write_text(
-        '{"active_language": 123, "reply_language": [], "tts_enabled": "false", '
-        '"input_device": {}, "output_device": ["default"]}',
+        '{"schema_version":1,"active_language":"es","tts_enabled":true,'
+        '"output_device":"speaker"}',
         encoding="utf-8",
     )
+    assert store.load() == {"active_language": "es"}
 
+
+def test_incompatible_schema_and_malformed_types_are_ignored(tmp_path):
+    store = UserSettings(tmp_path)
+    store.path.write_text('{"schema_version":999,"active_language":"es"}', encoding="utf-8")
+    assert store.load() == {}
+    store.path.write_text(
+        '{"active_language":123,"reply_language":[],"input_device":{}}',
+        encoding="utf-8",
+    )
     assert store.load() == {}

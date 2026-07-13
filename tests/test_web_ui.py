@@ -1,17 +1,29 @@
 from pathlib import Path
 
 
-WEB = Path(__file__).resolve().parent.parent / "translator_app" / "web"
+WEB = Path(__file__).resolve().parents[1] / "translator_app" / "web"
 
 
 def test_first_run_ui_defaults_to_japanese():
     script = (WEB / "app.js").read_text(encoding="utf-8")
     html = (WEB / "index.html").read_text(encoding="utf-8")
-    assert "localStorage.getItem('remoteplus-ui-language')||'ja'" in script
+    assert "remoteplus-ui-language') || 'ja'" in script
     assert '<html lang="ja">' in html
-    assert "システムを準備しています" in html
 
 
-def test_staff_reply_keeps_customer_language_in_partner_display():
+def test_ui_is_chat_based_and_has_no_tts_or_space_controls():
     script = (WEB / "app.js").read_text(encoding="utf-8")
-    assert "d.direction==='reply'?d.target_language:d.source_language" in script
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+    assert 'id="reply-form"' in html
+    assert 'id="reply-text"' in html
+    assert "/api/reply" in script
+    assert 'id="tts"' not in html
+    assert 'id="speech-mode"' not in html
+    assert "keydown" in script and "shiftKey" in script
+
+
+def test_ui_renders_both_reading_guides_from_server_events():
+    script = (WEB / "app.js").read_text(encoding="utf-8")
+    assert "romanized_reading" in script
+    assert "reading-kana" in script
+    assert "event.type==='reading'" in script

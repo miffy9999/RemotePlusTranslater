@@ -17,7 +17,7 @@ from .config import AudioConfig, sounddevice_value
 LOOPBACK_PREFIX = "loopback:"
 OUTPUT_PREFIX = "output:"
 MetricsCallback = Callable[..., None]
-SpeechContext = Callable[[], tuple[str, str, str, bool]]
+SpeechContext = Callable[[], tuple[str, str]]
 SpeechStartedSink = Callable[[int, str, str], None]
 LiveSnapshotSink = Callable[["LiveSnapshot"], None]
 
@@ -65,7 +65,6 @@ class Utterance:
     speech_mode: str = "customer"
     recognition_language: str = "en"
     reply_language: str = "en"
-    tts_enabled: bool = True
 
 
 @dataclass(slots=True)
@@ -90,32 +89,9 @@ class _SegmentResult:
     speech_mode: str
     recognition_language: str
     reply_language: str
-    tts_enabled: bool
 
     def __len__(self) -> int:
         return len(self.audio)
-
-
-class PlaybackGate:
-    def __init__(self, post_mute_ms: int = 0):
-        self._playing = threading.Event()
-        self._muted_until = 0.0
-        self._post_seconds = post_mute_ms / 1000
-        self._lock = threading.Lock()
-
-    def begin(self) -> None:
-        self._playing.set()
-
-    def end(self) -> None:
-        with self._lock:
-            self._muted_until = time.monotonic() + self._post_seconds
-        self._playing.clear()
-
-    def muted(self) -> bool:
-        if self._playing.is_set():
-            return True
-        with self._lock:
-            return time.monotonic() < self._muted_until
 
 
 class SpeechSegmenter:
@@ -130,9 +106,6 @@ class SpeechSegmenter:
         self.keep_tail_blocks = max(0, math.ceil(cfg.tail_keep_ms / cfg.block_ms))
         self.min_blocks = max(1, math.ceil(cfg.min_speech_ms / cfg.block_ms))
         self.max_blocks = max(1, math.ceil(cfg.max_utterance_ms / cfg.block_ms))
-        self.staff_end_blocks = max(self.end_blocks, math.ceil(cfg.staff_end_silence_ms / cfg.block_ms))
-        self.staff_keep_tail_blocks = max(0, math.ceil(cfg.staff_tail_keep_ms / cfg.block_ms))
-        self.staff_max_blocks = max(self.max_blocks, math.ceil(cfg.staff_max_utterance_ms / cfg.block_ms))
         self.pre_roll: deque[np.ndarray] = deque(maxlen=self.pre_blocks)
         self.frames: list[np.ndarray] = []
         self.speaking = False
@@ -142,10 +115,8 @@ class SpeechSegmenter:
         self.utterance_id = 0
         self.speech_started_at = 0.0
         self.speech_ended_at = 0.0
-        self.speech_mode = "customer"
         self.recognition_language = "en"
         self.reply_language = "en"
-        self.tts_enabled = True
         self.live_revision = 0
         self.last_live_emit_at = 0.0
 
@@ -158,10 +129,8 @@ class SpeechSegmenter:
         self.utterance_id = 0
         self.speech_started_at = 0.0
         self.speech_ended_at = 0.0
-        self.speech_mode = "customer"
         self.recognition_language = "en"
         self.reply_language = "en"
-        self.tts_enabled = True
         self.live_revision = 0
         self.last_live_emit_at = 0.0
 
@@ -171,10 +140,8 @@ class SpeechSegmenter:
         frame_ended_at: float | None = None,
         *,
         candidate_utterance_id: int | None = None,
-        speech_mode: str = "customer",
         recognition_language: str = "en",
         reply_language: str = "en",
-        tts_enabled: bool = True,
     ) -> _SegmentResult | None:
         frame_ended_at = time.monotonic() if frame_ended_at is None else frame_ended_at
         candidate_utterance_id = self.utterance_id + 1 if candidate_utterance_id is None else candidate_utterance_id
@@ -197,10 +164,8 @@ class SpeechSegmenter:
                 self.utterance_id = candidate_utterance_id
                 self.speech_started_at = max(0.0, frame_ended_at - self.block_seconds)
                 self.speech_ended_at = frame_ended_at
-                self.speech_mode = "staff" if speech_mode == "staff" else "customer"
                 self.recognition_language = recognition_language
                 self.reply_language = reply_language
-                self.tts_enabled = bool(tts_enabled)
             return None
 
         self.frames.append(frame.copy())
@@ -211,11 +176,7 @@ class SpeechSegmenter:
         else:
             self.silent_blocks += 1
 
-        end_blocks = self.staff_end_blocks if self.speech_mode == "staff" else self.end_blocks
-        max_blocks = self.staff_max_blocks if self.speech_mode == "staff" else self.max_blocks
-        keep_tail_blocks = self.staff_keep_tail_blocks if self.speech_mode == "staff" else self.keep_tail_blocks
-
-        if self.silent_blocks < end_blocks and len(self.frames) < max_blocks:
+        if self.silent_blocks < self.end_blocks and len(self.frames) < self.max_blocks:
             return None
 
         result = None
@@ -223,11 +184,10 @@ class SpeechSegmenter:
             frames = self.frames
             # Keep only a small tail after the last voiced block. It avoids
             # sending VAD padding into the final model without clipping words.
-            # Staff mode keeps a longer tail and waits longer before closing the
-            # chunk because Japanese replies are often read as one long sentence
-            # while Space is held. Customer mode keeps the low-latency defaults.
+            # Keep a short tail after customer speech so final consonants are
+            # preserved without sending the full VAD silence into Whisper.
             if self.silent_blocks and len(frames) > self.silent_blocks:
-                drop = max(0, self.silent_blocks - keep_tail_blocks)
+                drop = max(0, self.silent_blocks - self.keep_tail_blocks)
                 if drop:
                     frames = frames[:-drop]
             result = _SegmentResult(
@@ -236,10 +196,9 @@ class SpeechSegmenter:
                 speech_started_at=self.speech_started_at,
                 speech_ended_at=self.speech_ended_at or frame_ended_at,
                 ready_at=frame_ended_at,
-                speech_mode=self.speech_mode,
+                speech_mode="customer",
                 recognition_language=self.recognition_language,
                 reply_language=self.reply_language,
-                tts_enabled=self.tts_enabled,
             )
         self.reset()
         return result
@@ -269,7 +228,7 @@ class SpeechSegmenter:
             speech_started_at=self.speech_started_at,
             captured_at=captured_at,
             speech_seconds=speech_seconds,
-            speech_mode=self.speech_mode,
+            speech_mode="customer",
             recognition_language=self.recognition_language,
         )
 
@@ -279,7 +238,6 @@ class AudioCapture(threading.Thread):
         self,
         cfg: AudioConfig,
         output: queue.Queue[Utterance],
-        gate: PlaybackGate,
         status: Callable[[str, str], None],
         metrics: MetricsCallback | None = None,
         context: SpeechContext | None = None,
@@ -290,16 +248,14 @@ class AudioCapture(threading.Thread):
         super().__init__(name="audio-capture", daemon=True)
         self.cfg = cfg
         self.output = output
-        self.gate = gate
         self.status = status
         self.metrics = metrics
         self.context = context
         self.speech_started_sink = speech_started_sink
         self.live_snapshot_sink = live_snapshot_sink
         self.segmenter = SpeechSegmenter(cfg)
-        # Audio frames arrive on the capture thread, while a Space-key request
-        # can promote the active segment on the HTTP thread. Keep all VAD
-        # segment mutations behind one lock so a job cannot get a mixed mode.
+        # Device restarts and manual text replies can reserve IDs from other
+        # threads, so all segment/ID mutations share one lock.
         self._segment_lock = threading.Lock()
         self._frames: queue.Queue[tuple[np.ndarray, float, bool]] = queue.Queue(maxsize=100)
         self._stop_event = threading.Event()
@@ -324,17 +280,22 @@ class AudioCapture(threading.Thread):
     def last_utterance_id(self) -> int:
         return self._next_utterance_id
 
-    def _speech_context(self) -> tuple[str, str, str, bool]:
+    def _speech_context(self) -> tuple[str, str]:
         if self.context is None:
-            return "customer", "en", "en", True
+            return "en", "en"
         try:
-            mode, language, reply_language, tts_enabled = self.context()
-            mode = "staff" if mode == "staff" else "customer"
+            language, reply_language = self.context()
             language = str(language or "en").strip().lower()
             reply_language = str(reply_language or "en").strip().lower()
-            return mode, language or "en", reply_language or "en", bool(tts_enabled)
+            return language or "en", reply_language or "en"
         except Exception:
-            return "customer", "en", "en", True
+            return "en", "en"
+
+    def reserve_utterance_id(self) -> int:
+        """Reserve an ID for a typed staff reply without colliding with audio."""
+        with self._segment_lock:
+            self._next_utterance_id += 1
+            return self._next_utterance_id
 
     def _callback(self, indata, frames, time_info, callback_status) -> None:
         discontinuity = False
@@ -377,19 +338,14 @@ class AudioCapture(threading.Thread):
             if was_speaking and now >= self._next_gap_warning_at:
                 self.status("warning", "Audio frames were lost; the incomplete utterance was discarded")
                 self._next_gap_warning_at = now + 10.0
-        if self.gate.muted():
-            self.segmenter.reset()
-            return
-        mode, language, reply_language, tts_enabled = self._speech_context()
+        language, reply_language = self._speech_context()
         was_speaking = self.segmenter.speaking
         result = self.segmenter.process(
             frame,
             ended_at,
             candidate_utterance_id=self._next_utterance_id + 1,
-            speech_mode=mode,
             recognition_language=language,
             reply_language=reply_language,
-            tts_enabled=tts_enabled,
         )
         if self.segmenter.speaking and self.segmenter.utterance_id > self._next_utterance_id:
             self._next_utterance_id = self.segmenter.utterance_id
@@ -412,40 +368,6 @@ class AudioCapture(threading.Thread):
                     self.live_snapshot_sink(snapshot)
                 except Exception:
                     pass
-
-    def promote_active_to_staff(
-        self,
-        recognition_language: str,
-        reply_language: str,
-        tts_enabled: bool,
-        *,
-        max_age_seconds: float = 0.75,
-    ) -> int | None:
-        """Repair a push-to-talk control request that trails speech onset.
-
-        The browser sends Space state over localhost HTTP. If speech crossed
-        the VAD threshold just before that request arrived, safely promote only
-        the very recent active segment. Releasing Space never demotes a segment.
-        """
-        utterance_id: int | None = None
-        with self._segment_lock:
-            age = time.monotonic() - self.segmenter.speech_started_at
-            if (
-                self.segmenter.speaking
-                and self.segmenter.speech_mode == "customer"
-                and 0 <= age <= max_age_seconds
-            ):
-                self.segmenter.speech_mode = "staff"
-                self.segmenter.recognition_language = recognition_language
-                self.segmenter.reply_language = reply_language
-                self.segmenter.tts_enabled = bool(tts_enabled)
-                utterance_id = self.segmenter.utterance_id
-        if utterance_id is not None and self.speech_started_sink is not None:
-            try:
-                self.speech_started_sink(utterance_id, "staff", recognition_language)
-            except Exception:
-                pass
-        return utterance_id
 
     def run(self) -> None:
         while not self._stop_event.is_set():
@@ -525,7 +447,6 @@ class AudioCapture(threading.Thread):
             speech_mode=result.speech_mode,
             recognition_language=result.recognition_language,
             reply_language=result.reply_language,
-            tts_enabled=result.tts_enabled,
         )
         before = self.output.qsize()
         self._metric(

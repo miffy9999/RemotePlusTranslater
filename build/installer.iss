@@ -1,5 +1,5 @@
 #define MyAppName "RemotePlus Translator"
-#define MyAppVersion "0.6.0"
+#define MyAppVersion "0.7.0"
 #define MyAppExeName "RemotePlusTranslator.exe"
 
 [Setup]
