@@ -1,9 +1,9 @@
 # Local TTS packs (0.6.0)
 
 The commercial profile does not use Microsoft Edge Read Aloud, Azure Speech, Windows SAPI,
-or installed Windows language voices. `prepare_models.bat` installs reviewed ONNX model packs
-under `%LOCALAPPDATA%\RemotePlusTranslator\models\tts` for a frozen build. Source runs use the
-repository `models\tts` directory.
+or installed Windows language voices. Portable builds include both reviewed ONNX model packs under
+`models\tts` beside the EXE. `%LOCALAPPDATA%\RemotePlusTranslator\models\tts` is used only as a
+download/repair fallback when a bundled pack is missing. Source runs use the repository pack first.
 
 ## Reviewed catalog
 
@@ -48,7 +48,9 @@ before loading.
 8. a receipt containing every extracted model-file hash is written.
 
 No arbitrary model URL is accepted from the browser, user settings, or `config.local.toml`.
-At runtime a missing pack results in text-only translation. It never falls back to an online TTS.
+At runtime the bundled pack has priority; an incomplete bundle falls back to the verified user cache
+and then to the pinned automatic installer. Until repair finishes, translation remains text-only and
+never falls back to an online TTS.
 
 ## Adding a language/model
 

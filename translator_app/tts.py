@@ -47,7 +47,7 @@ class LocalTtsEngine:
     def __init__(self, cfg: TtsConfig, interrupted: threading.Event):
         self.cfg = cfg
         self.interrupted = interrupted
-        self.packs = TtsPackManager(cfg.data_root)
+        self.packs = TtsPackManager(cfg.data_root, cfg.bundled_data_root)
         self._models: dict[str, object] = {}
         self._model_lock = threading.RLock()
 
@@ -247,7 +247,7 @@ class ProcessLocalTtsEngine:
     def __init__(self, cfg: TtsConfig, interrupted: threading.Event):
         self.cfg = cfg
         self.interrupted = interrupted
-        self.packs = TtsPackManager(cfg.data_root)
+        self.packs = TtsPackManager(cfg.data_root, cfg.bundled_data_root)
         self._process: subprocess.Popen | None = None
         self._process_lock = threading.Lock()
         self._io_lock = threading.Lock()

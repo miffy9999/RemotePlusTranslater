@@ -323,8 +323,8 @@ volume = 0.9
 # Verified local ONNX voices. No reply text leaves the computer and Windows
 # speech language packs are not required.
 backend = "local"
-# A fresh PC downloads every reviewed local voice pack automatically once.
-# Installed packs are checksum-verified and reused without another download.
+# Portable releases include every reviewed voice pack. Automatic installation
+# remains enabled only as a repair/fallback path for a missing pack.
 auto_install_voice_packs = true
 local_threads = 2
 local_kokoro_threads = 4

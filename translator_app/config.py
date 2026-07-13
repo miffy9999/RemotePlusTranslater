@@ -126,9 +126,8 @@ class TtsConfig:
     volume: float = 0.9
     # Commercial builds never send reply text to a third-party speech service.
     backend: str = "local"
-    # The two reviewed packs cover every language for which this release can
-    # synthesize speech. A fresh EXE install downloads them once in the
-    # background; subsequent starts use the verified local receipts.
+    # Portable releases bundle the reviewed packs. Keep automatic installation
+    # as a missing-pack repair path and for source/development runs.
     auto_install_voice_packs: bool = True
     local_threads: int = 2
     # Kokoro benefits from four threads on typical Intel call-center PCs;
@@ -149,6 +148,7 @@ class TtsConfig:
     edge_voice_overrides: dict[str, str] = field(default_factory=dict)
     fallback_to_sapi: bool = False
     data_root: Path = field(default=DATA_ROOT, init=False, repr=False)
+    bundled_data_root: Path | None = field(default=None, init=False, repr=False)
 
 
 @dataclass(slots=True)
@@ -239,6 +239,7 @@ def load_config(path: Path | None = None) -> AppConfig:
         candidate.translation.root = candidate.root
         candidate.translation.data_root = candidate.data_root
         candidate.tts.data_root = candidate.data_root
+        candidate.tts.bundled_data_root = candidate.root
         validate_config(candidate)
         return candidate
 

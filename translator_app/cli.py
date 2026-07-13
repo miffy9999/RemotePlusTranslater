@@ -51,7 +51,9 @@ def doctor() -> int:
             checks.append(("Hy-MT2 model", model.exists(), str(model)))
             checks.append(("llama.cpp runtime", runtime.exists(), str(runtime)))
         from .tts_packs import TtsPackManager
-        tts_languages = TtsPackManager(cfg.data_root).installed_languages()
+        tts_languages = TtsPackManager(
+            cfg.data_root, cfg.tts.bundled_data_root
+        ).installed_languages()
         checks.append(("TTS runtime", cfg.tts.backend == "local", "local sherpa-onnx; no cloud speech service"))
         checks.append((
             "TTS voice packs",
@@ -97,7 +99,7 @@ def prepare() -> int:
     if cfg.translation.backend == "hymt2":
         prepare_hymt2_files(cfg.translation, report)
     from .tts_packs import TtsPackManager
-    TtsPackManager(cfg.data_root).install_for_languages(
+    TtsPackManager(cfg.data_root, cfg.tts.bundled_data_root).install_for_languages(
         cfg.conversation.enabled_languages, report
     )
     translator = create_translator(cfg.translation, report)

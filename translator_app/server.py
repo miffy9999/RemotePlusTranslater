@@ -167,6 +167,13 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
         result["tts_download_active"] = bool(queued)
         return result
 
+    def selected_tts_language() -> str:
+        state = controller.snapshot()
+        target = state.get("reply_language")
+        if target == "auto":
+            target = state.get("active_language") or state.get("input_language")
+        return str(target or "").strip().lower()
+
     def queue_voice_install(languages: list[str]) -> list[str]:
         """Queue reviewed packs without losing selections during another download."""
         nonlocal tts_installer_thread
@@ -177,9 +184,9 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
         }
         missing = requested - installed
         if not missing:
-            for code in requested:
-                if hasattr(controller.speaker, "preload"):
-                    controller.speaker.preload(code)
+            target = selected_tts_language()
+            if target in requested and hasattr(controller.speaker, "preload"):
+                controller.speaker.preload(target)
             return []
         with tts_install_lock:
             tts_pending.update(missing - tts_installing)
@@ -196,7 +203,7 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
 
     def voice_install_worker() -> None:
         nonlocal tts_installer_thread
-        manager = TtsPackManager(config.data_root)
+        manager = TtsPackManager(config.data_root, config.tts.bundled_data_root)
         while True:
             with tts_install_lock:
                 if not tts_pending:
@@ -212,15 +219,12 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
                         "status", phase=phase, message=message
                     ),
                 )
-                state = controller.snapshot()
-                target = state.get("reply_language")
-                if target == "auto":
-                    target = state.get("active_language") or state.get("input_language")
+                target = selected_tts_language()
                 # Installing every reviewed pack must not create one preload
                 # thread per language. Supertonic is shared, so warm only the
                 # language currently selected by the operator.
                 if target in batch and hasattr(controller.speaker, "preload"):
-                    controller.speaker.preload(str(target))
+                    controller.speaker.preload(target)
             except Exception as exc:
                 bus.publish("warning", message=f"Local voice-pack installation failed: {exc}")
             finally:

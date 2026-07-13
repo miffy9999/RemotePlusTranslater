@@ -109,6 +109,10 @@ Copy-Item '.\models\whisper' '.\dist\RemotePlusTranslator\models\whisper' -Recur
 New-Item -ItemType Directory '.\dist\RemotePlusTranslator\models\hymt2' -Force | Out-Null
 Copy-Item '.\models\hymt2\Hy-MT2-1.8B-Q4_K_M.gguf' '.\dist\RemotePlusTranslator\models\hymt2\Hy-MT2-1.8B-Q4_K_M.gguf' -Force
 Copy-Item '.\models\hymt2\llama' '.\dist\RemotePlusTranslator\models\hymt2\llama' -Recurse -Force
+& '.\.venv\Scripts\python.exe' '.\scripts\bundle_tts_packs.py' '.' '.\dist\RemotePlusTranslator'
+if ($LASTEXITCODE -ne 0) {
+    throw 'Reviewed TTS packs are missing or failed integrity verification.'
+}
 $env:REMOTEPLUS_BUILD_DOCTOR = '1'
 $doctor = Start-Process -FilePath '.\dist\RemotePlusTranslator\RemotePlusTranslator.exe' -ArgumentList 'doctor' -WindowStyle Hidden -Wait -PassThru
 Remove-Item Env:\REMOTEPLUS_BUILD_DOCTOR -ErrorAction SilentlyContinue

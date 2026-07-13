@@ -13,6 +13,7 @@ from translator_app.tts_packs import PACK_CATALOG
 def make_client(tmp_path):
     cfg = load_config()
     cfg.data_root = tmp_path
+    cfg.tts.bundled_data_root = None
     return TestClient(
         create_app(cfg, start_backend=False),
         base_url=f"http://127.0.0.1:{cfg.server.port}",
@@ -69,6 +70,7 @@ def test_real_app_start_automatically_installs_every_reviewed_voice_pack(
     )
     cfg = load_config()
     cfg.data_root = tmp_path
+    cfg.tts.bundled_data_root = None
     expected = {code for spec in PACK_CATALOG.values() for code in spec.languages}
 
     with TestClient(

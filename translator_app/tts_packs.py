@@ -133,36 +133,76 @@ def _safe_extract(archive: Path, destination: Path) -> None:
 
 
 class TtsPackManager:
-    def __init__(self, data_root: Path):
+    def __init__(self, data_root: Path, bundled_data_root: Path | None = None):
+        # Downloads and repairs always go to the per-user data root. A frozen
+        # release may additionally ship read-only reviewed packs beside the
+        # EXE; those take priority and avoid a first-run network dependency.
         self.root = data_root / "models" / "tts"
+        bundled = bundled_data_root / "models" / "tts" if bundled_data_root else None
+        self.bundled_root = bundled if bundled != self.root else None
+
+    def _read_roots(self) -> tuple[Path, ...]:
+        return (
+            (self.bundled_root, self.root)
+            if self.bundled_root is not None
+            else (self.root,)
+        )
 
     def pack_path(self, pack_id: str) -> Path:
+        """Return the writable per-user destination for a pack."""
         if pack_id not in PACK_CATALOG:
             raise ValueError(f"unknown TTS pack: {pack_id}")
         return self.root / pack_id
 
-    def installed(self, pack_id: str) -> bool:
+    def _installed_at(self, pack_id: str, root: Path) -> bool:
         spec = PACK_CATALOG[pack_id]
-        root = self.pack_path(pack_id)
         receipt = root / "pack-receipt.json"
         try:
             data = json.loads(receipt.read_text(encoding="utf-8"))
         except (OSError, ValueError, TypeError):
             return False
+        files = data.get("files")
+        if not isinstance(files, dict) or not files:
+            return False
+        # Checking existence is inexpensive and detects incomplete USB/folder
+        # copies before the native runtime tries to open a model. Full hashes
+        # are still checked once immediately before model load.
+        resolved_root = root.resolve()
+        for relative in files:
+            if not isinstance(relative, str) or "\\" in relative:
+                return False
+            normalized = PurePosixPath(relative)
+            if normalized.is_absolute() or ".." in normalized.parts:
+                return False
+            path = (root / Path(*normalized.parts)).resolve()
+            if resolved_root not in path.parents or not path.is_file():
+                return False
         return (
             data.get("schema") == 1
             and data.get("pack_id") == spec.pack_id
             and data.get("version") == spec.version
             and data.get("archive_sha256") == spec.archive_sha256
             and data.get("license_sha256") == spec.license_sha256
-            and isinstance(data.get("files"), dict)
-            and bool(data.get("files"))
             and (root / spec.archive_root).is_dir()
         )
 
+    def resolved_pack_path(self, pack_id: str) -> Path | None:
+        if pack_id not in PACK_CATALOG:
+            raise ValueError(f"unknown TTS pack: {pack_id}")
+        for base in self._read_roots():
+            candidate = base / pack_id
+            if self._installed_at(pack_id, candidate):
+                return candidate
+        return None
+
+    def installed(self, pack_id: str) -> bool:
+        return self.resolved_pack_path(pack_id) is not None
+
     def validate_integrity(self, pack_id: str) -> None:
         """Hash model assets once before a runtime loads executable model data."""
-        root = self.pack_path(pack_id)
+        root = self.resolved_pack_path(pack_id)
+        if root is None:
+            raise ValueError(f"TTS pack is not installed: {pack_id}")
         try:
             receipt = json.loads((root / "pack-receipt.json").read_text(encoding="utf-8"))
         except (OSError, ValueError, TypeError) as exc:
@@ -192,14 +232,16 @@ class TtsPackManager:
         order = ("kokoro-v1.1-zh", "supertonic-3-int8")
         for pack_id in order:
             spec = PACK_CATALOG[pack_id]
-            if code in spec.languages and self.installed(pack_id):
-                return spec, self.pack_path(pack_id) / spec.archive_root
+            root = self.resolved_pack_path(pack_id)
+            if code in spec.languages and root is not None:
+                return spec, root / spec.archive_root
         return None
 
     def install(self, pack_id: str, progress: ProgressCallback | None = None) -> Path:
         spec = PACK_CATALOG[pack_id]
-        if self.installed(pack_id):
-            return self.pack_path(pack_id)
+        existing = self.resolved_pack_path(pack_id)
+        if existing is not None:
+            return existing
         notify = progress or (lambda _phase, _message: None)
         self.root.mkdir(parents=True, exist_ok=True)
         work = Path(tempfile.mkdtemp(prefix=f".{pack_id}-", dir=self.root))
