@@ -39,29 +39,6 @@ class SpeechRequest:
     utterance_id: int | None = None
     speech_ended_at: float = 0.0
     translation_ready_at: float = 0.0
-    contains_disclosure: bool = False
-
-
-SYNTHETIC_VOICE_DISCLOSURES = {
-    "en": "This reply uses AI translation and a synthetic voice.",
-    "ko": "이 응답은 인공지능 번역과 합성 음성을 사용합니다.",
-    "zh": "本次回复使用人工智能翻译和合成语音。",
-    "es": "Esta respuesta utiliza traducción por inteligencia artificial y voz sintética.",
-    "fr": "Cette réponse utilise une traduction par intelligence artificielle et une voix de synthèse.",
-    "de": "Diese Antwort verwendet KI-Übersetzung und eine synthetische Stimme.",
-    "it": "Questa risposta utilizza la traduzione con intelligenza artificiale e una voce sintetica.",
-    "pt": "Esta resposta usa tradução por inteligência artificial e voz sintética.",
-    "ru": "В этом ответе используются перевод с помощью ИИ и синтезированный голос.",
-    "ar": "يستخدم هذا الرد ترجمة بالذكاء الاصطناعي وصوتًا اصطناعيًا.",
-    "hi": "यह उत्तर एआई अनुवाद और कृत्रिम आवाज़ का उपयोग करता है।",
-    "vi": "Phản hồi này sử dụng bản dịch AI và giọng nói tổng hợp.",
-    "id": "Tanggapan ini menggunakan terjemahan AI dan suara sintetis.",
-    "tr": "Bu yanıt yapay zekâ çevirisi ve sentetik ses kullanır.",
-    "nl": "Dit antwoord gebruikt AI-vertaling en een synthetische stem.",
-    "pl": "Ta odpowiedź korzysta z tłumaczenia AI i głosu syntetycznego.",
-    "uk": "У цій відповіді використано переклад ШІ та синтезований голос.",
-    "cs": "Tato odpověď používá překlad pomocí AI a syntetický hlas.",
-}
 
 
 class LocalTtsEngine:
@@ -480,7 +457,6 @@ class LocalSpeaker(threading.Thread):
         self.engine = ProcessLocalTtsEngine(cfg, self._interrupt_event)
         self._preload_lock = threading.Lock()
         self._preload_requested: set[str] = set()
-        self._disclosed_languages: set[str] = set()
         self._cleanup_orphan_files()
 
     @staticmethod
@@ -528,11 +504,6 @@ class LocalSpeaker(threading.Thread):
 
         threading.Thread(target=load, name=f"local-tts-preload-{code}", daemon=True).start()
 
-    def reset_disclosure(self) -> None:
-        """Start a new caller session for synthetic-voice disclosure purposes."""
-        with self._request_lock:
-            self._disclosed_languages.clear()
-
     def _clear_requests(self, *, reason: str) -> None:
         while True:
             try:
@@ -577,13 +548,6 @@ class LocalSpeaker(threading.Thread):
             if not self.supports(code):
                 self._metric("tts_not_queued", utterance_id=utterance_id or 0, reason="voice_pack_missing", language=code)
                 return None
-            disclosure = (
-                self.cfg.disclose_synthetic_voice
-                and utterance_id is not None
-                and code not in self._disclosed_languages
-                and code in SYNTHETIC_VOICE_DISCLOSURES
-            )
-            spoken_text = f"{SYNTHETIC_VOICE_DISCLOSURES[code]} {clean}" if disclosure else clean
             if self.cfg.latest_only:
                 self._latest_request_id = 0
                 self._clear_requests(reason="newer_tts_request")
@@ -592,8 +556,8 @@ class LocalSpeaker(threading.Thread):
                     self.engine.interrupt()
             self._next_request_id += 1
             request = SpeechRequest(
-                self._next_request_id, spoken_text, code, time.monotonic(), utterance_id,
-                speech_ended_at, translation_ready_at, disclosure,
+                self._next_request_id, clean, code, time.monotonic(), utterance_id,
+                speech_ended_at, translation_ready_at,
             )
             self._latest_request_id = request.request_id
             try:
@@ -709,9 +673,6 @@ class LocalSpeaker(threading.Thread):
                     nonlocal gate_started
                     if not gate_started:
                         gate_started = True
-                        if request.contains_disclosure:
-                            with self._request_lock:
-                                self._disclosed_languages.add(request.language)
                         self.gate.begin()
                         self.status("speaking", "Speaking translated reply")
 

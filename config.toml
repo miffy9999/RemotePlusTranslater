@@ -331,9 +331,8 @@ local_kokoro_threads = 4
 local_speed = 1.0
 local_steps = 5
 local_speaker_id = 0
-# The first automatic reply after launch/history-clear tells the caller that
-# AI translation and a synthetic voice are being used.
-disclose_synthetic_voice = true
+# Legacy compatibility setting. The app does not prepend an AI announcement.
+disclose_synthetic_voice = false
 edge_rate = "+0%"
 edge_timeout_seconds = 15
 edge_retry_count = 1

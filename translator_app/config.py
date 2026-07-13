@@ -137,7 +137,9 @@ class TtsConfig:
     local_speed: float = 1.0
     local_steps: int = 5
     local_speaker_id: int = 0
-    disclose_synthetic_voice: bool = True
+    # Legacy config compatibility only. Automatic spoken disclosure was
+    # removed; hotel policy can provide any required notice separately.
+    disclose_synthetic_voice: bool = False
     # Retained only so an old config.local.toml can be read and migrated. These
     # values are ignored by the local backend and Edge is never imported.
     edge_rate: str = "+0%"

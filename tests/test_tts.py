@@ -39,22 +39,11 @@ def test_missing_voice_pack_does_not_queue_or_use_network():
     assert speaker._requests.empty()
 
 
-def test_first_automatic_reply_contains_synthetic_voice_disclosure():
+def test_automatic_reply_speaks_only_the_translated_text():
     speaker = _speaker()
     speaker.speak("Your room is ready.", "en", utterance_id=10)
     request = speaker._requests.get_nowait()
-    assert request.contains_disclosure is True
-    assert request.text.startswith("This reply uses AI translation")
-
-
-def test_replay_does_not_repeat_disclosure_and_new_call_can_reset_it():
-    speaker = _speaker()
-    speaker._disclosed_languages.add("en")
-    speaker.speak("Your room is ready.", "en")
-    assert speaker._requests.get_nowait().contains_disclosure is False
-    speaker.reset_disclosure()
-    speaker.speak("Welcome.", "en", utterance_id=11)
-    assert speaker._requests.get_nowait().contains_disclosure is True
+    assert request.text == "Your room is ready."
 
 
 def test_interrupt_invalidates_inflight_local_synthesis():

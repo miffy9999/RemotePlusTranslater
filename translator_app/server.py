@@ -421,8 +421,6 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
     @app.delete("/api/history")
     def clear_history():
         bus.clear_history_and_publish()
-        if hasattr(controller.speaker, "reset_disclosure"):
-            controller.speaker.reset_disclosure()
         return {"cleared": True}
 
     @app.delete("/api/feedback")
