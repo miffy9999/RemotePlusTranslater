@@ -121,17 +121,30 @@ def _clean_filler_text(text: str, language: str) -> tuple[str, int]:
 def _create_debug_logger(data_root: Path) -> logging.Logger | None:
     if os.getenv("REMOTEPLUS_DEBUG") != "1":
         return None
-    log_dir = data_root / "logs"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    run_id = datetime.now().strftime("%Y%m%d-%H%M%S-%f")[:-3]
-    logger = logging.getLogger(f"remoteplus.timing.{os.getpid()}.{run_id}")
-    logger.setLevel(logging.INFO)
-    logger.propagate = False
-    handler = logging.FileHandler(log_dir / f"timing-{run_id}.log", mode="w", encoding="utf-8")
-    handler.setFormatter(logging.Formatter("%(asctime)s.%(msecs)03d %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
-    logger.addHandler(handler)
-    logger.info("timing_log_started path=%s pid=%s", log_dir / f"timing-{run_id}.log", os.getpid())
-    return logger
+    logger: logging.Logger | None = None
+    handler: logging.Handler | None = None
+    try:
+        log_dir = data_root / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        run_id = datetime.now().strftime("%Y%m%d-%H%M%S-%f")[:-3]
+        logger = logging.getLogger(f"remoteplus.timing.{os.getpid()}.{run_id}")
+        logger.setLevel(logging.INFO)
+        logger.propagate = False
+        handler = logging.FileHandler(log_dir / f"timing-{run_id}.log", mode="w", encoding="utf-8")
+        handler.setFormatter(logging.Formatter("%(asctime)s.%(msecs)03d %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
+        logger.addHandler(handler)
+        logger.info("timing_log_started path=%s pid=%s", log_dir / f"timing-{run_id}.log", os.getpid())
+        return logger
+    except OSError:
+        # Optional telemetry must not prevent the translator from starting.
+        if handler is not None:
+            try:
+                handler.close()
+            except OSError:
+                pass
+        if logger is not None and handler is not None:
+            logger.removeHandler(handler)
+        return None
 
 
 class ConversationController:
@@ -309,11 +322,29 @@ class ConversationController:
         self._stop.set()
         self.capture.stop()
         self.speaker.stop()
+        # translate() owns the translator lock while waiting for SSE chunks.
+        # Close its response first so close() does not wait for the full request
+        # timeout when the operator exits during an active translation.
+        if hasattr(self.translator, "cancel_active_request"):
+            try:
+                self.translator.cancel_active_request()
+            except Exception:
+                pass
         if hasattr(self.translator, "close"):
             self.translator.close()
         for thread in (self.capture, self.speaker, self._translator_warmup, self._live_launcher, self._stt_worker, self._live_worker, self._translation_worker):
             if thread is not None and thread.is_alive():
                 thread.join(timeout=3)
+        logger, self._debug_logger = self._debug_logger, None
+        if logger is not None:
+            for handler in tuple(logger.handlers):
+                try:
+                    handler.flush()
+                    handler.close()
+                except (OSError, ValueError):
+                    pass
+                finally:
+                    logger.removeHandler(handler)
 
     def _status(self, phase: str, message: str = "") -> None:
         requested_phase = phase
@@ -330,16 +361,21 @@ class ConversationController:
             self.bus.publish(requested_phase, message=requested_message)
 
     def _log_perf(self, event: str, **fields: object) -> None:
-        if self._debug_logger is None:
+        logger = self._debug_logger
+        if logger is None:
             return
         escaped_newline = "\\n"
         details = " ".join(
             f"{key}={str(value).replace(chr(10), escaped_newline).replace(chr(13), '')}"
             for key, value in fields.items()
         )
-        self._debug_logger.info("%s %s", event, details)
-        for handler in self._debug_logger.handlers:
-            handler.flush()
+        try:
+            logger.info("%s %s", event, details)
+            for handler in logger.handlers:
+                handler.flush()
+        except (OSError, ValueError):
+            # Losing diagnostics is preferable to interrupting live audio.
+            self._debug_logger = None
 
     @staticmethod
     def _take_latest(source: queue.Queue, first):

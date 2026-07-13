@@ -6,4 +6,6 @@ if not exist ".venv\Scripts\python.exe" (
   exit /b 1
 )
 ".venv\Scripts\python.exe" -m translator_app.cli doctor
+set "DOCTOR_EXIT=%ERRORLEVEL%"
 pause
+exit /b %DOCTOR_EXIT%

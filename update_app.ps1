@@ -69,5 +69,8 @@ Remove-Item -LiteralPath $backup -Recurse -Force -ErrorAction SilentlyContinue
 
 Copy-Item -LiteralPath '.\config.toml' -Destination (Join-Path $distRoot 'config.toml') -Force
 Copy-Item -LiteralPath '.\README.md' -Destination (Join-Path $distRoot 'README.md') -Force
+$distDocs = Join-Path $distRoot 'docs'
+New-Item -ItemType Directory -Path $distDocs -Force | Out-Null
+Get-ChildItem -LiteralPath '.\docs' -File | Copy-Item -Destination $distDocs -Force
 Write-Host "Fast app update $($manifest.version) installed in dist\RemotePlusTranslator\app_update" -ForegroundColor Green
 Write-Host 'Models, native DLLs, and the base EXE were not rebuilt. Restart the app to apply it.' -ForegroundColor Green

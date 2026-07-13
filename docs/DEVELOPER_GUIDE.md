@@ -47,6 +47,10 @@ Space 키 요청은 브라우저에서 localhost REST로 오므로 음성이 먼
 - pip 의존성·DLL·PyInstaller spec·`launcher.py` 수정: `build.ps1`
 - 소스에서 즉시 시험: `run_debug.bat` (EXE 업데이트 불필요)
 
+BAT는 개발 보조 경로이고 고객 배포 기준은 `dist\RemotePlusTranslator` EXE 패키지다.
+`run_debug.bat`에는 앱을 열지 않고 CMD quote/timestamp parsing만 검사하는
+`REMOTEPLUS_BATCH_SELFTEST=1` 경로가 있으며 unit test가 이를 실행한다.
+
 빠른 업데이트는 `app_update/manifest.json`의 모든 파일 SHA-256을 시작 시 확인한다.
 manifest의 파일 목록과 실제 파일 집합도 정확히 일치해야 하며, 누락·추가·손상 시 내장
 코드를 사용한다. 이 checksum은 전자서명이 아니라 복사 손상 감지 장치다. 문제 분리는 환경 변수

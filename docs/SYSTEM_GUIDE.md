@@ -49,6 +49,11 @@ staff mode가 고정되지 않는다. 입력 요소나 버튼에 focus가 있을
 
 고객 모드는 선택 언어를 Whisper에 강제하고 일본어로 번역한다. 직원 모드는 일본어를 Whisper에 강제하고 발화 시작 때 snapshot한 고객 언어로 번역한다.
 
+화면의 고객 언어 표시는 고객 발화에서는 `source_language`, 직원 답변에서는
+`target_language`를 사용한다. 직원 답변의 source는 항상 일본어이므로 이를 표시값으로
+사용하면 고객 언어가 일본어처럼 보이는 오류가 생긴다. 첫 실행 UI 기본값과 초기 HTML은
+일본어이며, 사용자가 화면 언어를 바꾸면 해당 브라우저 저장값을 우선한다.
+
 ## 오디오와 VAD
 
 microphone은 16 kHz mono, 20 ms block이다. WASAPI loopback은 보통 48 kHz stereo로 읽고 mono 16 kHz로 선형 resample한다.

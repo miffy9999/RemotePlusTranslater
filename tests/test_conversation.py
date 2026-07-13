@@ -5,7 +5,12 @@ import time
 import pytest
 
 from translator_app.config import load_config
-from translator_app.conversation import ConversationController, RecognitionJob, _NOISE_TEXT
+from translator_app.conversation import (
+    ConversationController,
+    RecognitionJob,
+    _NOISE_TEXT,
+    _create_debug_logger,
+)
 from translator_app.events import EventBus
 from translator_app.stt import Recognition
 
@@ -32,6 +37,8 @@ class FakeSpeaker:
     def speak(self, text, language): self.calls.append((text, language))
     def stop(self): pass
     def interrupt(self, **_kwargs): pass
+    def is_alive(self): return False
+    def join(self, timeout=None): pass
 
 
 def make_controller():
@@ -59,6 +66,8 @@ def test_japanese_reply_returns_to_last_partner_and_speaks():
     assert translator.calls[-1] == ("こんにちは", "ja", "es")
     assert controller.speaker.calls == [("es:こんにちは", "es")]
     assert bus.history()[-1]["data"]["direction"] == "reply"
+    assert controller.state.input_language == "es"
+    assert controller.state.active_language == "es"
 
 
 def test_completed_reply_can_be_replayed_after_interruption():
@@ -287,3 +296,31 @@ def test_failed_stream_stop_does_not_commit_new_input_device(monkeypatch):
     assert controller.capture is old_capture
     assert controller.state.input_device == "default"
     assert controller.cfg.audio.input_device == "default"
+
+
+def test_stop_cancels_active_translation_before_closing_engine():
+    controller, _, _ = make_controller()
+    order = []
+
+    class TranslatorWithShutdown:
+        def cancel_active_request(self):
+            order.append("cancel")
+            return True
+
+        def close(self):
+            order.append("close")
+
+    controller.translator = TranslatorWithShutdown()
+    controller.stop()
+
+    assert order == ["cancel", "close"]
+
+
+def test_debug_log_open_failure_does_not_prevent_startup(tmp_path, monkeypatch):
+    monkeypatch.setenv("REMOTEPLUS_DEBUG", "1")
+
+    def fail_file_handler(*_args, **_kwargs):
+        raise OSError("disk is read-only")
+
+    monkeypatch.setattr("translator_app.conversation.logging.FileHandler", fail_file_handler)
+    assert _create_debug_logger(tmp_path) is None

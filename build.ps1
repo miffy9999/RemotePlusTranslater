@@ -33,6 +33,9 @@ if ($doctor.ExitCode -ne 0) {
 $iscc = Get-Command ISCC.exe -ErrorAction SilentlyContinue
 if ($iscc) {
     & $iscc.Source '.\build\installer.iss'
+    if ($LASTEXITCODE -ne 0) {
+        throw "Inno Setup failed with exit code $LASTEXITCODE"
+    }
     Write-Host 'Installer created in dist\installer' -ForegroundColor Green
 } else {
     Write-Host 'Portable build created in dist\RemotePlusTranslator.' -ForegroundColor Green
