@@ -14,9 +14,11 @@ Compression=lzma2/max
 SolidCompression=yes
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-PrivilegesRequired=lowest
+; Commercial hotel deployment belongs under IT-managed Program Files.
+PrivilegesRequired=admin
 WizardStyle=modern
-LicenseFile=..\EULA_JA.md
+; Use the rendered release document, never the source template containing placeholders.
+LicenseFile=..\dist\RemotePlusTranslator\EULA_JA.md
 UninstallDisplayIcon={app}\{#MyAppExeName}
 CloseApplications=yes
 
