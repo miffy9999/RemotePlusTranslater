@@ -36,7 +36,16 @@ def doctor() -> int:
     checks: list[tuple[str, bool, str]] = []
     version_ok = (3, 11) <= sys.version_info[:2] < (3, 14)
     checks.append(("Python", version_ok, platform.python_version()))
-    for package in ("numpy", "sounddevice", "faster_whisper", "fastapi", "edge_tts", "pygame"):
+    for package in (
+        "numpy",
+        "sounddevice",
+        "faster_whisper",
+        "ctranslate2",
+        "huggingface_hub",
+        "fastapi",
+        "edge_tts",
+        "pygame",
+    ):
         try:
             module = importlib.import_module(package)
             checks.append((package, True, getattr(module, "__version__", "installed")))
@@ -52,6 +61,10 @@ def doctor() -> int:
             checks.append(("llama.cpp runtime", runtime.exists(), str(runtime)))
         checks.append(("TTS", cfg.tts.backend == "edge", "Edge online neural; Windows language packs not required"))
         checks.append(("live captions", True, "disabled for final-STT priority"))
+        from .server import create_app
+
+        create_app(cfg, start_backend=False)
+        checks.append(("local server", True, "API routes and web assets loaded"))
     except Exception as exc:
         checks.append(("configuration", False, str(exc)))
     if os.environ.get("REMOTEPLUS_ENUMERATE_AUDIO_DEVICES") == "1":

@@ -24,7 +24,9 @@ for runtime_dll in (
 
 hiddenimports = []
 hiddenimports += collect_submodules("uvicorn")
-hiddenimports += collect_submodules("soundcard")
+hiddenimports += collect_submodules(
+    "soundcard", filter=lambda name: ".__pyinstaller" not in name
+)
 hiddenimports += collect_submodules("edge_tts")
 hiddenimports += collect_submodules("pygame")
 
@@ -35,7 +37,7 @@ a = Analysis(
     datas=datas,
     hiddenimports=hiddenimports,
     excludes=[
-        "tkinter", "matplotlib", "IPython", "notebook",
+        "tkinter", "matplotlib", "IPython", "notebook", "pytest", "_pytest",
         "torch", "transformers", "accelerate", "sentencepiece", "safetensors",
     ],
     noarchive=False,

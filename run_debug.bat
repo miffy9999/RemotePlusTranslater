@@ -1,11 +1,15 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-if not exist ".venv\Scripts\python.exe" (
-  echo Run install.bat or install.ps1 first.
-  pause
-  exit /b 1
-)
+if not exist ".venv\Scripts\python.exe" goto repair_venv
+".venv\Scripts\python.exe" -c "import sys" >nul 2>nul
+if errorlevel 1 goto repair_venv
+goto venv_ready
+:repair_venv
+echo Repairing the local Python environment...
+call install.bat
+if errorlevel 1 exit /b 1
+:venv_ready
 set "PYTHONUTF8=1"
 set "PYGAME_HIDE_SUPPORT_PROMPT=1"
 set "REMOTEPLUS_DEBUG=1"
@@ -19,3 +23,4 @@ echo Creating timing summary for the latest debug run...
 echo.
 echo Debug run exit code: %APP_EXIT%
 pause
+exit /b %APP_EXIT%

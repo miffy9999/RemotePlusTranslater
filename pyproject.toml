@@ -5,6 +5,8 @@ description = "Local-first bidirectional hotel speech translator centered on Jap
 requires-python = ">=3.11,<3.14"
 dependencies = [
   "faster-whisper==1.2.1",
+  "ctranslate2>=4.0,<5",
+  "huggingface-hub>=0.21,<2",
   "numpy==2.2.6",
   "sounddevice==0.5.3",
   "SoundCard==0.4.6",

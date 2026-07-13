@@ -261,4 +261,4 @@ def run_desktop() -> int:
             except subprocess.TimeoutExpired:
                 app_process.kill()
         shutil.rmtree(profile_root, ignore_errors=True)
-    return 0
+    return 1 if server_error else 0

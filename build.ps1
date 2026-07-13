@@ -2,7 +2,14 @@ $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 
 if (-not (Test-Path '.venv\Scripts\python.exe')) {
-    throw 'Run install.bat first.'
+    & '.\install.ps1'
+    if ($LASTEXITCODE -ne 0) { throw "Environment setup failed with exit code $LASTEXITCODE" }
+} else {
+    & '.\.venv\Scripts\python.exe' -c "import sys"
+    if ($LASTEXITCODE -ne 0) {
+        & '.\install.ps1'
+        if ($LASTEXITCODE -ne 0) { throw "Environment repair failed with exit code $LASTEXITCODE" }
+    }
 }
 
 & '.\.venv\Scripts\python.exe' -m pip install -e '.[dev]'

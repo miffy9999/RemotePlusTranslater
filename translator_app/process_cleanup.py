@@ -25,6 +25,25 @@ def acquire_single_instance(name: str = "Local\\RemotePlusTranslator") -> bool:
     return True
 
 
+def _configure_kernel32(kernel32) -> None:
+    """Declare 64-bit-safe Win32 signatures used by the cleanup job."""
+    kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
+    kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+    kernel32.SetInformationJobObject.argtypes = [
+        wintypes.HANDLE,
+        ctypes.c_int,
+        ctypes.c_void_p,
+        wintypes.DWORD,
+    ]
+    kernel32.SetInformationJobObject.restype = wintypes.BOOL
+    kernel32.GetCurrentProcess.argtypes = []
+    kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+    kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+    kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
+
 def enable_windows_process_cleanup() -> None:
     """Kill child processes when the launcher process exits on Windows."""
     global _JOB_HANDLE
@@ -32,6 +51,7 @@ def enable_windows_process_cleanup() -> None:
         return
     try:
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        _configure_kernel32(kernel32)
         job = kernel32.CreateJobObjectW(None, None)
         if not job:
             return
@@ -71,8 +91,15 @@ def enable_windows_process_cleanup() -> None:
 
         info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
         info.BasicLimitInformation.LimitFlags = 0x00002000
-        kernel32.SetInformationJobObject(job, 9, ctypes.byref(info), ctypes.sizeof(info))
-        if kernel32.AssignProcessToJobObject(job, kernel32.GetCurrentProcess()):
+        configured = kernel32.SetInformationJobObject(
+            job, 9, ctypes.byref(info), ctypes.sizeof(info)
+        )
+        assigned = configured and kernel32.AssignProcessToJobObject(
+            job, kernel32.GetCurrentProcess()
+        )
+        if assigned:
             _JOB_HANDLE = job
+        else:
+            kernel32.CloseHandle(job)
     except Exception:
         return
