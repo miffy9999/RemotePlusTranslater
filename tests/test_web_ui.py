@@ -24,6 +24,8 @@ def test_ui_is_chat_based_and_has_no_tts_or_space_controls():
 
 def test_ui_renders_both_reading_guides_from_server_events():
     script = (WEB / "app.js").read_text(encoding="utf-8")
+    styles = (WEB / "app.css").read_text(encoding="utf-8")
     assert "romanized_reading" in script
     assert "reading-kana" in script
     assert "event.type==='reading'" in script
+    assert ".reading-guide .reading-kana,\n.reading-guide .reading-roman" in styles

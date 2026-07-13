@@ -659,7 +659,8 @@ main {
   text-shadow: 0 1px 1px rgba(0, 0, 0, .55)
 }
 
-.reading-guide .reading-kana {
+.reading-guide .reading-kana,
+.reading-guide .reading-roman {
   color: #f8fafc !important
 }
 
