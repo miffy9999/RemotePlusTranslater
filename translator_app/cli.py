@@ -53,7 +53,12 @@ def doctor() -> int:
         from .tts_packs import TtsPackManager
         tts_languages = TtsPackManager(cfg.data_root).installed_languages()
         checks.append(("TTS runtime", cfg.tts.backend == "local", "local sherpa-onnx; no cloud speech service"))
-        checks.append(("TTS voice packs", True, ", ".join(sorted(tts_languages)) or "none yet; install from the app or run prepare"))
+        checks.append((
+            "TTS voice packs",
+            True,
+            ", ".join(sorted(tts_languages))
+            or "none yet; the normal app start downloads reviewed packs automatically",
+        ))
         checks.append(("live captions", True, "disabled for final-STT priority"))
     except Exception as exc:
         checks.append(("configuration", False, str(exc)))

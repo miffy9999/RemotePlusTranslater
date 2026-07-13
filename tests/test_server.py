@@ -7,6 +7,7 @@ from starlette.websockets import WebSocketDisconnect
 from translator_app.config import load_config
 from translator_app.desktop import _desktop_client_idle_seconds, _desktop_client_seen, _wait_for_http
 from translator_app.server import create_app
+from translator_app.tts_packs import PACK_CATALOG
 
 
 def make_client(tmp_path):
@@ -47,6 +48,67 @@ def test_voice_pack_install_accepts_only_reviewed_catalog_languages(tmp_path, mo
         unavailable = client.post("/api/install-voices", json={"languages": ["th"]})
         assert unavailable.status_code == 400
         assert "commercially reviewed" in unavailable.json()["detail"]
+
+
+def test_real_app_start_automatically_installs_every_reviewed_voice_pack(
+    tmp_path, monkeypatch
+):
+    completed = threading.Event()
+    calls = []
+
+    monkeypatch.setattr("translator_app.server.ConversationController.start", lambda _self: None)
+    monkeypatch.setattr("translator_app.server.ConversationController.stop", lambda _self: None)
+
+    def fake_install(_self, languages, _progress=None):
+        calls.append(set(languages))
+        completed.set()
+        return []
+
+    monkeypatch.setattr(
+        "translator_app.server.TtsPackManager.install_for_languages", fake_install
+    )
+    cfg = load_config()
+    cfg.data_root = tmp_path
+    expected = {code for spec in PACK_CATALOG.values() for code in spec.languages}
+
+    with TestClient(
+        create_app(cfg, start_backend=True),
+        base_url=f"http://127.0.0.1:{cfg.server.port}",
+    ):
+        assert completed.wait(1)
+
+    assert calls == [expected]
+
+
+def test_voice_pack_selection_is_queued_during_an_active_download(tmp_path, monkeypatch):
+    first_started = threading.Event()
+    release_first = threading.Event()
+    second_completed = threading.Event()
+    calls = []
+
+    def fake_install(_self, languages, _progress=None):
+        calls.append(list(languages))
+        if len(calls) == 1:
+            first_started.set()
+            assert release_first.wait(1)
+        else:
+            second_completed.set()
+        return []
+
+    monkeypatch.setattr(
+        "translator_app.server.TtsPackManager.install_for_languages", fake_install
+    )
+    with make_client(tmp_path) as client:
+        client.get("/")
+        first = client.post("/api/install-voices", json={"languages": ["en"]})
+        assert first.status_code == 202
+        assert first_started.wait(1)
+        second = client.post("/api/install-voices", json={"languages": ["zh"]})
+        assert second.status_code == 202
+        release_first.set()
+        assert second_completed.wait(1)
+
+    assert calls == [["en"], ["zh"]]
 
 
 def test_reply_replay_refuses_uninstalled_voice_pack(tmp_path):

@@ -126,6 +126,10 @@ class TtsConfig:
     volume: float = 0.9
     # Commercial builds never send reply text to a third-party speech service.
     backend: str = "local"
+    # The two reviewed packs cover every language for which this release can
+    # synthesize speech. A fresh EXE install downloads them once in the
+    # background; subsequent starts use the verified local receipts.
+    auto_install_voice_packs: bool = True
     local_threads: int = 2
     # Kokoro benefits from four threads on typical Intel call-center PCs;
     # Supertonic remains at two to avoid competing with STT/translation.
