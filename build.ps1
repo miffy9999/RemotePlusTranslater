@@ -1,3 +1,4 @@
+param([switch]$CommercialRelease)
 $ErrorActionPreference = 'Stop'
 Set-Location $PSScriptRoot
 
@@ -17,7 +18,28 @@ if ($LASTEXITCODE -ne 0) {
 Copy-Item '.\config.toml' '.\dist\RemotePlusTranslator\config.toml' -Force
 Copy-Item '.\README.md' '.\dist\RemotePlusTranslator\README.md' -Force
 Copy-Item '.\THIRD_PARTY_NOTICES.md' '.\dist\RemotePlusTranslator\THIRD_PARTY_NOTICES.md' -Force
+Copy-Item '.\EULA_JA.md' '.\dist\RemotePlusTranslator\EULA_JA.md' -Force
+Copy-Item '.\PRIVACY_NOTICE_JA.md' '.\dist\RemotePlusTranslator\PRIVACY_NOTICE_JA.md' -Force
 Copy-Item '.\docs' '.\dist\RemotePlusTranslator\docs' -Recurse -Force
+& '.\.venv\Scripts\python.exe' '.\scripts\generate_compliance.py' '.\dist\RemotePlusTranslator'
+if ($LASTEXITCODE -ne 0) {
+    throw 'Compliance inventory is incomplete. Add the missing license files before release.'
+}
+
+function Sign-CommercialArtifact([string]$Path) {
+    if (-not $CommercialRelease) { return }
+    $thumbprint = $env:REMOTEPLUS_SIGN_CERT_SHA1
+    if (-not $thumbprint) { throw 'REMOTEPLUS_SIGN_CERT_SHA1 is required for -CommercialRelease.' }
+    $signtool = Get-Command signtool.exe -ErrorAction SilentlyContinue
+    if (-not $signtool) { throw 'signtool.exe from the Windows SDK is required for -CommercialRelease.' }
+    & $signtool.Source sign /sha1 $thumbprint /fd SHA256 /tr 'http://timestamp.digicert.com' /td SHA256 $Path
+    if ($LASTEXITCODE -ne 0) { throw "Code signing failed: $Path" }
+    $signature = Get-AuthenticodeSignature -LiteralPath $Path
+    if ($signature.Status -ne 'Valid') { throw "Invalid Authenticode signature: $Path ($($signature.Status))" }
+}
+
+Sign-CommercialArtifact '.\dist\RemotePlusTranslator\RemotePlusTranslator.exe'
+Sign-CommercialArtifact '.\dist\RemotePlusTranslator\RemotePlusTtsWorker.exe'
 New-Item -ItemType Directory '.\dist\RemotePlusTranslator\models' -Force | Out-Null
 Copy-Item '.\models\whisper' '.\dist\RemotePlusTranslator\models\whisper' -Recurse -Force
 New-Item -ItemType Directory '.\dist\RemotePlusTranslator\models\hymt2' -Force | Out-Null
@@ -37,7 +59,9 @@ if ($iscc) {
         throw "Inno Setup failed with exit code $LASTEXITCODE"
     }
     Write-Host 'Installer created in dist\installer' -ForegroundColor Green
+    Sign-CommercialArtifact ".\dist\installer\RemotePlusTranslator-Setup-0.6.0.exe"
 } else {
+    if ($CommercialRelease) { throw 'Inno Setup 6 is required for -CommercialRelease.' }
     Write-Host 'Portable build created in dist\RemotePlusTranslator.' -ForegroundColor Green
     Write-Host 'Install Inno Setup 6 and rerun to also create Setup.exe.' -ForegroundColor Yellow
 }

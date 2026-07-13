@@ -1,5 +1,5 @@
 #define MyAppName "RemotePlus Translator"
-#define MyAppVersion "0.5.2"
+#define MyAppVersion "0.6.0"
 #define MyAppExeName "RemotePlusTranslator.exe"
 
 [Setup]
@@ -16,6 +16,7 @@ ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 PrivilegesRequired=lowest
 WizardStyle=modern
+LicenseFile=..\EULA_JA.md
 UninstallDisplayIcon={app}\{#MyAppExeName}
 CloseApplications=yes
 

@@ -8,11 +8,12 @@ datas = [(os.path.join(project_root, "config.toml"), ".")]
 datas += collect_data_files("translator_app")
 datas += collect_data_files("faster_whisper")
 datas += collect_data_files("soundcard")
-datas += collect_data_files("edge_tts")
+datas += collect_data_files("sherpa_onnx")
 datas += collect_data_files("pygame")
 
 binaries = collect_dynamic_libs("ctranslate2")
 binaries += collect_dynamic_libs("onnxruntime")
+binaries += collect_dynamic_libs("sherpa_onnx")
 system32 = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "System32")
 for runtime_dll in (
     "msvcp140.dll", "msvcp140_1.dll", "msvcp140_2.dll", "msvcp140_atomic_wait.dll",
@@ -25,7 +26,7 @@ for runtime_dll in (
 hiddenimports = []
 hiddenimports += collect_submodules("uvicorn")
 hiddenimports += collect_submodules("soundcard")
-hiddenimports += collect_submodules("edge_tts")
+hiddenimports += collect_submodules("sherpa_onnx")
 hiddenimports += collect_submodules("pygame")
 
 a = Analysis(
@@ -53,8 +54,21 @@ exe = EXE(
     upx=False,
     console=False,
 )
+tts_worker = EXE(
+    pyz,
+    a.scripts,
+    [],
+    exclude_binaries=True,
+    name="RemotePlusTtsWorker",
+    debug=False,
+    bootloader_ignore_signals=False,
+    strip=False,
+    upx=False,
+    console=True,
+)
 coll = COLLECT(
     exe,
+    tts_worker,
     a.binaries,
     a.datas,
     strip=False,

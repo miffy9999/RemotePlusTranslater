@@ -1,4 +1,4 @@
-# 품질 검증 현황 (0.5.2)
+# 품질 검증 현황 (0.6.0)
 
 자동 검증:
 
@@ -9,12 +9,38 @@
 - 실제 모델 반복 실행용 `scripts/stress_runtime.py`
 - EXE build 후 `doctor` 실행
 
+## 0.6.0 상업용 로컬 TTS 브랜치 검증
+
+2026-07-13 기준 unit/integration test 116개, Ruff, compileall, pip check를 통과했다.
+SBOM은 Python dependency closure 69개와 라이선스 파일 87개를 생성하며 누락은 0개다.
+새 PyInstaller 산출물에서 `doctor` exit 0, frozen TTS worker JSON protocol, 실제 Supertonic
+WAV(247,136 bytes), sherpa/ONNX/CTranslate2 DLL, Edge TTS 파일 0개를 확인했다.
+
+상업성·성능 화이트박스에서 추가로 수정한 항목:
+
+- Edge Read Aloud/`edge-tts`를 완전히 제거하고 검증된 로컬 ONNX 팩만 허용
+- `zh_CN-chaowen-medium`이 MIT 저장소 표시와 달리 non-commercial Xiao Ya/BZNSYP에서
+  파인튜닝된 계보임을 찾아 상업 카탈로그에서 제거
+- 공개 가중치가 non-commercial인 `wuxuedaifu/supertonic_cn`을 참고 후보로만 기록
+- Apache-2.0 Kokoro v1.1-zh exact archive의 크기, SHA-256, 내장 LICENSE SHA-256 고정
+- HTTPS 다운로드가 HTTP로 downgrade redirect되면 거부
+- 네이티브 TTS를 별도 persistent worker에 격리해 오래된 긴 합성을 0.003초 수준에서 종료
+- 중국어 FP32/INT8 및 1/2/4/8 threads 비교 후 FP32 4 threads 채택; 이 QA PC에서 warm
+  4.99초 음성 합성 4.46초(RTF 0.893), INT8 4 threads는 RTF 2.368로 기각
+- 한글 경로 때문에 필요한 중국어 frontend만 ASCII 캐시에 두고, 파일별 해시를 매 로드 전
+  검증하며 변조된 캐시는 자동 재생성
+- TTS worker stderr 1MB rotation log와 invalid protocol worker reset 추가
+- commercial build가 desktop EXE와 TTS worker EXE 모두 Authenticode 서명하지 못하면 실패
+
+현재 QA 산출물 두 EXE는 기능 검증용으로 `NotSigned`다. 인증서 없이 만든 portable build를
+상업 최종 릴리스로 승인해서는 안 된다.
+
 ## 0.5.2 화이트박스 재검증 결과
 
 2026-07-13 재검증에서 107개 unit/integration test, Ruff, compileall, pip check와
 dependency audit를 통과했다. 실제 모델 경로에서는 호텔 번역 corpus 128건이
 forward/reverse term score 1.0, fixed-language 공개 음성 execution smoke 5/5였다.
-공개 음성 결과는 아래 설명처럼 정확도 점수가 아니다. 실제 Edge TTS 일본어 MP3 생성,
+공개 음성 결과는 아래 설명처럼 정확도 점수가 아니다. 실제 로컬 TTS 다국어 WAV 생성,
 스트리밍 번역 중 취소, 취소 직후 다음 번역도 확인했다.
 
 이번 검증에서 재현하고 수정한 항목:
@@ -50,8 +76,8 @@ forward/reverse term score 1.0, fixed-language 공개 음성 execution smoke 5/5
 - EventBus/DOM bounded history
 - WebSocket 인증·disconnect subscriber 정리
 - user setting schema와 다른 PC 장치 fallback
-- Edge synthesis cancel/retry
+- 로컬 synthesis cancel, 최신 요청 우선, 팩 무결성 검증
 
-아직 자동 점수가 보증하지 않는 영역은 실제 30~60분 통화, 겹쳐 말하기, 저속/불안정 인터넷 Edge TTS, 호텔별 전화 코덱, 강한 억양과 뭉개진 발음이다. 공개 음원만으로 이 조건을 대표할 수 없으므로 상업 사용 권리가 확보된 현장 샘플을 익명화해 회귀 세트로 유지해야 한다.
+아직 자동 점수가 보증하지 않는 영역은 실제 30~60분 통화, 겹쳐 말하기, 저사양 CPU의 로컬 TTS 지연, 호텔별 전화 코덱, 강한 억양과 뭉개진 발음이다. 공개 음원만으로 이 조건을 대표할 수 없으므로 상업 사용 권리가 확보된 현장 샘플을 익명화해 회귀 세트로 유지해야 한다.
 
 `benchmark_public_audio.py`의 공개 파일에는 권위 있는 정답 transcript가 없으므로 모델 실행·non-empty 결과만 검사한다. 이 결과를 WER/CER 또는 인식 정확도로 표현하면 안 된다. 실제 정확도 gate는 정답 transcript가 포함된 권리 확보 호텔 음성 corpus로 별도 구성해야 한다.

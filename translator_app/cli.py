@@ -36,7 +36,7 @@ def doctor() -> int:
     checks: list[tuple[str, bool, str]] = []
     version_ok = (3, 11) <= sys.version_info[:2] < (3, 14)
     checks.append(("Python", version_ok, platform.python_version()))
-    for package in ("numpy", "sounddevice", "faster_whisper", "fastapi", "edge_tts", "pygame"):
+    for package in ("numpy", "sounddevice", "faster_whisper", "fastapi", "sherpa_onnx", "pygame"):
         try:
             module = importlib.import_module(package)
             checks.append((package, True, getattr(module, "__version__", "installed")))
@@ -50,7 +50,10 @@ def doctor() -> int:
             runtime = cfg.root / cfg.translation.hymt2_runtime / "llama-server.exe"
             checks.append(("Hy-MT2 model", model.exists(), str(model)))
             checks.append(("llama.cpp runtime", runtime.exists(), str(runtime)))
-        checks.append(("TTS", cfg.tts.backend == "edge", "Edge online neural; Windows language packs not required"))
+        from .tts_packs import TtsPackManager
+        tts_languages = TtsPackManager(cfg.data_root).installed_languages()
+        checks.append(("TTS runtime", cfg.tts.backend == "local", "local sherpa-onnx; no cloud speech service"))
+        checks.append(("TTS voice packs", True, ", ".join(sorted(tts_languages)) or "none yet; install from the app or run prepare"))
         checks.append(("live captions", True, "disabled for final-STT priority"))
     except Exception as exc:
         checks.append(("configuration", False, str(exc)))
@@ -84,10 +87,14 @@ def prepare() -> int:
 
     _emit("Final speech model is downloaded once and then used locally.")
     _emit("Live preview is disabled for queue stability and CPU priority.")
-    _emit("Reply speech uses Edge online neural voices; Windows language packs are not required.")
+    _emit("Reply speech uses verified local ONNX voices; no Windows language packs are required.")
     WhisperRecognizer(cfg.stt, report, label="final").load()
     if cfg.translation.backend == "hymt2":
         prepare_hymt2_files(cfg.translation, report)
+    from .tts_packs import TtsPackManager
+    TtsPackManager(cfg.data_root).install_for_languages(
+        cfg.conversation.enabled_languages, report
+    )
     translator = create_translator(cfg.translation, report)
     translator.load()
     if hasattr(translator, "close"):
@@ -104,9 +111,9 @@ def device_probe(kind: str) -> int:
         result = list_audio_devices()
         payload = {"inputs": result.get("inputs", []), "warnings": result.get("warnings", [])}
     elif kind == "output":
-        from .tts import EdgeSpeaker
+        from .tts import LocalSpeaker
 
-        payload = {"outputs": EdgeSpeaker.output_devices(), "warnings": []}
+        payload = {"outputs": LocalSpeaker.output_devices(), "warnings": []}
     else:
         return 2
     encoded = json.dumps(payload, ensure_ascii=False)
@@ -153,6 +160,7 @@ def main() -> int:
     sub.add_parser("prepare", help="download local speech and translation models")
     probe = sub.add_parser("device-probe", help=argparse.SUPPRESS)
     probe.add_argument("kind", choices=("input", "output"))
+    sub.add_parser("tts-worker", help=argparse.SUPPRESS)
     args = parser.parse_args()
     if args.command is None or args.command == "desktop":
         return desktop()
@@ -164,6 +172,9 @@ def main() -> int:
         return prepare()
     if args.command == "device-probe":
         return device_probe(args.kind)
+    if args.command == "tts-worker":
+        from .tts import tts_worker_main
+        return tts_worker_main()
     return 2
 
 

@@ -1,3 +1,5 @@
+import threading
+
 import pytest
 from fastapi.testclient import TestClient
 from starlette.websockets import WebSocketDisconnect
@@ -27,15 +29,35 @@ def test_api_requires_session_cookie(tmp_path):
         assert client.get("/api/state").status_code == 200
 
 
-def test_reply_replay_requires_enabled_language_and_queues_audio(tmp_path):
+def test_voice_pack_install_accepts_only_reviewed_catalog_languages(tmp_path, monkeypatch):
+    completed = threading.Event()
+
+    def fake_install(_self, languages, _progress=None):
+        assert languages == ["en"]
+        completed.set()
+        return []
+
+    monkeypatch.setattr("translator_app.server.TtsPackManager.install_for_languages", fake_install)
+    with make_client(tmp_path) as client:
+        client.get("/")
+        response = client.post("/api/install-voices", json={"languages": ["en"]})
+        assert response.status_code == 202
+        assert response.json()["accepted"] is True
+        assert completed.wait(1)
+        unavailable = client.post("/api/install-voices", json={"languages": ["th"]})
+        assert unavailable.status_code == 400
+        assert "commercially reviewed" in unavailable.json()["detail"]
+
+
+def test_reply_replay_refuses_uninstalled_voice_pack(tmp_path):
     with make_client(tmp_path) as client:
         client.get("/")
         response = client.post(
             "/api/replay",
             json={"text": "Please wait a moment.", "language": "en"},
         )
-        assert response.status_code == 200
-        assert response.json()["queued"] is True
+        assert response.status_code == 400
+        assert "voice pack" in response.json()["detail"]
         invalid = client.post("/api/replay", json={"text": "test", "language": "ja"})
         assert invalid.status_code == 400
 
@@ -120,7 +142,7 @@ def test_health_endpoint_identifies_remoteplus(tmp_path):
     assert response.status_code == 200
     assert response.json() == {
         "app": "remoteplus-translator",
-        "version": "0.5.2",
+        "version": "0.6.0",
         "update_layer": False,
         "ok": True,
     }

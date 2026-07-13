@@ -20,8 +20,16 @@ def _update_error(message: str) -> None:
 
 
 def _activate_verified_update() -> None:
-    """Load a small side-by-side app update while retaining the bundled fallback."""
+    """Load a development side-by-side update only after explicit opt-in.
+
+    Hashes detect corruption but do not authenticate a publisher. Commercial
+    builds therefore keep this path disabled until the distributor adds a
+    signed manifest/public-key policy or ships an Authenticode-signed full
+    installer update.
+    """
     if not getattr(sys, "frozen", False) or os.environ.get("REMOTEPLUS_DISABLE_APP_UPDATE") == "1":
+        return
+    if os.environ.get("REMOTEPLUS_ENABLE_UNAUTHENTICATED_APP_UPDATE") != "1":
         return
     update_root = Path(sys.executable).resolve().parent / "app_update"
     manifest_path = update_root / "manifest.json"

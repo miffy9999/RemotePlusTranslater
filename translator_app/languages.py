@@ -41,7 +41,7 @@ _LANGUAGES: tuple[Language, ...] = (
 _BY_CODE = {language.code: language for language in _LANGUAGES}
 
 # Japanese is reserved for the Space-held employee mode. Every item below is a
-# selectable fixed customer language and has an Edge Neural voice mapping.
+# selectable fixed customer language. TTS availability depends on verified local packs.
 CUSTOMER_LANGUAGE_CODES: tuple[str, ...] = tuple(
     language.code for language in _LANGUAGES if language.code != "ja"
 )
