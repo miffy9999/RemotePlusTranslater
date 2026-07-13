@@ -19,7 +19,7 @@ from .events import EventBus
 from .hymt2 import create_translator
 from .languages import get_language
 from .stt import Recognition, WhisperRecognizer
-from .tts import EDGE_OUTPUT_PREFIX, EdgeSpeaker
+from .tts import LEGACY_EDGE_OUTPUT_PREFIX, LOCAL_OUTPUT_PREFIX, LocalSpeaker
 
 
 class RecognizerLike(Protocol):
@@ -205,7 +205,7 @@ class ConversationController:
         self.recognizer.set_selected_language(customer) if hasattr(self.recognizer, "set_selected_language") else None
         self.live_recognizer: WhisperRecognizer | None = None
         self.translator = translator or create_translator(cfg.translation, self._status)
-        self.speaker = EdgeSpeaker(cfg.tts, cfg.audio, self.gate, self._status, metrics=self._log_perf)
+        self.speaker = LocalSpeaker(cfg.tts, cfg.audio, self.gate, self._status, metrics=self._log_perf)
         self.capture = self._make_capture()
         self._capture_started = False
         self._stt_worker = threading.Thread(target=self._run_stt, name="conversation-final-stt", daemon=True)
@@ -287,7 +287,7 @@ class ConversationController:
             customer_language=self.state.input_language,
             speech_mode=self.state.speech_mode,
             tts_enabled=self.state.tts_enabled,
-            tts_backend="edge",
+            tts_backend="local",
             pipeline="final_only_latest_queue_no_live",
             live_preview=False,
             final_model=self.cfg.stt.model,
@@ -669,6 +669,10 @@ class ConversationController:
                 self.translator.warmup()
             self._translator_ready.set()
             self._log_perf("translator_ready", seconds=f"{time.monotonic() - started:.3f}", warmup_seconds=f"{time.monotonic() - warmup_started:.3f}")
+            with self._state_lock:
+                preload_language = self.state.input_language
+            if hasattr(self.speaker, "preload"):
+                self.speaker.preload(preload_language)
             self.bus.publish("state", **self.snapshot())
         except Exception as exc:
             self._translator_failed.set()
@@ -835,7 +839,13 @@ class ConversationController:
         result["live_queue_depth"] = 0
         result["translation_queue_depth"] = self._recognitions.qsize()
         result["tts_backend"] = self.cfg.tts.backend
-        result["tts_online"] = self.cfg.tts.backend == "edge"
+        result["tts_online"] = False
+        installed = self.speaker.installed_languages() if hasattr(self.speaker, "installed_languages") else set()
+        result["tts_installed_languages"] = sorted(installed)
+        reply_target = result.get("reply_language")
+        if reply_target == "auto":
+            reply_target = result.get("active_language") or result.get("input_language")
+        result["tts_available"] = bool(not hasattr(self.speaker, "supports") or self.speaker.supports(str(reply_target or "")))
         result["pipeline"] = "final_only_latest_queue_no_live"
         return result
 
@@ -852,6 +862,8 @@ class ConversationController:
             raise ValueError("Enable TTS before replaying a reply")
         if target not in allowed or get_language(target) is None:
             raise ValueError("Replay language is not enabled")
+        if hasattr(self.speaker, "supports") and not self.speaker.supports(target):
+            raise ValueError(f"No verified local voice pack is installed for '{target}'")
         try:
             request_id = self.speaker.speak(clean, target) or 0
         except TypeError:
@@ -917,8 +929,10 @@ class ConversationController:
                 self.cfg.audio.input_device = input_device
                 restart_capture = True
             if output_device is not None:
-                if output_device != "default" and not str(output_device).startswith(EDGE_OUTPUT_PREFIX):
-                    raise ValueError("output_device must be 'default' or an Edge TTS output device")
+                if output_device != "default" and not str(output_device).startswith(
+                    (LOCAL_OUTPUT_PREFIX, LEGACY_EDGE_OUTPUT_PREFIX)
+                ):
+                    raise ValueError("output_device must be 'default' or a local TTS output device")
                 self.state.output_device = output_device
                 self.cfg.audio.output_device = output_device
             forced = self.cfg.conversation.japanese_code if self.state.speech_mode == "staff" else self.state.input_language
@@ -971,6 +985,8 @@ class ConversationController:
                 self._capture_started = False
             if self._ready.is_set() and self._translator_ready.is_set() and not self._stop.is_set() and not paused_snapshot:
                 self._start_capture_if_needed()
+        if active_language is not None and hasattr(self.speaker, "preload"):
+            self.speaker.preload(active_language)
         state = self.snapshot()
         self.bus.publish("state", **state)
         return state

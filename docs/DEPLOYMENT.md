@@ -1,4 +1,4 @@
-# 배포 결정 (0.5.2)
+# 배포 결정 (0.6.0)
 
 ## 빠른 앱 업데이트와 전체 빌드의 구분
 
@@ -14,7 +14,7 @@
 
 납품 기준은 Windows x64 PyInstaller `onedir` 포터블 폴더다. Python, Whisper small, Hy-MT2 GGUF, llama.cpp runtime과 네이티브 DLL을 함께 넣는다. 수 GB 파일을 실행마다 임시 해제하는 onefile보다 시작·백신 예외·장애 분석이 안정적이다.
 
-대상 PC에는 Python이나 Windows TTS 언어팩이 필요 없다. Chrome 또는 Edge가 있으면 독립 app 창으로 열고, 없으면 기본 브라우저를 사용한다. Edge Neural TTS 때문에 인터넷은 필요하다.
+대상 PC에는 Python이나 Windows TTS 언어팩이 필요 없다. Chrome 또는 Edge가 있으면 독립 app 창으로 열고, 없으면 기본 브라우저를 사용한다. STT·번역·검증된 TTS 모델팩은 portable 폴더에 내장되므로 정상 실행에는 인터넷이 필요하지 않다. 인터넷은 앱 업데이트나 누락된 TTS 팩 복구에만 사용한다.
 
 배포 절차:
 

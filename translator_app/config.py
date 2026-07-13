@@ -30,7 +30,7 @@ class AudioConfig:
     sample_rate: int = 16000
     block_ms: int = 20
     input_device: str | int = "default"
-    # Retained for old config compatibility. Edge TTS uses Windows' default output.
+    # Retained for old config compatibility. Local TTS uses SDL output devices.
     output_device: str | int = "default"
     start_rms: float = 0.012
     continue_rms: float = 0.007
@@ -124,13 +124,31 @@ class TranslationConfig:
 class TtsConfig:
     enabled: bool = True
     volume: float = 0.9
-    backend: str = "edge"
+    # Commercial builds never send reply text to a third-party speech service.
+    backend: str = "local"
+    # Portable releases bundle the reviewed packs. Keep automatic installation
+    # as a missing-pack repair path and for source/development runs.
+    auto_install_voice_packs: bool = True
+    local_threads: int = 2
+    # Kokoro benefits from four threads on typical Intel call-center PCs;
+    # Supertonic remains at two to avoid competing with STT/translation.
+    local_kokoro_threads: int = 4
+    local_speed: float = 1.0
+    local_steps: int = 5
+    local_speaker_id: int = 0
+    # Legacy config compatibility only. Automatic spoken disclosure was
+    # removed; hotel policy can provide any required notice separately.
+    disclose_synthetic_voice: bool = False
+    # Retained only so an old config.local.toml can be read and migrated. These
+    # values are ignored by the local backend and Edge is never imported.
     edge_rate: str = "+0%"
     edge_timeout_seconds: int = 15
     edge_retry_count: int = 1
     latest_only: bool = True
     edge_voice_overrides: dict[str, str] = field(default_factory=dict)
     fallback_to_sapi: bool = False
+    data_root: Path = field(default=DATA_ROOT, init=False, repr=False)
+    bundled_data_root: Path | None = field(default=None, init=False, repr=False)
 
 
 @dataclass(slots=True)
@@ -220,6 +238,8 @@ def load_config(path: Path | None = None) -> AppConfig:
         candidate.stt.root = candidate.root
         candidate.translation.root = candidate.root
         candidate.translation.data_root = candidate.data_root
+        candidate.tts.data_root = candidate.data_root
+        candidate.tts.bundled_data_root = candidate.root
         validate_config(candidate)
         return candidate
 
@@ -263,8 +283,18 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("live_preview_final_grace_ms must be between 0 and 500")
     if not 0 <= cfg.tts.volume <= 1:
         raise ValueError("tts.volume must be between 0 and 1")
-    if cfg.tts.backend != "edge":
-        raise ValueError("tts.backend must be 'edge'. Windows language-pack TTS has been removed.")
+    if cfg.tts.backend != "local":
+        raise ValueError("tts.backend must be 'local'; online Edge TTS is not allowed in commercial builds")
+    if not 1 <= cfg.tts.local_threads <= 8:
+        raise ValueError("tts.local_threads must be between 1 and 8")
+    if not 1 <= cfg.tts.local_kokoro_threads <= 8:
+        raise ValueError("tts.local_kokoro_threads must be between 1 and 8")
+    if not 0.7 <= cfg.tts.local_speed <= 2.0:
+        raise ValueError("tts.local_speed must be between 0.7 and 2.0")
+    if not 5 <= cfg.tts.local_steps <= 12:
+        raise ValueError("tts.local_steps must be between 5 and 12")
+    if not 0 <= cfg.tts.local_speaker_id <= 9:
+        raise ValueError("tts.local_speaker_id must be between 0 and 9")
     if cfg.tts.edge_timeout_seconds < 3:
         raise ValueError("tts.edge_timeout_seconds must be at least 3")
     if not 0 <= cfg.tts.edge_retry_count <= 3:

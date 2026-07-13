@@ -16,3 +16,9 @@ user-settings.json
 benchmarks/results/
 browser-app-profile/
 desktop_browser_profile/
+legal/distributor-info.local.json
+legal/counsel-review.local.*
+*.pfx
+*.p12
+*.pvk
+signature-report.json

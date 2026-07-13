@@ -1,5 +1,5 @@
 #define MyAppName "RemotePlus Translator"
-#define MyAppVersion "0.5.2"
+#define MyAppVersion "0.6.0"
 #define MyAppExeName "RemotePlusTranslator.exe"
 
 [Setup]
@@ -14,8 +14,11 @@ Compression=lzma2/max
 SolidCompression=yes
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
-PrivilegesRequired=lowest
+; Commercial hotel deployment belongs under IT-managed Program Files.
+PrivilegesRequired=admin
 WizardStyle=modern
+; Use the rendered release document, never the source template containing placeholders.
+LicenseFile=..\dist\RemotePlusTranslator\EULA_JA.md
 UninstallDisplayIcon={app}\{#MyAppExeName}
 CloseApplications=yes
 

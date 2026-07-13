@@ -24,6 +24,7 @@ from .events import EventBus
 from .feedback import FeedbackStore
 from .languages import CUSTOMER_LANGUAGE_CODES, public_languages
 from .settings import UserSettings
+from .tts_packs import PACK_CATALOG, TtsPackManager
 
 
 def _fallback_devices(message: str) -> dict[str, list]:
@@ -84,8 +85,8 @@ def _enumerate_devices(root: Path, timeout_seconds: float = 8.0) -> dict[str, li
     )
     output_code = (
         "import json;"
-        "from translator_app.tts import EdgeSpeaker;"
-        "print(json.dumps({'outputs':EdgeSpeaker.output_devices(),'warnings':[]}, ensure_ascii=False), flush=True)"
+        "from translator_app.tts import LocalSpeaker;"
+        "print(json.dumps({'outputs':LocalSpeaker.output_devices(),'warnings':[]}, ensure_ascii=False), flush=True)"
     )
     input_result = _run_device_probe(root, "input", input_code, timeout_seconds)
     output_result = _run_device_probe(root, "output", output_code, timeout_seconds)
@@ -135,17 +136,104 @@ class ReplayRequest(StrictRequest):
     language: str
 
 
+class InstallVoicesRequest(StrictRequest):
+    languages: list[str]
+
+
 def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recognizer=None) -> FastAPI:
     config = cfg or load_config()
+    # Tests, embedders and future multi-user launchers may relocate the data
+    # root after loading the base config. Keep model managers on that exact root.
+    config.tts.data_root = config.data_root
     bus = EventBus()
     controller = ConversationController(config, bus, recognizer=recognizer)
     feedback = FeedbackStore(config.data_root)
     user_settings = UserSettings(config.data_root)
     devices_cache: dict[str, object] = {"expires_at": 0.0, "payload": None}
     devices_lock = threading.Lock()
+    tts_install_lock = threading.Lock()
+    tts_installing: set[str] = set()
+    tts_pending: set[str] = set()
+    tts_installer_thread: threading.Thread | None = None
+    local_voice_languages = {
+        code for spec in PACK_CATALOG.values() for code in spec.languages
+    }
+
+    def public_state() -> dict:
+        result = controller.snapshot()
+        with tts_install_lock:
+            queued = sorted(tts_installing | tts_pending)
+        result["tts_installing_languages"] = queued
+        result["tts_download_active"] = bool(queued)
+        return result
+
+    def selected_tts_language() -> str:
+        state = controller.snapshot()
+        target = state.get("reply_language")
+        if target == "auto":
+            target = state.get("active_language") or state.get("input_language")
+        return str(target or "").strip().lower()
+
+    def queue_voice_install(languages: list[str]) -> list[str]:
+        """Queue reviewed packs without losing selections during another download."""
+        nonlocal tts_installer_thread
+        installed = controller.speaker.installed_languages()
+        requested = {
+            str(code).strip().lower() for code in languages
+            if str(code).strip().lower() in local_voice_languages
+        }
+        missing = requested - installed
+        if not missing:
+            target = selected_tts_language()
+            if target in requested and hasattr(controller.speaker, "preload"):
+                controller.speaker.preload(target)
+            return []
+        with tts_install_lock:
+            tts_pending.update(missing - tts_installing)
+            queued = sorted(tts_pending | tts_installing)
+            if tts_installer_thread is None or not tts_installer_thread.is_alive():
+                tts_installer_thread = threading.Thread(
+                    target=voice_install_worker,
+                    name="tts-pack-installer",
+                    daemon=True,
+                )
+                tts_installer_thread.start()
+        bus.publish("state", **public_state())
+        return queued
+
+    def voice_install_worker() -> None:
+        nonlocal tts_installer_thread
+        manager = TtsPackManager(config.data_root, config.tts.bundled_data_root)
+        while True:
+            with tts_install_lock:
+                if not tts_pending:
+                    tts_installer_thread = None
+                    return
+                batch = sorted(tts_pending)
+                tts_pending.clear()
+                tts_installing.update(batch)
+            try:
+                manager.install_for_languages(
+                    batch,
+                    lambda phase, message: bus.publish(
+                        "status", phase=phase, message=message
+                    ),
+                )
+                target = selected_tts_language()
+                # Installing every reviewed pack must not create one preload
+                # thread per language. Supertonic is shared, so warm only the
+                # language currently selected by the operator.
+                if target in batch and hasattr(controller.speaker, "preload"):
+                    controller.speaker.preload(target)
+            except Exception as exc:
+                bus.publish("warning", message=f"Local voice-pack installation failed: {exc}")
+            finally:
+                with tts_install_lock:
+                    tts_installing.difference_update(batch)
+                bus.publish("state", **public_state())
 
     # Every supported customer language is selectable immediately. There is no
-    # Windows voice pack setup because Edge Neural TTS is online.
+    # Voice models are managed by the app and never depend on Windows packs.
     controller.control(enabled_languages=list(CUSTOMER_LANGUAGE_CODES))
     saved = user_settings.load()
     for key in ("active_language", "reply_language", "tts_enabled", "output_device", "input_device"):
@@ -172,6 +260,11 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
     async def lifespan(app: FastAPI):
         if start_backend:
             controller.start()
+            if config.tts.auto_install_voice_packs:
+                # Install both reviewed packs on the first run. This is queued
+                # after the UI/backend starts so downloading never blocks the
+                # window from opening or text translation from becoming ready.
+                queue_voice_install(sorted(local_voice_languages))
         yield
         controller.stop()
 
@@ -223,10 +316,10 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
     @app.get("/api/state")
     def state():
         return {
-            "state": controller.snapshot(),
+            "state": public_state(),
             "history": bus.history(),
             "languages": public_languages(CUSTOMER_LANGUAGE_CODES),
-            "tts": {"backend": "edge", "provider": "Edge online neural"},
+            "tts": {"backend": "local", "provider": "Verified local ONNX voice packs"},
         }
 
     @app.get("/api/devices")
@@ -241,7 +334,7 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
                 result = _enumerate_devices(config.root)
                 warnings.extend(result.get("warnings", []))
                 if not result.get("outputs"):
-                    warnings.append("Could not enumerate Edge TTS output devices; system default remains available.")
+                    warnings.append("Could not enumerate local TTS output devices; system default remains available.")
                     result["outputs"] = []
                 result["warnings"] = warnings
                 devices_cache["payload"] = result
@@ -270,18 +363,48 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
                 except OSError as exc:
                     state["settings_persisted"] = False
                     bus.publish("warning", message=f"Settings could not be saved: {exc}")
-            return state
+            if (
+                config.tts.auto_install_voice_packs
+                and state.get("tts_enabled")
+                and any(payload.get(key) is not None for key in ("active_language", "reply_language", "tts_enabled"))
+            ):
+                target = state.get("reply_language")
+                if target == "auto":
+                    target = state.get("active_language") or state.get("input_language")
+                if target:
+                    queue_voice_install([str(target)])
+            response_state = public_state()
+            if "settings_persisted" in state:
+                response_state["settings_persisted"] = state["settings_persisted"]
+            return response_state
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
 
     @app.get("/api/tts")
     def tts_info():
+        with tts_install_lock:
+            installing = sorted(tts_installing | tts_pending)
         return {
-            "backend": "edge",
-            "provider": "Edge online neural",
-            "language_pack_required": False,
+            "backend": "local",
+            "provider": "Verified local ONNX voice packs",
+            "online": False,
+            "language_pack_required": True,
+            "installed_languages": sorted(controller.speaker.installed_languages()),
+            "installing_languages": installing,
             "languages": public_languages(CUSTOMER_LANGUAGE_CODES),
         }
+
+    @app.post("/api/install-voices", status_code=202)
+    def install_voices(request: InstallVoicesRequest):
+        languages = list(dict.fromkeys(str(code).strip().lower() for code in request.languages))
+        allowed = set(CUSTOMER_LANGUAGE_CODES)
+        if not languages or len(languages) > 10 or any(code not in allowed for code in languages):
+            raise HTTPException(400, "Choose 1 to 10 supported customer languages")
+        unavailable = sorted(set(languages) - local_voice_languages)
+        if unavailable:
+            raise HTTPException(400, f"No commercially reviewed local voice pack for: {', '.join(unavailable)}")
+        queued = queue_voice_install(languages)
+        return {"accepted": True, "languages": queued, "already_installing": bool(queued)}
 
     @app.post("/api/feedback")
     def save_feedback(request: FeedbackRequest):
@@ -294,7 +417,8 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
     @app.post("/api/replay")
     def replay(request: ReplayRequest):
         try:
-            return {"queued": True, "request_id": controller.replay_tts(request.text, request.language)}
+            request_id = controller.replay_tts(request.text, request.language)
+            return {"queued": bool(request_id), "request_id": request_id}
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
 
@@ -329,7 +453,7 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
                 try:
                     event = await asyncio.to_thread(subscriber.get, True, 1.0)
                 except queue.Empty:
-                    await websocket.send_json({"type": "state", "data": controller.snapshot()})
+                    await websocket.send_json({"type": "state", "data": public_state()})
                     continue
                 await websocket.send_json(event.as_dict())
         except (WebSocketDisconnect, RuntimeError):

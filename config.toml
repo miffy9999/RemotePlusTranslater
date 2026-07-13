@@ -320,8 +320,19 @@ es = ["salida tardía", "salir más tarde"]
 [tts]
 enabled = true
 volume = 0.9
-# Edge online neural voice only. Windows speech language packs are not used.
-backend = "edge"
+# Verified local ONNX voices. No reply text leaves the computer and Windows
+# speech language packs are not required.
+backend = "local"
+# Portable releases include every reviewed voice pack. Automatic installation
+# remains enabled only as a repair/fallback path for a missing pack.
+auto_install_voice_packs = true
+local_threads = 2
+local_kokoro_threads = 4
+local_speed = 1.0
+local_steps = 5
+local_speaker_id = 0
+# Legacy compatibility setting. The app does not prepend an AI announcement.
+disclose_synthetic_voice = false
 edge_rate = "+0%"
 edge_timeout_seconds = 15
 edge_retry_count = 1
