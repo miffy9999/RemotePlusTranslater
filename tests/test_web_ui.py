@@ -29,3 +29,4 @@ def test_ui_renders_both_reading_guides_from_server_events():
     assert "reading-kana" in script
     assert "event.type==='reading'" in script
     assert ".reading-guide .reading-kana,\n.reading-guide .reading-roman" in styles
+    assert ".reading-guide .reading-roman {\n  color: var(--staff) !important" in styles

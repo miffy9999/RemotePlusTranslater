@@ -546,9 +546,9 @@ main {
   margin-top: 10px;
   padding: 10px 12px;
   border-radius: 11px;
-  background: #111827;
-  border: 1px solid #020617;
-  color: #f8fafc;
+  background: var(--staff-soft);
+  border: 1px solid #ead7bd;
+  color: var(--staff);
   font-size: 15px;
   line-height: 1.9;
   word-break: break-word
@@ -637,7 +637,7 @@ main {
 }
 
 .reading-guide .reading-label {
-  color: #93c5fd;
+  color: var(--staff);
   font-weight: 780;
   margin-right: 6px
 }
@@ -648,12 +648,12 @@ main {
 }
 
 .reading-guide .reading-base {
-  color: #f8fafc
+  color: var(--staff)
 }
 
 .reading-guide rt {
   font-size: .72em;
-  color: #f8fafc !important;
+  color: var(--staff) !important;
   font-weight: 900;
   letter-spacing: .02em;
   text-shadow: 0 1px 1px rgba(0, 0, 0, .55)
@@ -661,16 +661,16 @@ main {
 
 .reading-guide .reading-kana,
 .reading-guide .reading-roman {
-  color: #f8fafc !important
+  color: var(--staff) !important
 }
 
 .reading-guide .reading-token {
-  color: #f8fafc;
+  color: var(--staff);
   font-weight: 760
 }
 
 .reading-guide .reading-punctuation {
-  color: #f8fafc;
+  color: var(--staff);
   font-weight: 800
 }
 
