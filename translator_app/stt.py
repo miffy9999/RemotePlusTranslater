@@ -213,13 +213,26 @@ class WhisperRecognizer:
             )
         )
         if should_retry:
-            retry_text, retry_info, _ = self._decode(
+            retry_text, retry_info, retry_confidence = self._decode(
                 audio,
                 forced,
                 hotword_language,
                 self.cfg.quality_retry_beam_size,
             )
-            if retry_text:
+            # A larger beam is not automatically more accurate. Keep the fast
+            # first pass unless the retry supplies measurable better confidence;
+            # this prevents a costly retry from degrading a valid transcript.
+            retry_is_better = (
+                retry_text
+                and (
+                    not text
+                    or (
+                        retry_confidence is not None
+                        and (confidence is None or retry_confidence > confidence)
+                    )
+                )
+            )
+            if retry_is_better:
                 text, _info = collapse_repetitions(retry_text), retry_info
                 quality_retry_used = True
         if text and self.apply_corrections and self._correction_pattern is not None:

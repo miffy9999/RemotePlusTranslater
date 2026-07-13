@@ -21,3 +21,24 @@ def test_invalid_local_overlay_does_not_prevent_startup(tmp_path, monkeypatch):
         cfg = load_config(primary)
     assert cfg.audio.sample_rate == 16000
     assert cfg.data_root == tmp_path
+
+
+def test_semantically_invalid_local_overlay_falls_back_to_primary(tmp_path, monkeypatch):
+    import translator_app.config as config_module
+
+    primary = config_module.ROOT / "config.toml"
+    (tmp_path / "config.local.toml").write_text(
+        "[audio]\nstart_rms = -1\n", encoding="utf-8"
+    )
+    monkeypatch.setattr(config_module, "DATA_ROOT", tmp_path)
+    with pytest.warns(RuntimeWarning, match="Ignoring incompatible local configuration"):
+        cfg = load_config(primary)
+    assert cfg.audio.start_rms > 0
+
+
+def test_unknown_top_level_section_is_rejected(tmp_path):
+    config = tmp_path / "config.toml"
+    config.write_text("[traslation]\nbackend = 'hymt2'\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="Unknown configuration sections"):
+        load_config(config)

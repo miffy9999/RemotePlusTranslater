@@ -297,6 +297,10 @@ class AudioCapture(threading.Thread):
         self.speech_started_sink = speech_started_sink
         self.live_snapshot_sink = live_snapshot_sink
         self.segmenter = SpeechSegmenter(cfg)
+        # Audio frames arrive on the capture thread, while a Space-key request
+        # can promote the active segment on the HTTP thread. Keep all VAD
+        # segment mutations behind one lock so a job cannot get a mixed mode.
+        self._segment_lock = threading.Lock()
         self._frames: queue.Queue[tuple[np.ndarray, float, bool]] = queue.Queue(maxsize=100)
         self._stop_event = threading.Event()
         self.dropped_utterances = 0
@@ -360,6 +364,10 @@ class AudioCapture(threading.Thread):
                 pass
 
     def _process_frame(self, frame: np.ndarray, ended_at: float, discontinuity: bool = False) -> None:
+        with self._segment_lock:
+            self._process_frame_locked(frame, ended_at, discontinuity)
+
+    def _process_frame_locked(self, frame: np.ndarray, ended_at: float, discontinuity: bool = False) -> None:
         if discontinuity or self._frame_gap.is_set():
             self._frame_gap.clear()
             was_speaking = self.segmenter.speaking
@@ -404,6 +412,40 @@ class AudioCapture(threading.Thread):
                     self.live_snapshot_sink(snapshot)
                 except Exception:
                     pass
+
+    def promote_active_to_staff(
+        self,
+        recognition_language: str,
+        reply_language: str,
+        tts_enabled: bool,
+        *,
+        max_age_seconds: float = 0.75,
+    ) -> int | None:
+        """Repair a push-to-talk control request that trails speech onset.
+
+        The browser sends Space state over localhost HTTP. If speech crossed
+        the VAD threshold just before that request arrived, safely promote only
+        the very recent active segment. Releasing Space never demotes a segment.
+        """
+        utterance_id: int | None = None
+        with self._segment_lock:
+            age = time.monotonic() - self.segmenter.speech_started_at
+            if (
+                self.segmenter.speaking
+                and self.segmenter.speech_mode == "customer"
+                and 0 <= age <= max_age_seconds
+            ):
+                self.segmenter.speech_mode = "staff"
+                self.segmenter.recognition_language = recognition_language
+                self.segmenter.reply_language = reply_language
+                self.segmenter.tts_enabled = bool(tts_enabled)
+                utterance_id = self.segmenter.utterance_id
+        if utterance_id is not None and self.speech_started_sink is not None:
+            try:
+                self.speech_started_sink(utterance_id, "staff", recognition_language)
+            except Exception:
+                pass
+        return utterance_id
 
     def run(self) -> None:
         while not self._stop_event.is_set():

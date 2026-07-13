@@ -41,8 +41,22 @@ class UserSettings:
                 return {}
         if not isinstance(data, dict) or data.get("schema_version", 1) != self.SCHEMA_VERSION:
             return {}
-        allowed = {"active_language", "reply_language", "tts_enabled", "input_device", "output_device"}
-        return {key: value for key, value in data.items() if key in allowed}
+        # Treat this file as untrusted input. It can come from an older build,
+        # a partial manual edit, or another PC with different device values.
+        result = {}
+        for key in ("active_language", "reply_language"):
+            if isinstance(data.get(key), str):
+                result[key] = data[key]
+        if isinstance(data.get("tts_enabled"), bool):
+            result["tts_enabled"] = data["tts_enabled"]
+        input_device = data.get("input_device")
+        if isinstance(input_device, str) or (
+            isinstance(input_device, int) and not isinstance(input_device, bool)
+        ):
+            result["input_device"] = input_device
+        if isinstance(data.get("output_device"), str):
+            result["output_device"] = data["output_device"]
+        return result
 
     def save(self, state: dict) -> None:
         allowed = ("active_language", "reply_language", "tts_enabled", "input_device", "output_device")

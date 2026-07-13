@@ -117,3 +117,25 @@ def test_low_confidence_result_gets_a_quality_retry_only_when_needed():
     result = recognizer.transcribe(np.zeros(16000, dtype=np.float32), language="en")
     assert result.text == "clear answer"
     assert result.quality_retry_used is True
+
+
+def test_lower_confidence_quality_retry_does_not_replace_better_first_pass():
+    class FakeModel:
+        def __init__(self):
+            self.calls = 0
+
+        def transcribe(self, audio, **kwargs):
+            self.calls += 1
+            if self.calls == 1:
+                return [SimpleNamespace(text="correct answer", avg_logprob=-1.0)], SimpleNamespace(
+                    language="en", language_probability=1.0
+                )
+            return [SimpleNamespace(text="wrong answer", avg_logprob=-2.0)], SimpleNamespace(
+                language="en", language_probability=1.0
+            )
+
+    recognizer = WhisperRecognizer(SttConfig(), lambda *_: None)
+    recognizer.model = FakeModel()
+    result = recognizer.transcribe(np.zeros(16000, dtype=np.float32), language="en")
+    assert result.text == "correct answer"
+    assert result.quality_retry_used is False

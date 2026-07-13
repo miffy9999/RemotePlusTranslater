@@ -1,10 +1,11 @@
 from types import SimpleNamespace
+import threading
 import time
 
 import pytest
 
 from translator_app.config import load_config
-from translator_app.conversation import ConversationController, RecognitionJob
+from translator_app.conversation import ConversationController, RecognitionJob, _NOISE_TEXT
 from translator_app.events import EventBus
 from translator_app.stt import Recognition
 
@@ -206,3 +207,83 @@ def test_production_translation_worker_consumes_latest_queued_job():
     controller._translation_worker.join(timeout=1)
     assert translator.calls == [("latest", "en", "ja")]
     assert bus.history()[-1]["data"]["source"] == "latest"
+
+
+def test_normal_hotel_thank_you_is_not_classified_as_hallucination():
+    assert _NOISE_TEXT.fullmatch("Thank you") is None
+
+
+def test_control_requests_are_serialized_with_recognizer_updates():
+    controller, _, _ = make_controller()
+    entered = threading.Event()
+    release = threading.Event()
+    original = controller.recognizer.set_selected_language
+
+    def delayed(language):
+        if language == "ko":
+            entered.set()
+            release.wait(1)
+        original(language)
+
+    controller.recognizer.set_selected_language = delayed
+    first = threading.Thread(target=lambda: controller.control(active_language="ko"))
+    second = threading.Thread(target=lambda: controller.control(active_language="es"))
+    first.start()
+    assert entered.wait(1)
+    second.start()
+    time.sleep(0.05)
+    assert second.is_alive()
+    release.set()
+    first.join(1)
+    second.join(1)
+    assert controller.state.input_language == "es"
+    assert controller.recognizer.selected_language == "es"
+
+
+def test_slow_device_validation_does_not_hold_audio_context_lock(monkeypatch):
+    controller, _, _ = make_controller()
+    entered = threading.Event()
+    release = threading.Event()
+
+    def delayed_validation(_device):
+        entered.set()
+        release.wait(1)
+
+    monkeypatch.setattr("translator_app.conversation.validate_input_device", delayed_validation)
+    worker = threading.Thread(target=lambda: controller.control(input_device=3))
+    worker.start()
+    assert entered.wait(1)
+    started = time.perf_counter()
+    assert controller._capture_context()[0] == "customer"
+    assert time.perf_counter() - started < 0.1
+    release.set()
+    worker.join(1)
+
+
+def test_failed_stream_stop_does_not_commit_new_input_device(monkeypatch):
+    controller, _, _ = make_controller()
+    monkeypatch.setattr("translator_app.conversation.validate_input_device", lambda _device: None)
+
+    class StuckCapture:
+        dropped_utterances = 0
+        dropped_frames = 0
+
+        def stop(self):
+            pass
+
+        def is_alive(self):
+            return True
+
+        def join(self, timeout=None):
+            pass
+
+    old_capture = StuckCapture()
+    controller.capture = old_capture
+    controller._capture_started = True
+
+    with pytest.raises(ValueError, match="did not stop"):
+        controller.control(input_device=3)
+
+    assert controller.capture is old_capture
+    assert controller.state.input_device == "default"
+    assert controller.cfg.audio.input_device == "default"

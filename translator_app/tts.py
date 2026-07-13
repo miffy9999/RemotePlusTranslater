@@ -91,6 +91,7 @@ class EdgeSpeaker(threading.Thread):
         self._synthesis_loop: asyncio.AbstractEventLoop | None = None
         self._synthesis_task: asyncio.Task[None] | None = None
         self._next_request_id = 0
+        self._latest_request_id = 0
         self._mixer_device_name: str | None = None
         self._cleanup_orphan_files()
 
@@ -128,7 +129,7 @@ class EdgeSpeaker(threading.Thread):
                 reason=reason,
             )
 
-    def interrupt(self, *, clear_queue: bool = True, reason: str = "manual") -> None:
+    def _interrupt_runtime(self, *, clear_queue: bool, reason: str) -> None:
         if self._playing.is_set():
             self._interrupt_event.set()
             self._metric("tts_interrupt_requested", reason=reason)
@@ -149,6 +150,15 @@ class EdgeSpeaker(threading.Thread):
         if clear_queue:
             self._clear_requests(reason=reason)
 
+    def interrupt(self, *, clear_queue: bool = True, reason: str = "manual") -> None:
+        if clear_queue:
+            # Also invalidate a request already dequeued by the worker. It may
+            # be in the few instructions before `_playing` or the asyncio task
+            # becomes visible, where event/task cancellation alone can miss it.
+            with self._request_lock:
+                self._latest_request_id = 0
+        self._interrupt_runtime(clear_queue=clear_queue, reason=reason)
+
     def speak(
         self,
         text: str,
@@ -164,29 +174,36 @@ class EdgeSpeaker(threading.Thread):
         clean = text.strip()
         if not clean:
             return None
+        # ID assignment, old-request interruption and queue insertion form one
+        # transaction. Replay HTTP calls and translation worker calls can arrive
+        # concurrently; allowing them to interleave can put the older request
+        # back after the newer one.
         with self._request_lock:
+            if self.cfg.latest_only:
+                # We already own _request_lock, so use the runtime half of
+                # interrupt and publish the new valid ID immediately after it.
+                self._interrupt_runtime(clear_queue=True, reason="newer_tts_request")
             self._next_request_id += 1
             request_id = self._next_request_id
-        if self.cfg.latest_only:
-            self.interrupt(clear_queue=True, reason="newer_tts_request")
-        request = SpeechRequest(
-            request_id=request_id,
-            text=clean,
-            language=language.strip().lower(),
-            queued_at=time.monotonic(),
-            utterance_id=utterance_id,
-            speech_ended_at=speech_ended_at,
-            translation_ready_at=translation_ready_at,
-        )
-        try:
-            self._requests.put_nowait(request)
-        except queue.Full:
-            self._clear_requests(reason="tts_queue_replaced")
+            self._latest_request_id = request_id
+            request = SpeechRequest(
+                request_id=request_id,
+                text=clean,
+                language=language.strip().lower(),
+                queued_at=time.monotonic(),
+                utterance_id=utterance_id,
+                speech_ended_at=speech_ended_at,
+                translation_ready_at=translation_ready_at,
+            )
             try:
                 self._requests.put_nowait(request)
             except queue.Full:
-                self._metric("tts_dropped", request_id=request_id, utterance_id=utterance_id or 0, reason="tts_queue_full")
-                return None
+                self._clear_requests(reason="tts_queue_replaced")
+                try:
+                    self._requests.put_nowait(request)
+                except queue.Full:
+                    self._metric("tts_dropped", request_id=request_id, utterance_id=utterance_id or 0, reason="tts_queue_full")
+                    return None
         self._metric(
             "tts_queued",
             request_id=request_id,
@@ -200,6 +217,10 @@ class EdgeSpeaker(threading.Thread):
             ),
         )
         return request_id
+
+    def _is_latest_request(self, request: SpeechRequest) -> bool:
+        with self._request_lock:
+            return request.request_id == self._latest_request_id
 
     @staticmethod
     def output_devices() -> list[dict[str, str]]:
@@ -335,6 +356,14 @@ class EdgeSpeaker(threading.Thread):
         raise RuntimeError("Edge TTS retry loop ended unexpectedly")
 
     def _play(self, request: SpeechRequest, begin_playback: Callable[[], None]) -> None:
+        if not self._is_latest_request(request):
+            self._metric(
+                "tts_dropped",
+                request_id=request.request_id,
+                utterance_id=request.utterance_id or 0,
+                reason="superseded_after_dequeue",
+            )
+            return
         import pygame
 
         self._ensure_mixer_output(pygame)
@@ -347,7 +376,11 @@ class EdgeSpeaker(threading.Thread):
             synthesis_seconds=f"{time.monotonic() - synthesized_at:.3f}",
         )
         try:
-            if self._stop_event.is_set() or self._interrupt_event.is_set():
+            if (
+                self._stop_event.is_set()
+                or self._interrupt_event.is_set()
+                or not self._is_latest_request(request)
+            ):
                 self._metric("tts_interrupted", request_id=request.request_id, utterance_id=request.utterance_id or 0, stage="before_playback")
                 return
             pygame.mixer.music.load(str(path))

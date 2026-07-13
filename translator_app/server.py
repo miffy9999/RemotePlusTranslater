@@ -15,9 +15,9 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
 from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
+from . import __version__
 from .config import AppConfig, load_config
 from .conversation import ConversationController
 from .events import EventBus
@@ -96,10 +96,21 @@ def _enumerate_devices(root: Path, timeout_seconds: float = 8.0) -> dict[str, li
     }
 
 WEB = Path(__file__).resolve().parent / "web"
+WEB_ASSETS = {
+    "app.css": WEB / "app.css",
+    "device.css": WEB / "device.css",
+    "app.js": WEB / "app.js",
+}
 DEVICE_CACHE_SECONDS = 60.0
 
 
-class ControlRequest(BaseModel):
+class StrictRequest(BaseModel):
+    # Silently ignored fields hide version mismatches between an old UI and a
+    # new backend. Reject them so the caller gets an actionable 422 response.
+    model_config = ConfigDict(extra="forbid")
+
+
+class ControlRequest(StrictRequest):
     paused: bool | None = None
     tts_enabled: bool | None = None
     active_language: str | None = None
@@ -110,7 +121,7 @@ class ControlRequest(BaseModel):
     enabled_languages: list[str] | None = None
 
 
-class FeedbackRequest(BaseModel):
+class FeedbackRequest(StrictRequest):
     direction: str
     source_language: str
     source: str
@@ -119,7 +130,7 @@ class FeedbackRequest(BaseModel):
     corrected_translation: str = ""
 
 
-class ReplayRequest(BaseModel):
+class ReplayRequest(StrictRequest):
     text: str
     language: str
 
@@ -183,7 +194,14 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
                 return JSONResponse({"detail": "Unauthorized"}, status_code=401)
         return await call_next(request)
 
-    app.mount("/assets", StaticFiles(directory=WEB), name="assets")
+    @app.get("/assets/{filename}")
+    def asset(filename: str):
+        # Do not pass a user-controlled path to Starlette StaticFiles on
+        # Windows. Only the three packaged assets are addressable.
+        path = WEB_ASSETS.get(filename)
+        if path is None:
+            raise HTTPException(404, "Asset not found")
+        return FileResponse(path)
 
     @app.get("/")
     def index():
@@ -193,7 +211,14 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
 
     @app.get("/remoteplus-health")
     def health():
-        return {"app": "remoteplus-translator", "ok": True}
+        # `update_layer` makes support diagnostics unambiguous without exposing
+        # arbitrary filesystem paths or enabling a general debug endpoint.
+        return {
+            "app": "remoteplus-translator",
+            "version": __version__,
+            "update_layer": "app_update" in Path(__file__).parts,
+            "ok": True,
+        }
 
     @app.get("/api/state")
     def state():
@@ -234,7 +259,17 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
             if payload.get("enabled_languages") is not None:
                 payload["enabled_languages"] = list(CUSTOMER_LANGUAGE_CODES)
             state = controller.control(**payload)
-            user_settings.save(state)
+            persistent_keys = {
+                "active_language", "reply_language", "tts_enabled",
+                "input_device", "output_device",
+            }
+            if any(payload.get(key) is not None for key in persistent_keys):
+                try:
+                    user_settings.save(state)
+                    state["settings_persisted"] = True
+                except OSError as exc:
+                    state["settings_persisted"] = False
+                    bus.publish("warning", message=f"Settings could not be saved: {exc}")
             return state
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
@@ -265,8 +300,7 @@ def create_app(cfg: AppConfig | None = None, start_backend: bool = True, recogni
 
     @app.delete("/api/history")
     def clear_history():
-        bus.clear_history()
-        bus.publish("history_cleared")
+        bus.clear_history_and_publish()
         return {"cleared": True}
 
     @app.delete("/api/feedback")

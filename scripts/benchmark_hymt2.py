@@ -2,23 +2,18 @@ from __future__ import annotations
 
 import json
 import time
-import urllib.request
 from pathlib import Path
 
+from translator_app.config import load_config
+from translator_app.hymt2 import create_translator
+
 ROOT = Path(__file__).resolve().parent.parent
-SERVER = "http://127.0.0.1:8788/v1/chat/completions"
-LANGUAGES = {
-    "ja": "Japanese",
-    "en": "English",
-    "ko": "Korean",
-    "zh": "Chinese",
-    "es": "Spanish",
-}
 CORPORA = (
     ROOT / "benchmarks/hotel_translation_extended.json",
     ROOT / "benchmarks/hotel_translation_holdout.json",
     ROOT / "benchmarks/hotel_translation_validation.json",
 )
+REPORT = ROOT / "benchmarks/latest_product_validation_report.json"
 
 
 def score(text: str, groups: list[list[str]]) -> tuple[float, list[list[str]]]:
@@ -27,72 +22,56 @@ def score(text: str, groups: list[list[str]]) -> tuple[float, list[list[str]]]:
     return (len(groups) - len(missed)) / len(groups), missed
 
 
-def translate(text: str, target: str) -> str:
-    prompt = (
-        f"Translate the following text into {LANGUAGES[target]}. "
-        "Note that you should only output the translated result without any "
-        f"additional explanation:\n\n{text}"
+def main() -> int:
+    """Run every hotel corpus through the same translator used by the app."""
+    cfg = load_config()
+    translator = create_translator(
+        cfg.translation,
+        lambda phase, message: print(phase, message, flush=True),
     )
-    body = json.dumps(
-        {
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.2,
-            "top_p": 0.6,
-            "top_k": 20,
-            "repeat_penalty": 1.05,
-            "max_tokens": 192,
-        }
-    ).encode("utf-8")
-    request = urllib.request.Request(
-        SERVER,
-        data=body,
-        headers={"Content-Type": "application/json"},
-    )
-    with urllib.request.urlopen(request, timeout=60) as response:
-        payload = json.load(response)
-    return payload["choices"][0]["message"]["content"].strip()
-
-
-def main() -> None:
     rows = []
-    for corpus_path in CORPORA:
-        corpus = json.loads(corpus_path.read_text(encoding="utf-8"))
-        for item in corpus:
-            started = time.perf_counter()
-            translated = translate(item["text"], item["target"])
-            term_score, missed = score(translated, item["expected_any"])
-            row = {
-                **item,
-                "corpus": corpus_path.stem,
-                "translated": translated,
-                "score": round(term_score, 3),
-                "missed": missed,
-                "seconds": round(time.perf_counter() - started, 3),
-            }
-            rows.append(row)
-            print(f"{item['id']} {term_score:.3f} {row['seconds']:.2f}s | {translated}", flush=True)
-    groups = {}
-    for corpus_path in CORPORA:
-        name = corpus_path.stem
-        selected = [row for row in rows if row["corpus"] == name]
-        groups[name] = {
-            "score": round(sum(row["score"] for row in selected) / len(selected), 3),
-            "average_seconds": round(sum(row["seconds"] for row in selected) / len(selected), 3),
-            "failed": [row["id"] for row in selected if row["score"] < 1],
-        }
+    try:
+        translator.load()
+        translator.warmup()
+        for corpus_path in CORPORA:
+            corpus = json.loads(corpus_path.read_text(encoding="utf-8"))
+            for item in corpus:
+                started = time.perf_counter()
+                translated = translator.translate(
+                    item["text"], item["source"], item["target"]
+                )
+                term_score, missed = score(translated, item["expected_any"])
+                row = {
+                    **item,
+                    "corpus": corpus_path.stem,
+                    "translated": translated,
+                    "score": round(term_score, 3),
+                    "missed": missed,
+                    "seconds": round(time.perf_counter() - started, 3),
+                }
+                rows.append(row)
+                print(
+                    f"{item['id']} {term_score:.3f} {row['seconds']:.2f}s | {translated}",
+                    flush=True,
+                )
+    finally:
+        translator.close()
+
+    forward = [row for row in rows if row["source"] != "ja"]
+    reverse = [row for row in rows if row["source"] == "ja"]
     summary = {
         "samples": len(rows),
-        "score": round(sum(row["score"] for row in rows) / len(rows), 3),
-        "average_seconds": round(sum(row["seconds"] for row in rows) / len(rows), 3),
-        "corpora": groups,
+        "forward_score": round(sum(row["score"] for row in forward) / len(forward), 3),
+        "reverse_score": round(sum(row["score"] for row in reverse) / len(reverse), 3),
+        "failed": [row["id"] for row in rows if row["score"] < 1],
     }
-    output = ROOT / "benchmarks/latest_hymt2_report.json"
-    output.write_text(
+    REPORT.write_text(
         json.dumps({"summary": summary, "rows": rows}, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
     print("SUMMARY", json.dumps(summary, ensure_ascii=False), flush=True)
+    return 1 if summary["failed"] else 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

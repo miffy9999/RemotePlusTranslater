@@ -22,6 +22,7 @@ else:
     DATA_ROOT = ROOT
 
 T = TypeVar("T")
+CONFIG_SECTIONS = {"audio", "stt", "translation", "tts", "conversation", "server"}
 
 
 @dataclass(slots=True)
@@ -36,7 +37,7 @@ class AudioConfig:
     pre_roll_ms: int = 100
     end_silence_ms: int = 360
     tail_keep_ms: int = 180
-    min_speech_ms: int = 350
+    min_speech_ms: int = 180
     max_utterance_ms: int = 12000
     # Staff often speaks longer replies while holding Space. Keep the same
     # silence cutoff as customer mode, but allow longer captured utterances and
@@ -200,6 +201,11 @@ def load_config(path: Path | None = None) -> AppConfig:
             data = primary_data
 
     def build(values: dict[str, Any]) -> AppConfig:
+        unknown_sections = set(values) - CONFIG_SECTIONS
+        if unknown_sections:
+            raise ValueError(
+                f"Unknown configuration sections: {', '.join(sorted(unknown_sections))}"
+            )
         return AppConfig(
             audio=_make(AudioConfig, values.get("audio", {})),
             stt=_make(SttConfig, values.get("stt", {})),
@@ -210,17 +216,20 @@ def load_config(path: Path | None = None) -> AppConfig:
             root=primary.resolve().parent,
             data_root=DATA_ROOT,
         )
+    def finalize(candidate: AppConfig) -> AppConfig:
+        candidate.stt.root = candidate.root
+        candidate.translation.root = candidate.root
+        candidate.translation.data_root = candidate.data_root
+        validate_config(candidate)
+        return candidate
+
     try:
-        cfg = build(data)
+        cfg = finalize(build(data))
     except (TypeError, ValueError) as exc:
         if not local.exists() or data == primary_data:
             raise
         warnings.warn(f"Ignoring incompatible local configuration {local}: {exc}", RuntimeWarning)
-        cfg = build(primary_data)
-    cfg.stt.root = cfg.root
-    cfg.translation.root = cfg.root
-    cfg.translation.data_root = cfg.data_root
-    validate_config(cfg)
+        cfg = finalize(build(primary_data))
     return cfg
 
 
@@ -232,8 +241,10 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("audio.block_ms must be 10, 20, or 30")
     if not 0 < audio.continue_rms <= audio.start_rms < 1:
         raise ValueError("RMS thresholds must satisfy 0 < continue_rms <= start_rms < 1")
-    if audio.min_speech_ms >= audio.max_utterance_ms:
-        raise ValueError("min_speech_ms must be less than max_utterance_ms")
+    if not audio.block_ms <= audio.min_speech_ms < audio.max_utterance_ms:
+        raise ValueError("min_speech_ms must be at least one block and less than max_utterance_ms")
+    if audio.pre_roll_ms < 0 or audio.end_silence_ms < audio.block_ms:
+        raise ValueError("audio pre-roll must be nonnegative and end silence at least one block")
     if audio.tail_keep_ms < 0 or audio.tail_keep_ms > audio.end_silence_ms:
         raise ValueError("audio.tail_keep_ms must be between 0 and end_silence_ms")
     if audio.staff_end_silence_ms < audio.end_silence_ms:
@@ -258,10 +269,8 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("tts.edge_timeout_seconds must be at least 3")
     if not 0 <= cfg.tts.edge_retry_count <= 3:
         raise ValueError("tts.edge_retry_count must be between 0 and 3")
-    if cfg.translation.backend not in {"m2m100", "hymt2"}:
-        raise ValueError("translation.backend must be m2m100 or hymt2")
-    if FROZEN and cfg.translation.backend != "hymt2":
-        raise ValueError("The packaged application includes only the Hy-MT2 translation backend")
+    if cfg.translation.backend != "hymt2":
+        raise ValueError("translation.backend must be hymt2")
     if not 1 <= cfg.server.port <= 65535:
         raise ValueError("server.port must be between 1 and 65535")
     if cfg.server.auto_shutdown_no_clients_seconds < 3:
@@ -280,6 +289,12 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("stt.quality_retry_log_prob_threshold must be between -5 and 0")
     if cfg.translation.hymt2_threads < 1:
         raise ValueError("translation.hymt2_threads must be at least 1")
+    if not 1 <= cfg.translation.max_new_tokens <= 256:
+        raise ValueError("translation.max_new_tokens must be between 1 and 256")
+    if cfg.translation.hymt2_context < 512:
+        raise ValueError("translation.hymt2_context must be at least 512")
+    if cfg.translation.hymt2_timeout_seconds < 5:
+        raise ValueError("translation.hymt2_timeout_seconds must be at least 5")
     if cfg.translation.hymt2_request_timeout_seconds < 1:
         raise ValueError("translation.hymt2_request_timeout_seconds must be at least 1")
     if cfg.translation.hymt2_startup_poll_ms < 20:
@@ -289,6 +304,8 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("conversation.enabled_languages must contain supported customer language codes")
     if cfg.conversation.reply_language != "auto" and cfg.conversation.reply_language not in enabled:
         raise ValueError("conversation.reply_language must be auto or an enabled language")
+    if cfg.conversation.japanese_code != "ja":
+        raise ValueError("conversation.japanese_code must be ja in this fixed Japanese console")
 
 
 def sounddevice_value(value: str | int) -> int | None:

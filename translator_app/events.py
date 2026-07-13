@@ -32,16 +32,19 @@ class EventBus:
         with self._lock:
             if event_type in {"translation", "error", "warning"}:
                 self._history.append(event)
-            for target in tuple(self._subscribers):
-                try:
-                    target.put_nowait(event)
-                except queue.Full:
-                    try:
-                        target.get_nowait()
-                        target.put_nowait(event)
-                    except (queue.Empty, queue.Full):
-                        pass
+            self._fan_out_locked(event)
         return event
+
+    def _fan_out_locked(self, event: Event) -> None:
+        for target in tuple(self._subscribers):
+            try:
+                target.put_nowait(event)
+            except queue.Full:
+                try:
+                    target.get_nowait()
+                    target.put_nowait(event)
+                except (queue.Empty, queue.Full):
+                    pass
 
     def subscribe(self) -> queue.Queue[Event]:
         target: queue.Queue[Event] = queue.Queue(maxsize=self._subscriber_size)
@@ -60,3 +63,15 @@ class EventBus:
     def clear_history(self) -> None:
         with self._lock:
             self._history.clear()
+
+    def clear_history_and_publish(self) -> Event:
+        """Clear replay history and order the UI event under the same lock.
+
+        A separate clear() then publish() leaves a gap where a new translation
+        can be stored and subsequently erased by the browser's clear event.
+        """
+        event = Event("history_cleared")
+        with self._lock:
+            self._history.clear()
+            self._fan_out_locked(event)
+        return event

@@ -9,6 +9,7 @@ import time
 from collections import deque
 from dataclasses import asdict, dataclass
 from datetime import datetime
+from functools import wraps
 from pathlib import Path
 from typing import Protocol
 
@@ -29,6 +30,20 @@ class RecognizerLike(Protocol):
 class TranslatorLike(Protocol):
     def load(self) -> None: ...
     def translate(self, text: str, source_code: str, target_code: str) -> str: ...
+
+
+def _serialized_control(method):
+    """Apply one complete UI control change before another one can begin.
+
+    `_state_lock` protects individual fields. This wider lock protects the
+    whole transaction: state -> recognizer context -> optional stream restart.
+    """
+    @wraps(method)
+    def wrapped(self, *args, **kwargs):
+        with self._control_lock:
+            return method(self, *args, **kwargs)
+
+    return wrapped
 
 
 @dataclass(slots=True)
@@ -66,7 +81,7 @@ class RecognitionJob:
     tts_enabled: bool = True
 
 
-_NOISE_TEXT = re.compile(r"^(thank you|thanks for watching|subscribe|ご視聴ありがとうございました|字幕視聴ありがとうございました)$", re.IGNORECASE)
+_NOISE_TEXT = re.compile(r"^(thanks for watching|subscribe|ご視聴ありがとうございました|字幕視聴ありがとうございました)$", re.IGNORECASE)
 
 _FILLER_PATTERNS: dict[str, tuple[re.Pattern[str], ...]] = {
     # Conservative, standalone fillers only. Do not remove words inside real terms.
@@ -149,6 +164,9 @@ class ConversationController:
             tts_enabled=cfg.tts.enabled,
         )
         self._state_lock = threading.Lock()
+        # Do not replace this with _state_lock: control() calls helpers that
+        # need to take _state_lock themselves and may probe slow audio drivers.
+        self._control_lock = threading.Lock()
         self._capture_lock = threading.Lock()
         self._latest_lock = threading.Lock()
         self._latest_started_by_mode: dict[str, int] = {"customer": 0, "staff": 0}
@@ -810,9 +828,19 @@ class ConversationController:
         )
         return request_id
 
+    @_serialized_control
     def control(self, *, paused: bool | None = None, tts_enabled: bool | None = None, active_language: str | None = None, reply_language: str | None = None, speech_mode: str | None = None, input_device: str | int | None = None, output_device: str | int | None = None, enabled_languages: list[str] | None = None) -> dict:
         if speech_mode is not None and speech_mode not in {"customer", "staff"}:
             raise ValueError("speech_mode must be 'customer' or 'staff'")
+        previous_input_device: str | int | None = None
+        if input_device is not None:
+            with self._state_lock:
+                previous_input_device = self.state.input_device
+                input_changed = input_device != self.state.input_device
+            if input_changed:
+                # Device probing can block on COM/driver calls. Never hold the
+                # state lock needed by the live audio context while probing.
+                validate_input_device(input_device)
         restart_capture = False
         previous_mode = None
         with self._state_lock:
@@ -849,7 +877,6 @@ class ConversationController:
                 self.state.tts_enabled = tts_enabled
                 self.speaker.cfg.enabled = tts_enabled
             if input_device is not None and input_device != self.state.input_device:
-                validate_input_device(input_device)
                 self.state.input_device = input_device
                 self.cfg.audio.input_device = input_device
                 restart_capture = True
@@ -859,11 +886,25 @@ class ConversationController:
                 self.state.output_device = output_device
                 self.cfg.audio.output_device = output_device
             forced = self.cfg.conversation.japanese_code if self.state.speech_mode == "staff" else self.state.input_language
+            enabled_snapshot = list(self.state.enabled_languages or [])
+            paused_snapshot = self.state.paused
+            reply_target = (
+                self.state.reply_language
+                if self.state.reply_language != "auto"
+                else self.state.active_language or self.state.input_language
+            )
+            tts_snapshot = self.state.tts_enabled
+        if speech_mode == "staff" and previous_mode != "staff":
+            self.capture.promote_active_to_staff(
+                self.cfg.conversation.japanese_code,
+                reply_target,
+                tts_snapshot,
+            )
         for recognizer in (self.recognizer, self.live_recognizer):
             if recognizer is None:
                 continue
             if hasattr(recognizer, "set_enabled_languages"):
-                recognizer.set_enabled_languages(self.state.enabled_languages or [])
+                recognizer.set_enabled_languages(enabled_snapshot)
             if hasattr(recognizer, "set_selected_language"):
                 recognizer.set_selected_language(forced)
             if hasattr(recognizer, "set_context_language"):
@@ -883,10 +924,16 @@ class ConversationController:
                 if old.is_alive():
                     old.join(timeout=3)
                 if old.is_alive():
+                    # The request has already updated the shared config, but
+                    # the old stream is still the only live stream. Roll the
+                    # advertised device back so API/UI and reality agree.
+                    with self._state_lock:
+                        self.state.input_device = previous_input_device
+                        self.cfg.audio.input_device = previous_input_device
                     raise ValueError("Previous audio stream did not stop; device was not changed")
                 self.capture = self._make_capture()
                 self._capture_started = False
-            if self._ready.is_set() and self._translator_ready.is_set() and not self._stop.is_set() and not self.state.paused:
+            if self._ready.is_set() and self._translator_ready.is_set() and not self._stop.is_set() and not paused_snapshot:
                 self._start_capture_if_needed()
         state = self.snapshot()
         self.bus.publish("state", **state)

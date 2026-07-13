@@ -37,3 +37,14 @@ def test_incompatible_settings_schema_is_ignored(tmp_path):
     store = UserSettings(tmp_path)
     store.path.write_text('{"schema_version": 999, "active_language": "es"}', encoding="utf-8")
     assert store.load() == {}
+
+
+def test_malformed_runtime_setting_types_are_filtered(tmp_path):
+    store = UserSettings(tmp_path)
+    store.path.write_text(
+        '{"active_language": 123, "reply_language": [], "tts_enabled": "false", '
+        '"input_device": {}, "output_device": ["default"]}',
+        encoding="utf-8",
+    )
+
+    assert store.load() == {}

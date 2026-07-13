@@ -1,6 +1,9 @@
+import queue
+import time
+
 import numpy as np
 
-from translator_app.audio import LOOPBACK_PREFIX, SpeechSegmenter, _resample_mono
+from translator_app.audio import AudioCapture, LOOPBACK_PREFIX, PlaybackGate, SpeechSegmenter, _resample_mono
 import pytest
 
 from translator_app.config import AudioConfig, sounddevice_value
@@ -82,6 +85,43 @@ def test_segmenter_snapshots_reply_language_and_tts_at_speech_start():
             break
     assert result is not None
     assert result.utterance_id == 7
+    assert result.speech_mode == "staff"
+    assert result.recognition_language == "ja"
+    assert result.reply_language == "ko"
+    assert result.tts_enabled is True
+
+
+def test_short_180ms_utterance_reaches_stt_queue():
+    cfg = AudioConfig(end_silence_ms=60, min_speech_ms=180)
+    vad = SpeechSegmenter(cfg)
+    for _ in range(9):
+        vad.process(frame(0.05))
+    result = None
+    for _ in range(4):
+        candidate = vad.process(frame(0.0))
+        if candidate is not None:
+            result = candidate
+            break
+    assert result is not None
+
+
+def test_recent_customer_segment_can_be_promoted_to_staff_after_http_delay():
+    cfg = AudioConfig(end_silence_ms=60, staff_end_silence_ms=60, min_speech_ms=20)
+    output = queue.Queue(maxsize=1)
+    capture = AudioCapture(
+        cfg,
+        output,
+        PlaybackGate(),
+        lambda *_: None,
+        context=lambda: ("customer", "en", "ja", False),
+    )
+    now = time.monotonic()
+    capture._process_frame(frame(0.05), now)
+    promoted = capture.promote_active_to_staff("ja", "ko", True)
+    for index in range(1, 5):
+        capture._process_frame(frame(0.0), now + index * 0.02)
+    result = output.get_nowait()
+    assert promoted == result.utterance_id
     assert result.speech_mode == "staff"
     assert result.recognition_language == "ja"
     assert result.reply_language == "ko"

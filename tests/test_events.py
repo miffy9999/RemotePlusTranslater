@@ -30,3 +30,17 @@ def test_history_never_grows_beyond_configured_limit():
     for number in range(10):
         bus.publish("translation", number=number)
     assert [item["data"]["number"] for item in bus.history()] == [7, 8, 9]
+
+
+def test_clear_event_is_ordered_before_any_later_translation():
+    bus = EventBus()
+    subscriber = bus.subscribe()
+    bus.publish("translation", number=1)
+    subscriber.get_nowait()
+    bus.clear_history_and_publish()
+    bus.publish("translation", number=2)
+    assert [subscriber.get_nowait().type, subscriber.get_nowait().type] == [
+        "history_cleared",
+        "translation",
+    ]
+    assert [item["data"]["number"] for item in bus.history()] == [2]

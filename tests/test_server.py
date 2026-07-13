@@ -118,7 +118,12 @@ def test_health_endpoint_identifies_remoteplus(tmp_path):
     with make_client(tmp_path) as client:
         response = client.get("/remoteplus-health")
     assert response.status_code == 200
-    assert response.json() == {"app": "remoteplus-translator", "ok": True}
+    assert response.json() == {
+        "app": "remoteplus-translator",
+        "version": "0.5.2",
+        "update_layer": False,
+        "ok": True,
+    }
 
 
 def test_wait_for_http_waits_until_server_answers(monkeypatch):
@@ -143,3 +148,59 @@ def test_wait_for_http_waits_until_server_answers(monkeypatch):
     monkeypatch.setattr("translator_app.desktop.time.sleep", lambda _seconds: None)
 
     assert _wait_for_http("http://127.0.0.1:8765", timeout_seconds=1)
+
+
+def test_static_assets_are_explicitly_allowlisted(tmp_path):
+    with make_client(tmp_path) as client:
+        assert client.get("/assets/app.js").status_code == 200
+        assert client.get("/assets/not-packaged.css").status_code == 404
+
+
+def test_settings_write_failure_does_not_turn_applied_control_into_http_500(
+    tmp_path, monkeypatch
+):
+    def fail_save(*_args, **_kwargs):
+        raise OSError("disk full")
+
+    monkeypatch.setattr("translator_app.settings.UserSettings.save", fail_save)
+    with make_client(tmp_path) as client:
+        client.get("/")
+        response = client.post("/api/control", json={"tts_enabled": False})
+        assert response.status_code == 200
+        assert response.json()["tts_enabled"] is False
+        assert response.json()["settings_persisted"] is False
+        state = client.get("/api/state").json()
+        assert state["state"]["tts_enabled"] is False
+        assert any(event["type"] == "warning" for event in state["history"])
+
+
+def test_momentary_staff_mode_does_not_write_user_settings(tmp_path, monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        "translator_app.settings.UserSettings.save",
+        lambda *_args, **_kwargs: calls.append(True),
+    )
+    with make_client(tmp_path) as client:
+        client.get("/")
+        assert client.post("/api/control", json={"speech_mode": "staff"}).status_code == 200
+        assert client.post("/api/control", json={"speech_mode": "customer"}).status_code == 200
+    assert calls == []
+
+
+def test_unknown_api_fields_are_rejected_instead_of_silently_ignored(tmp_path):
+    with make_client(tmp_path) as client:
+        client.get("/")
+        response = client.post("/api/control", json={"speech_modes": "staff"})
+    assert response.status_code == 422
+
+
+def test_malformed_persisted_settings_do_not_prevent_startup(tmp_path):
+    (tmp_path / "user-settings.json").write_text(
+        '{"active_language": 123, "tts_enabled": "false", "input_device": {}}',
+        encoding="utf-8",
+    )
+    with make_client(tmp_path) as client:
+        client.get("/")
+        state = client.get("/api/state").json()["state"]
+    assert state["input_language"] == "en"
+    assert state["tts_enabled"] is True

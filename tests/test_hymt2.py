@@ -79,8 +79,67 @@ def test_invalid_completion_shape_has_clear_error(monkeypatch):
     class Response:
         def __enter__(self): return self
         def __exit__(self, *_args): pass
-        def read(self, *_args): return b'{"choices": []}'
+        def __iter__(self):
+            return iter([b'data: {"choices": []}\n'])
 
     monkeypatch.setattr("urllib.request.urlopen", lambda *_args, **_kwargs: Response())
-    with pytest.raises(TranslationResponseError, match="no completion"):
+    with pytest.raises(TranslationResponseError, match="invalid completion chunk"):
         translator._request("prompt")
+
+
+def test_streaming_request_assembles_chunks_and_enables_early_cancel(monkeypatch):
+    cfg = SimpleNamespace(max_new_tokens=128, hymt2_request_timeout_seconds=1)
+    translator = HyMT2Translator(cfg, lambda *_: None)
+    translator.port = 9999
+    seen = {}
+
+    class Response:
+        def __enter__(self): return self
+        def __exit__(self, *_args): pass
+        def __iter__(self):
+            return iter([
+                b'data: {"choices":[{"delta":{"content":"\\u3053\\u3093"}}]}\n',
+                b'data: {"choices":[{"delta":{"content":"\\u306b\\u3061\\u306f"}}]}\n',
+                b'data: [DONE]\n',
+            ])
+
+    def fake_urlopen(request, **_kwargs):
+        seen.update(__import__("json").loads(request.data))
+        return Response()
+
+    monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+    assert translator._request("prompt") == "こんにちは"
+    assert seen["stream"] is True
+
+
+def test_cancelled_stream_does_not_poison_the_next_request(monkeypatch):
+    cfg = SimpleNamespace(max_new_tokens=128, hymt2_request_timeout_seconds=1)
+    translator = HyMT2Translator(cfg, lambda *_: None)
+    translator.port = 9999
+    responses = []
+
+    class Response:
+        def __init__(self, cancel=False):
+            self.cancel = cancel
+            self.closed = False
+        def __enter__(self): return self
+        def __exit__(self, *_args): pass
+        def close(self): self.closed = True
+        def __iter__(self):
+            yield b'data: {"choices":[{"delta":{"content":"ok"}}]}\n'
+            if self.cancel:
+                assert translator.cancel_active_request() is True
+            yield b'data: [DONE]\n'
+
+    responses.extend([Response(cancel=True), Response()])
+    monkeypatch.setattr("urllib.request.urlopen", lambda *_args, **_kwargs: responses.pop(0))
+    with pytest.raises(InterruptedError, match="cancelled"):
+        translator._request("old")
+    assert translator._request("new") == "ok"
+
+
+def test_context_guard_rejects_pathological_cjk_input_before_model_call():
+    cfg = SimpleNamespace(protected_terms=[], glossary={})
+    translator = HyMT2Translator(cfg, lambda *_: None)
+    with pytest.raises(ValueError, match="too long"):
+        translator.translate("客" * 801, "zh", "ja")

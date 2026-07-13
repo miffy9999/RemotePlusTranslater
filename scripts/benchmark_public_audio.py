@@ -38,6 +38,7 @@ def main() -> None:
         recognizer.set_selected_language(selected)
         audio = decode_audio(str(WAV_ROOT / filename), sampling_rate=cfg.audio.sample_rate)
         result = recognizer.transcribe(audio, language=selected)
+        text_present = bool(result.text.strip())
         row = {
             "mode": mode,
             "selected": selected,
@@ -45,17 +46,23 @@ def main() -> None:
             "detected": result.language,
             "probability": round(result.probability, 3),
             "text": result.text,
-            "passed": result.language == expected,
+            # This public corpus has language labels but no authoritative
+            # transcripts. Treat it only as a packaged-model execution smoke
+            # test; it must never be reported as STT accuracy/WER.
+            "text_present": text_present,
+            "smoke_passed": result.language == expected and text_present,
         }
         rows.append(row)
         print(json.dumps(row, ensure_ascii=False), flush=True)
     summary = {
+        "test_type": "fixed_language_execution_smoke",
+        "transcript_accuracy_evaluated": False,
         "samples": len(rows),
-        "passed": sum(row["passed"] for row in rows),
+        "passed": sum(row["smoke_passed"] for row in rows),
         "failed": [
             f"{row['mode']}:{row['expected']}->{row['detected']}"
             for row in rows
-            if not row["passed"]
+            if not row["smoke_passed"]
         ],
     }
     output = ROOT / "benchmarks/latest_public_audio_report.json"

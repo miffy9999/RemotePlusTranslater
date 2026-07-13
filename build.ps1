@@ -6,6 +6,9 @@ if (-not (Test-Path '.venv\Scripts\python.exe')) {
 }
 
 & '.\.venv\Scripts\python.exe' -m pip install -e '.[dev]'
+if ($LASTEXITCODE -ne 0) {
+    throw "Dependency installation failed with exit code $LASTEXITCODE"
+}
 Remove-Item -Recurse -Force '.\dist\RemotePlusTranslator' -ErrorAction SilentlyContinue
 & '.\.venv\Scripts\python.exe' -m PyInstaller --noconfirm --clean '.\build\local_bridge.spec'
 if ($LASTEXITCODE -ne 0) {

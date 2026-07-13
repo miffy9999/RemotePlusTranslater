@@ -19,7 +19,7 @@ from typing import Callable
 from .config import TranslationConfig
 from .languages import get_language
 from .phrasebook import translate_hotel_phrase
-from .translation import M2M100Translator, contains_alias, protect_japanese_terms, protect_multilingual_terms
+from .translation import contains_alias, protect_japanese_terms, protect_multilingual_terms
 
 
 class TranslationResponseError(RuntimeError):
@@ -37,6 +37,7 @@ HYMT2_FILENAME = "Hy-MT2-1.8B-Q4_K_M.gguf"
 LLAMA_RUNTIME_URL = "https://github.com/ggml-org/llama.cpp/releases/download/b9870/llama-b9870-bin-win-cpu-x64.zip"
 LLAMA_RUNTIME_SHA256 = "71be86e7af277e9503847c6050948ecd943d5e34b941e178a8af0c161b2d9a9e"
 HYMT2_SHA256 = "dc5f44fcf1fa496ee7ad725982c0c8c553a4de00259b53af84c4b89fb0c06699"
+MAX_SOURCE_CHARACTERS = 800
 
 
 def _app_path(root: Path, value: str) -> Path:
@@ -207,32 +208,56 @@ class HyMT2Translator:
             "top_k": 20,
             "repeat_penalty": 1.05,
             "max_tokens": min(max_tokens or self.cfg.max_new_tokens, self.cfg.max_new_tokens, 256),
+            # Streaming exposes the response handle while llama.cpp is still
+            # generating. A newer utterance can then close that handle instead
+            # of leaving obsolete CPU generation running until completion.
+            "stream": True,
         }).encode("utf-8")
         request = urllib.request.Request(
             f"http://127.0.0.1:{self.port}/v1/chat/completions",
             data=body,
             headers={"Content-Type": "application/json", "Authorization": f"Bearer {self._api_key}"},
         )
+        self._request_aborted.clear()
         self._request_active.set()
+        chunks: list[str] = []
         try:
             with urllib.request.urlopen(request, timeout=self.cfg.hymt2_request_timeout_seconds) as response:
                 with self._response_lock:
                     self._active_response = response
                 try:
-                    payload = json.load(response)
-                except (ValueError, UnicodeError) as exc:
-                    raise TranslationResponseError("Translation server returned invalid JSON") from exc
+                    for raw_line in response:
+                        line = raw_line.decode("utf-8", errors="strict").strip()
+                        if not line or not line.startswith("data:"):
+                            continue
+                        data = line[5:].strip()
+                        if data == "[DONE]":
+                            break
+                        try:
+                            payload = json.loads(data)
+                            choice = payload["choices"][0]
+                            content = (choice.get("delta") or {}).get("content")
+                            if content is None:
+                                content = (choice.get("message") or {}).get("content")
+                        except (ValueError, UnicodeError, KeyError, IndexError, TypeError) as exc:
+                            raise TranslationResponseError(
+                                "Translation server returned an invalid completion chunk"
+                            ) from exc
+                        if isinstance(content, str):
+                            chunks.append(content)
+                except UnicodeError as exc:
+                    raise TranslationResponseError("Translation server returned invalid UTF-8") from exc
         finally:
             with self._response_lock:
                 self._active_response = None
             self._request_active.clear()
-        try:
-            content = payload["choices"][0]["message"]["content"]
-        except (KeyError, IndexError, TypeError) as exc:
-            raise TranslationResponseError("Translation server returned no completion") from exc
-        if not isinstance(content, str) or not content.strip():
+        if self._request_aborted.is_set():
+            self._request_aborted.clear()
+            raise InterruptedError("Superseded translation was cancelled")
+        content = "".join(chunks).strip()
+        if not content:
             raise TranslationResponseError("Translation server returned an empty completion")
-        return content.strip()
+        return content
 
     def _request_with_optional_limit(self, prompt: str, max_tokens: int | None) -> str:
         try:
@@ -263,7 +288,9 @@ class HyMT2Translator:
         clean = text.strip()
         if not clean:
             raise ValueError("Translation source is empty")
-        if len(clean) > 2000:
+        # CJK text can approach one token per character. Keep room in the
+        # 1,024-token context for instructions, terminology and output.
+        if len(clean) > MAX_SOURCE_CHARACTERS:
             raise ValueError("Translation source is too long for the local model context")
         if source_code == target_code:
             return clean
@@ -283,7 +310,7 @@ class HyMT2Translator:
             try:
                 translated = self._request_with_optional_limit(prompt, max_tokens)
             except Exception as exc:
-                if self._request_aborted.is_set():
+                if isinstance(exc, InterruptedError) or self._request_aborted.is_set():
                     self._request_aborted.clear()
                     raise InterruptedError("Superseded translation was cancelled") from exc
                 if isinstance(exc, TimeoutError):
@@ -348,5 +375,5 @@ class HyMT2Translator:
             self._log_handle = None
 
 
-def create_translator(cfg: TranslationConfig, status: Callable[[str, str], None]) -> M2M100Translator | HyMT2Translator:
-    return HyMT2Translator(cfg, status) if cfg.backend == "hymt2" else M2M100Translator(cfg, status)
+def create_translator(cfg: TranslationConfig, status: Callable[[str, str], None]) -> HyMT2Translator:
+    return HyMT2Translator(cfg, status)
