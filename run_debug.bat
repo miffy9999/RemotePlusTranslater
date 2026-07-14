@@ -23,6 +23,13 @@ if "%REMOTEPLUS_BATCH_SELFTEST%"=="1" (
   echo RUN_STARTED=%RUN_STARTED%
   exit /b 0
 )
+".venv\Scripts\python.exe" -c "import sys" >nul 2>nul
+if errorlevel 1 (
+  echo The project virtual environment is damaged or belongs to another computer.
+  echo Run install.bat to repair it, then start RemotePlus again.
+  pause
+  exit /b 1
+)
 ".venv\Scripts\python.exe" -m translator_app.cli desktop
 set "APP_EXIT=%ERRORLEVEL%"
 echo.

@@ -15,6 +15,10 @@ def acquire_single_instance(name: str = "Local\\RemotePlusTranslator") -> bool:
     if os.name != "nt" or _INSTANCE_HANDLE is not None:
         return True
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateMutexW.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR]
+    kernel32.CreateMutexW.restype = wintypes.HANDLE
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
     handle = kernel32.CreateMutexW(None, False, name)
     if not handle:
         return True
@@ -32,6 +36,20 @@ def enable_windows_process_cleanup() -> None:
         return
     try:
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
+        kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+        kernel32.SetInformationJobObject.argtypes = [
+            wintypes.HANDLE,
+            ctypes.c_int,
+            ctypes.c_void_p,
+            wintypes.DWORD,
+        ]
+        kernel32.SetInformationJobObject.restype = wintypes.BOOL
+        kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+        kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+        kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+        kernel32.CloseHandle.restype = wintypes.BOOL
         job = kernel32.CreateJobObjectW(None, None)
         if not job:
             return
@@ -71,8 +89,15 @@ def enable_windows_process_cleanup() -> None:
 
         info = JOBOBJECT_EXTENDED_LIMIT_INFORMATION()
         info.BasicLimitInformation.LimitFlags = 0x00002000
-        kernel32.SetInformationJobObject(job, 9, ctypes.byref(info), ctypes.sizeof(info))
-        if kernel32.AssignProcessToJobObject(job, kernel32.GetCurrentProcess()):
-            _JOB_HANDLE = job
+        configured = kernel32.SetInformationJobObject(
+            job, 9, ctypes.byref(info), ctypes.sizeof(info)
+        )
+        if not configured:
+            kernel32.CloseHandle(job)
+            return
+        if not kernel32.AssignProcessToJobObject(job, kernel32.GetCurrentProcess()):
+            kernel32.CloseHandle(job)
+            return
+        _JOB_HANDLE = job
     except Exception:
         return

@@ -11,6 +11,13 @@ if not exist ".venv\Scripts\python.exe" (
   pause
   exit /b 1
 )
+".venv\Scripts\python.exe" -c "import sys" >nul 2>nul
+if errorlevel 1 (
+  echo The project virtual environment is damaged or belongs to another computer.
+  echo Run install.bat to repair it, then start RemotePlus again.
+  pause
+  exit /b 1
+)
 
 set "PYTHONUTF8=1"
 set "PYGAME_HIDE_SUPPORT_PROMPT=1"

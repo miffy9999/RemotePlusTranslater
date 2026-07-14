@@ -29,6 +29,10 @@ def test_prompt_includes_matching_hotel_terminology_only():
 def test_prompt_without_terms_is_still_strict():
     prompt = build_hymt2_prompt("Hello", "en", "ja", [])
     assert "ONLY output the translated result" in prompt
+    assert "natural, polite hotel-service language" in prompt
+    assert "hotel call-center expressions" in prompt
+    assert "Korean sentence order" in prompt
+    assert "Never add or remove facts" in prompt
     assert prompt.endswith("Hello")
 
 

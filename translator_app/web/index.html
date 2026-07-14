@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RemotePlus Translator</title>
-  <link rel="stylesheet" href="/assets/app.css?v=text-chat-reading-brown-20260713">
+  <link rel="stylesheet" href="/assets/app.css?v=quick-phrase-collapse-20260714">
   <link rel="stylesheet" href="/assets/device.css?v=text-chat-20260713">
 </head>
 <body>
@@ -24,6 +24,18 @@
         <label class="field main-field"><span data-i18n="customerLanguage">お客様の言語</span><select id="language"></select></label>
         <label class="field"><span data-i18n="inputDevice">音声入力デバイス</span><select id="input-device"><option value="default" data-i18n="systemDefault">システム既定</option></select></label>
         <p class="mode-note" data-i18n="modeNote">お客様の音声は日本語に翻訳されます。スタッフは右側に日本語を入力します。</p>
+        <section class="quick-phrases" aria-labelledby="quick-phrases-title">
+          <div class="quick-phrases-heading"><strong id="quick-phrases-title" data-i18n="quickPhrases">よく使う文章</strong><small id="quick-phrase-count">0 / 40</small></div>
+          <div class="quick-phrase-tools">
+            <form id="quick-phrase-form" class="quick-phrase-form">
+              <input id="quick-phrase-text" maxlength="800" data-i18n-placeholder="quickPhrasePlaceholder" placeholder="日本語の文章を登録…">
+              <button id="add-quick-phrase" type="submit" title="Add" aria-label="Add">+</button>
+            </form>
+            <input id="quick-phrase-search" class="quick-phrase-search" type="search" data-i18n-placeholder="quickPhraseSearchPlaceholder" placeholder="文章を検索…">
+          </div>
+          <div id="quick-phrase-list" class="quick-phrase-list"></div>
+          <p id="quick-phrase-empty" class="quick-phrase-empty" data-i18n="noQuickPhrases">登録された文章はありません。</p>
+        </section>
       </div>
     </section>
 
@@ -41,6 +53,11 @@
   </main>
 
   <div id="toast" class="toast"></div>
-  <script src="/assets/app.js?v=text-chat-20260713"></script>
+  <div id="quick-phrase-menu" class="quick-phrase-menu" hidden>
+    <label><span data-i18n="phraseCategory">カテゴリー</span><input id="quick-phrase-category" maxlength="40" list="quick-phrase-categories"></label>
+    <datalist id="quick-phrase-categories"></datalist>
+    <div><button id="save-quick-phrase-category" class="primary" type="button" data-i18n="saveCategory">保存</button><button id="clear-quick-phrase-category" type="button" data-i18n="clearCategory">分類解除</button></div>
+  </div>
+  <script src="/assets/app.js?v=quick-phrase-collapse-20260714"></script>
 </body>
 </html>

@@ -12,6 +12,7 @@ import webbrowser
 from pathlib import Path
 
 from .config import load_config
+from .diagnostics import configure_runtime_logging, runtime_logger
 from .process_cleanup import enable_windows_process_cleanup
 
 
@@ -52,7 +53,7 @@ def doctor() -> int:
             checks.append(("Hy-MT2 model", model.exists(), str(model)))
             checks.append(("llama.cpp runtime", runtime.exists(), str(runtime)))
         checks.append(("live captions", True, "disabled for final-STT priority"))
-        checks.append(("staff replies", True, "typed Japanese with katakana/romanized guides"))
+        checks.append(("staff replies", True, "typed Japanese or English with reading guides"))
     except Exception as exc:
         checks.append(("configuration", False, str(exc)))
     if os.environ.get("REMOTEPLUS_ENUMERATE_AUDIO_DEVICES") == "1":
@@ -85,7 +86,7 @@ def prepare() -> int:
 
     _emit("Final speech model is downloaded once and then used locally.")
     _emit("Live preview is disabled for queue stability and CPU priority.")
-    _emit("Staff replies use typed Japanese and local reading-guide rules.")
+    _emit("Staff replies use typed Japanese or English and local reading-guide rules.")
     WhisperRecognizer(cfg.stt, report, label="final").load()
     if cfg.translation.backend == "hymt2":
         prepare_hymt2_files(cfg.translation, report)
@@ -118,6 +119,8 @@ def serve() -> int:
     _debug_startup("serve loading config")
     cfg = load_config()
     cfg.data_root.mkdir(parents=True, exist_ok=True)
+    configure_runtime_logging(cfg.data_root)
+    runtime_logger().info("serve start pid=%s data_root=%s", os.getpid(), cfg.data_root)
     _debug_startup("serve importing server")
     from .server import create_app
     _debug_startup("serve importing uvicorn")

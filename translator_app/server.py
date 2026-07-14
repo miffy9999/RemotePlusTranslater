@@ -24,6 +24,7 @@ from .events import EventBus
 from .feedback import FeedbackStore
 from .languages import CUSTOMER_LANGUAGE_CODES, public_languages
 from .reading import SUPPORTED_READING_LANGUAGES
+from .quick_phrases import QuickPhraseStore
 from .settings import UserSettings
 
 
@@ -137,6 +138,18 @@ class StaffReplyRequest(StrictRequest):
     text: str
 
 
+class QuickPhraseRequest(StrictRequest):
+    text: str
+
+
+class QuickPhraseCategoryRequest(StrictRequest):
+    category: str
+
+
+class QuickPhraseUIStateRequest(StrictRequest):
+    collapsed_categories: list[str]
+
+
 class FeedbackRequest(StrictRequest):
     direction: str
     source_language: str
@@ -155,6 +168,7 @@ def create_app(
     bus = EventBus()
     controller = ConversationController(config, bus, recognizer=recognizer)
     feedback = FeedbackStore(config.data_root)
+    quick_phrases = QuickPhraseStore(config.data_root)
     user_settings = UserSettings(config.data_root)
     devices_cache: dict[str, object] = {"expires_at": 0.0, "payload": None}
     devices_lock = threading.Lock()
@@ -287,6 +301,48 @@ def create_app(
             return {"accepted": True, "utterance_id": utterance_id}
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
+
+    @app.get("/api/quick-phrases")
+    def list_quick_phrases():
+        phrases, collapsed_categories = quick_phrases.list_state()
+        return {
+            "phrases": phrases,
+            "max_items": quick_phrases.MAX_ITEMS,
+            "collapsed_categories": collapsed_categories,
+        }
+
+    @app.post("/api/quick-phrases", status_code=201)
+    def add_quick_phrase(request: QuickPhraseRequest):
+        try:
+            return {"phrase": quick_phrases.add(request.text)}
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.patch("/api/quick-phrases/{phrase_id}/category")
+    def set_quick_phrase_category(phrase_id: str, request: QuickPhraseCategoryRequest):
+        try:
+            phrase = quick_phrases.set_category(phrase_id, request.category)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        if phrase is None:
+            raise HTTPException(404, "Quick phrase not found")
+        return {"phrase": phrase}
+
+    @app.patch("/api/quick-phrases/ui-state")
+    def set_quick_phrase_ui_state(request: QuickPhraseUIStateRequest):
+        try:
+            collapsed = quick_phrases.set_collapsed_categories(
+                request.collapsed_categories
+            )
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        return {"collapsed_categories": collapsed}
+
+    @app.delete("/api/quick-phrases/{phrase_id}")
+    def delete_quick_phrase(phrase_id: str):
+        if not quick_phrases.delete(phrase_id):
+            raise HTTPException(404, "Quick phrase not found")
+        return {"deleted": True}
 
     @app.post("/api/feedback")
     def save_feedback(request: FeedbackRequest):

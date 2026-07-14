@@ -7,8 +7,16 @@ WEB = Path(__file__).resolve().parents[1] / "translator_app" / "web"
 def test_first_run_ui_defaults_to_japanese():
     script = (WEB / "app.js").read_text(encoding="utf-8")
     html = (WEB / "index.html").read_text(encoding="utf-8")
-    assert "remoteplus-ui-language') || 'ja'" in script
+    assert "let ui = 'ja'" in script
+    assert "localStorage.getItem('remoteplus-ui-language')" in script
     assert '<html lang="ja">' in html
+
+
+def test_quick_phrase_collapsed_state_uses_persistent_server_storage():
+    script = (WEB / "app.js").read_text(encoding="utf-8")
+    assert "/api/quick-phrases/ui-state" in script
+    assert "phraseData.collapsed_categories" in script
+    assert "remoteplus-collapsed-phrase-categories" not in script
 
 
 def test_ui_is_chat_based_and_has_no_tts_or_space_controls():

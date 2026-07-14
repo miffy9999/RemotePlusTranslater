@@ -6,15 +6,18 @@ import queue
 import re
 import threading
 import time
+import unicodedata
 from collections import deque
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from functools import wraps
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Protocol
 
 from .audio import AudioCapture, LiveSnapshot, Utterance, validate_input_device
 from .config import AppConfig
+from .diagnostics import log_exception
 from .events import EventBus
 from .hymt2 import create_translator
 from .languages import get_language
@@ -85,6 +88,8 @@ class ReadingJob:
 
 
 _NOISE_TEXT = re.compile(r"^(thanks for watching|subscribe|ご視聴ありがとうございました|字幕視聴ありがとうございました)$", re.IGNORECASE)
+_JAPANESE_SCRIPT = re.compile(r"[\u3040-\u30ff\u3400-\u9fff]")
+_LATIN_SCRIPT = re.compile(r"[A-Za-z]")
 
 _FILLER_PATTERNS: dict[str, tuple[re.Pattern[str], ...]] = {
     # Conservative, standalone fillers only. Do not remove words inside real terms.
@@ -121,19 +126,36 @@ def _clean_filler_text(text: str, language: str) -> tuple[str, int]:
     return cleaned, removed
 
 
+def _staff_text_language(text: str, japanese_code: str) -> str:
+    normalized = unicodedata.normalize("NFKC", text)
+    if not _JAPANESE_SCRIPT.search(normalized) and _LATIN_SCRIPT.search(normalized):
+        return "en"
+    return japanese_code
+
+
 def _create_debug_logger(data_root: Path) -> logging.Logger | None:
-    if os.getenv("REMOTEPLUS_DEBUG") != "1":
-        return None
     logger: logging.Logger | None = None
     handler: logging.Handler | None = None
     try:
         log_dir = data_root / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
+        # Normal timing logs are only useful for the current field session.
+        # Persistent failures are captured separately in errors.log.
+        for old_log in log_dir.glob("timing-*.log*"):
+            try:
+                old_log.unlink()
+            except OSError:
+                pass
         run_id = datetime.now().strftime("%Y%m%d-%H%M%S-%f")[:-3]
         logger = logging.getLogger(f"remoteplus.timing.{os.getpid()}.{run_id}")
         logger.setLevel(logging.INFO)
         logger.propagate = False
-        handler = logging.FileHandler(log_dir / f"timing-{run_id}.log", mode="w", encoding="utf-8")
+        handler = RotatingFileHandler(
+            log_dir / f"timing-{run_id}.log",
+            maxBytes=256 * 1024,
+            backupCount=1,
+            encoding="utf-8",
+        )
         handler.setFormatter(logging.Formatter("%(asctime)s.%(msecs)03d %(message)s", datefmt="%Y-%m-%d %H:%M:%S"))
         logger.addHandler(handler)
         logger.info("timing_log_started path=%s pid=%s", log_dir / f"timing-{run_id}.log", os.getpid())
@@ -315,7 +337,10 @@ class ConversationController:
     def stop(self) -> None:
         self._log_perf("run_stopping")
         self._stop.set()
-        self.capture.stop()
+        try:
+            self.capture.stop()
+        except Exception:
+            log_exception("audio capture shutdown failed")
         # translate() owns the translator lock while waiting for SSE chunks.
         # Close its response first so close() does not wait for the full request
         # timeout when the operator exits during an active translation.
@@ -325,10 +350,14 @@ class ConversationController:
             except Exception:
                 pass
         if hasattr(self.translator, "close"):
-            self.translator.close()
+            try:
+                self.translator.close()
+            except Exception:
+                log_exception("translation engine shutdown failed")
+        join_deadline = time.monotonic() + 6
         for thread in (self.capture, self._translator_warmup, self._live_launcher, self._stt_worker, self._live_worker, self._translation_worker, self._reading_worker):
             if thread is not None and thread.is_alive():
-                thread.join(timeout=3)
+                thread.join(timeout=max(0.0, join_deadline - time.monotonic()))
         logger, self._debug_logger = self._debug_logger, None
         if logger is not None:
             for handler in tuple(logger.handlers):
@@ -611,6 +640,7 @@ class ConversationController:
                 except Exception as exc:
                     self._mark_finalized(item.utterance_id)
                     self.bus.publish("preview_discard", utterance_id=item.utterance_id)
+                    log_exception("final STT transcription failed")
                     self._log_perf("stt_failed", utterance_id=item.utterance_id, error=repr(exc))
                     self._status("error", f"Speech recognition failed: {exc}")
                     continue
@@ -645,6 +675,7 @@ class ConversationController:
                 self._put_latest_recognition(RecognitionJob(result, forced, item.speech_mode, item.duration, stt_started, stt_seconds, item.utterance_id, item.speech_ended_at, item.ready_at, item.speech_seconds, item.vad_tail_seconds, item.reply_language))
                 self._status("listening", "Listening")
         except Exception as exc:
+            log_exception("final STT worker failed")
             self._log_perf("stt_worker_failed", error=repr(exc))
             self._status("error", f"Speech recognition initialization failed: {exc}")
 
@@ -666,6 +697,7 @@ class ConversationController:
             self.bus.publish("state", **self.snapshot())
         except Exception as exc:
             self._translator_failed.set()
+            log_exception("translation model startup failed")
             self._log_perf("translator_failed", error=repr(exc))
             self._status("warning", f"Translation engine unavailable: {exc}")
             self.bus.publish("state", **self.snapshot())
@@ -717,6 +749,7 @@ class ConversationController:
             reading_guide("请稍等", "zh")
             romanized_guide("Подождите", "ru")
         except Exception as exc:
+            log_exception("reading guide warmup failed")
             self._log_perf("reading_warmup_failed", error=repr(exc))
         while not self._stop.is_set():
             try:
@@ -724,8 +757,13 @@ class ConversationController:
             except queue.Empty:
                 continue
             started = time.monotonic()
-            reading = reading_guide(job.text, job.language)
-            romanized = romanized_guide(job.text, job.language)
+            try:
+                reading = reading_guide(job.text, job.language)
+                romanized = romanized_guide(job.text, job.language)
+            except Exception as exc:
+                log_exception("reading guide generation failed")
+                self._log_perf("reading_failed", utterance_id=job.utterance_id, error=repr(exc))
+                continue
             self.bus.publish(
                 "reading",
                 utterance_id=job.utterance_id,
@@ -743,7 +781,7 @@ class ConversationController:
         japanese = self.cfg.conversation.japanese_code
         if job.speech_mode == "staff":
             target = job.reply_language
-            source, target, direction = japanese, target, "reply"
+            source, target, direction = job.language, target, "reply"
         else:
             source, target, direction = job.language, japanese, "incoming"
         if get_language(source) is None or get_language(target) is None:
@@ -760,6 +798,7 @@ class ConversationController:
             if self._is_stale(job):
                 self._log_perf("translation_result_discarded", utterance_id=job.utterance_id, reason="cancelled_for_newer_speech")
                 return
+            log_exception("translation request failed")
             self._log_perf("translation_failed", utterance_id=job.utterance_id, error=repr(exc))
             self._status("warning", f"Translation failed: {exc}")
             return
@@ -810,7 +849,7 @@ class ConversationController:
         self._translate_job(job)
 
     def submit_staff_text(self, text: str) -> int:
-        """Queue a Japanese staff reply with a fixed target-language snapshot.
+        """Queue a Japanese or English staff reply with a fixed target snapshot.
 
         Reserving the utterance ID and target together prevents a later UI
         language change from rerouting an already submitted reply.
@@ -827,12 +866,13 @@ class ConversationController:
         if target == "ja" or target not in allowed or get_language(target) is None:
             raise ValueError("Choose a supported customer reply language")
 
+        source_language = _staff_text_language(clean, self.cfg.conversation.japanese_code)
         utterance_id = self.capture.reserve_utterance_id()
         now = time.monotonic()
-        self._speech_started(utterance_id, "staff", self.cfg.conversation.japanese_code)
+        self._speech_started(utterance_id, "staff", source_language)
         job = RecognitionJob(
-            Recognition(clean, self.cfg.conversation.japanese_code, 1.0),
-            self.cfg.conversation.japanese_code,
+            Recognition(clean, source_language, 1.0),
+            source_language,
             "staff",
             0.0,
             now,
@@ -850,7 +890,7 @@ class ConversationController:
             utterance_id=utterance_id,
             final=True,
             text=clean,
-            language=self.cfg.conversation.japanese_code,
+            language=source_language,
             speech_mode="staff",
         )
         self._log_perf(

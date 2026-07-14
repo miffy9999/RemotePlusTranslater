@@ -17,6 +17,7 @@ from pathlib import Path
 import uvicorn
 
 from .config import load_config
+from .diagnostics import configure_runtime_logging, log_exception, runtime_logger
 from .server import create_app
 from .stt import WhisperRecognizer
 from .process_cleanup import acquire_single_instance
@@ -166,6 +167,8 @@ def run_desktop() -> int:
         return 3
     cfg = load_config()
     cfg.data_root.mkdir(parents=True, exist_ok=True)
+    logger = configure_runtime_logging(cfg.data_root)
+    logger.info("desktop start pid=%s data_root=%s", os.getpid(), cfg.data_root)
     cfg.server.open_browser = False
 
     cfg.server.port = _available_port(cfg.server.host, cfg.server.port)
@@ -199,6 +202,7 @@ def run_desktop() -> int:
             _startup_log("server.run returned")
         except BaseException:
             server_error.append(traceback.format_exc())
+            log_exception("local server thread failed")
             _startup_log("server failed:\n" + server_error[-1])
 
     server_thread = threading.Thread(target=run_server, name="remoteplus-server", daemon=True)
@@ -233,24 +237,31 @@ def run_desktop() -> int:
     profile_root = Path(tempfile.gettempdir()) / f"remoteplus-app-profile-{os.getpid()}"
     app_launched_at = time.monotonic()
     no_client_shutdown_seconds = max(60, cfg.server.auto_shutdown_no_clients_seconds * 3)
+    shutdown_requested = False
 
     try:
         while server_thread.is_alive():
             if app_process is not None and app_process.poll() is not None and not _desktop_client_active(app):
                 _startup_log("app window process exited; stopping server")
+                shutdown_requested = True
                 break
             if cfg.server.shutdown_when_idle:
                 if not _desktop_client_seen(app) and time.monotonic() - app_launched_at >= no_client_shutdown_seconds:
                     _startup_log("desktop client never connected; stopping server")
+                    shutdown_requested = True
                     break
                 idle_seconds = _desktop_client_idle_seconds(app)
                 if idle_seconds is not None and idle_seconds >= cfg.server.auto_shutdown_no_clients_seconds:
                     _startup_log(f"desktop client disconnected for {idle_seconds:.1f}s; stopping server")
+                    shutdown_requested = True
                     break
             time.sleep(0.5)
         _startup_log("server thread stopped")
+        if not shutdown_requested:
+            detail = server_error[-1] if server_error else "uvicorn returned without a shutdown request"
+            raise RuntimeError(f"Local server stopped unexpectedly:\n{detail}")
     except KeyboardInterrupt:
-        pass
+        shutdown_requested = True
     finally:
         server.should_exit = True
         server_thread.join(timeout=12.0)
@@ -261,4 +272,5 @@ def run_desktop() -> int:
             except subprocess.TimeoutExpired:
                 app_process.kill()
         shutil.rmtree(profile_root, ignore_errors=True)
+        runtime_logger().info("desktop shutdown requested")
     return 0

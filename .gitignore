@@ -13,6 +13,9 @@ build/local_bridge/
 *.egg-info/
 feedback/
 user-settings.json
+quick-phrases.json
+quick-phrases.corrupt-*.json
+.quick-phrases.json.*.tmp
 benchmarks/results/
 browser-app-profile/
 desktop_browser_profile/

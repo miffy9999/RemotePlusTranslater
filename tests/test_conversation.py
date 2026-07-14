@@ -64,6 +64,24 @@ def test_typed_japanese_reply_uses_target_snapshot():
     assert bus.history()[-1]["data"]["target_language"] == "ko"
 
 
+def test_typed_english_quick_phrase_is_not_mislabeled_as_japanese():
+    controller, translator, _ = make_controller()
+    controller._translator_ready.set()
+    controller.control(reply_language="ko")
+    controller.submit_staff_text("Please wait a moment.")
+    job = controller._recognitions.get_nowait()
+    assert job.language == "en"
+    controller._translate_job(job)
+    assert translator.calls[-1] == ("Please wait a moment.", "en", "ko")
+
+
+def test_fullwidth_english_quick_phrase_is_detected_as_english():
+    controller, _, _ = make_controller()
+    controller.control(reply_language="ko")
+    controller.submit_staff_text("ＰＬＥＡＳＥ ＷＡＩＴ")
+    assert controller._recognitions.get_nowait().language == "en"
+
+
 def test_reading_worker_adds_katakana_and_romanization_without_blocking_translation():
     controller, _, bus = make_controller()
     controller._translator_ready.set()
@@ -89,6 +107,18 @@ def test_invalid_or_oversized_staff_reply_is_rejected():
         controller.submit_staff_text("   ")
     with pytest.raises(ValueError, match="1 to 800"):
         controller.submit_staff_text("あ" * 801)
+
+
+def test_shutdown_continues_when_audio_and_translator_cleanup_fail():
+    controller, _, _ = make_controller()
+
+    def fail():
+        raise RuntimeError("cleanup failed")
+
+    controller.capture.stop = fail
+    controller.translator.close = fail
+    controller.stop()
+    assert controller._stop.is_set()
 
 
 def test_running_old_result_cannot_overwrite_newer_work():
