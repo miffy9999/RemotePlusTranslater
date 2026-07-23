@@ -34,15 +34,8 @@ def configure_runtime_logging(data_root: Path) -> logging.Logger:
                 pass
         try:
             log_dir.mkdir(parents=True, exist_ok=True)
-            # A new on-site session starts with fresh operational evidence.
-            # Keep error evidence, but remove normal/timing logs from older
-            # sessions so the operator never accumulates routine diagnostics.
-            for pattern in ("runtime.log*", "timing-*.log*"):
-                for old_log in log_dir.glob(pattern):
-                    try:
-                        old_log.unlink()
-                    except OSError:
-                        pass
+            # Preserve the previous field session. Startup and WebView failures
+            # often appear only after the operator clicks the icon again.
             formatter = logging.Formatter(
                 "%(asctime)s.%(msecs)03d %(levelname)s %(threadName)s %(message)s",
                 datefmt="%Y-%m-%d %H:%M:%S",

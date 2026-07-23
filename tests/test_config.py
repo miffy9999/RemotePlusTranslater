@@ -42,3 +42,19 @@ def test_unknown_top_level_section_is_rejected(tmp_path):
 
     with pytest.raises(ValueError, match="Unknown configuration sections"):
         load_config(config)
+
+
+def test_enabled_updates_reject_url_credentials_and_fragments(tmp_path):
+    config = tmp_path / "config.toml"
+    config.write_text(
+        """
+[updates]
+enabled = true
+manifest_url = "https://user:secret@example.com/manifest.json#old"
+trusted_publisher_thumbprints = ["AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"]
+""",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValueError, match="credentials or a fragment"):
+        load_config(config)

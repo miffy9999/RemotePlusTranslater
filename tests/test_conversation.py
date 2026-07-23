@@ -75,6 +75,41 @@ def test_typed_english_quick_phrase_is_not_mislabeled_as_japanese():
     assert translator.calls[-1] == ("Please wait a moment.", "en", "ko")
 
 
+def test_ambiguous_staff_turn_uses_previous_dialogue_in_one_contextual_call():
+    class ContextTranslator(FakeTranslator):
+        def __init__(self):
+            super().__init__()
+            self.context_calls = []
+
+        def translate_contextual(
+            self,
+            text,
+            source_code,
+            target_code,
+            *,
+            previous_text="",
+            next_text="",
+        ):
+            self.context_calls.append(
+                (text, source_code, target_code, previous_text, next_text)
+            )
+            return "그것으로 부탁드립니다."
+
+    translator = ContextTranslator()
+    controller = ConversationController(
+        load_config(), EventBus(), FakeRecognizer(), translator
+    )
+    controller.control(reply_language="ko")
+    controller.submit_staff_text("朝食は洋食と和食から選べます。")
+    controller._translate_job(controller._recognitions.get_nowait())
+    controller.submit_staff_text("それでお願いします。")
+    controller._translate_job(controller._recognitions.get_nowait())
+
+    assert len(translator.context_calls) == 1
+    assert "朝食は洋食と和食" in translator.context_calls[0][3]
+    assert translator.context_calls[0][4] == ""
+
+
 def test_fullwidth_english_quick_phrase_is_detected_as_english():
     controller, _, _ = make_controller()
     controller.control(reply_language="ko")
@@ -121,6 +156,38 @@ def test_shutdown_continues_when_audio_and_translator_cleanup_fail():
     assert controller._stop.is_set()
 
 
+def test_shutdown_interrupts_engine_before_waiting_for_normal_close():
+    controller, _, _ = make_controller()
+    calls = []
+    controller.translator.begin_shutdown = lambda: calls.append("begin")
+    controller.translator.close = lambda: calls.append("close")
+    controller.stop()
+    assert calls == ["begin", "close"]
+
+
+def test_translator_warmup_holds_shared_model_lock_until_ready():
+    entered = threading.Event()
+    release = threading.Event()
+
+    class WarmTranslator(FakeTranslator):
+        ready = True
+
+        def warmup(self):
+            entered.set()
+            release.wait(1)
+
+    controller = ConversationController(
+        load_config(), EventBus(), FakeRecognizer(), WarmTranslator()
+    )
+    worker = threading.Thread(target=controller._warm_translator)
+    worker.start()
+    assert entered.wait(1)
+    assert controller.translator_lock.acquire(blocking=False) is False
+    release.set()
+    worker.join(1)
+    assert controller._translator_ready.is_set()
+
+
 def test_running_old_result_cannot_overwrite_newer_work():
     controller, translator, bus = make_controller()
     with controller._latest_lock:
@@ -157,6 +224,16 @@ def test_manual_language_control_updates_recognizer_and_is_serialized():
     first.join(1)
     second.join(1)
     assert controller.recognizer.selected_language == "es"
+
+
+def test_live_microphone_is_fixed_to_customer_language_and_japanese_target():
+    controller, _, _ = make_controller()
+    controller.control(active_language="en")
+    assert controller._capture_context() == ("customer", "en", "en")
+    assert controller.recognizer.selected_language == "en"
+    state = controller.snapshot()
+    assert "speech_mode" not in state
+    assert state["pipeline"] == "customer_audio_staff_text_reading_guide"
 
 
 def test_snapshot_does_not_claim_dead_translation_engine_is_ready():

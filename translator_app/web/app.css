@@ -253,8 +253,118 @@ main {
   min-height: 0;
   padding: 16px;
   display: grid;
-  grid-template-rows: auto auto auto auto 1fr;
+  grid-template-rows: repeat(4, auto) minmax(0, 1fr);
   gap: 14px
+}
+
+.wav-import {
+  flex: 0 0 auto;
+  margin: 12px 16px 0;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface-2);
+  overflow: hidden
+}
+
+.wav-import-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 42px;
+  padding: 9px 12px 9px 34px;
+  position: relative;
+  cursor: pointer;
+  list-style: none;
+  font-size: 13px
+}
+
+.wav-import-heading::-webkit-details-marker {
+  display: none
+}
+
+.wav-import-heading::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform .15s ease
+}
+
+.wav-import[open] .wav-import-heading::before {
+  transform: translateY(2px) rotate(225deg)
+}
+
+.wav-import[open] .wav-import-heading {
+  border-bottom: 1px solid var(--line)
+}
+
+.wav-import-heading small {
+  margin: 0;
+  text-align: right;
+  font-size: 10px
+}
+
+.wav-import-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 10px;
+  padding: 10px 12px 12px
+}
+
+.wav-import input[type="file"] {
+  min-width: 0;
+  width: 100%;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px
+}
+
+.wav-import-actions {
+  display: flex;
+  gap: 6px
+}
+
+.wav-import-actions button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  white-space: nowrap
+}
+
+.wav-import-actions .primary {
+  border-color: var(--accent)
+}
+
+.wav-import progress {
+  grid-column: 1/-1;
+  width: 100%;
+  height: 8px;
+  accent-color: var(--accent)
+}
+
+.wav-status {
+  grid-column: 1/-1;
+  min-height: 1.2em;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4
+}
+
+.wav-status:empty {
+  display: none
+}
+
+.wav-import audio {
+  grid-column: 1/-1;
+  width: 100%;
+  height: 34px
 }
 
 .quick-phrases {
@@ -271,7 +381,7 @@ main {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  font-size: 13px
+  font-size: 14px
 }
 
 .quick-phrases-heading small,
@@ -292,13 +402,13 @@ main {
 
 .quick-phrase-tools {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(140px, .8fr);
+  grid-template-columns: minmax(0, 1fr) minmax(128px, .58fr);
   gap: 7px
 }
 
 .quick-phrase-form input {
   min-width: 0;
-  height: 38px
+  height: 42px
 }
 
 .quick-phrase-form input,
@@ -322,7 +432,7 @@ main {
 }
 
 .quick-phrase-search {
-  height: 38px
+  height: 42px
 }
 
 .quick-phrase-form button,
@@ -341,6 +451,7 @@ main {
 }
 
 .quick-phrase-list {
+  flex: 1 1 auto;
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -702,6 +813,10 @@ main {
   background: var(--staff)
 }
 
+.entry.unknown::before {
+  background: var(--muted)
+}
+
 .entry .meta {
   display: flex;
   align-items: center;
@@ -761,6 +876,21 @@ main {
 
 .entry.incoming .main {
   color: #193d42
+}
+
+.entry.unknown {
+  background: var(--surface-2)
+}
+
+.wav-play {
+  min-height: 26px;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--accent);
+  font: inherit;
+  font-size: 11px
 }
 
 .entry.live {
@@ -1012,6 +1142,7 @@ ruby {
   .status-strip,
   .main-field,
   .quick-controls,
+  .wav-import,
   .quick-phrases {
     grid-column: 1/-1
   }

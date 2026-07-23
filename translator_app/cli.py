@@ -37,7 +37,8 @@ def doctor() -> int:
     version_ok = (3, 11) <= sys.version_info[:2] < (3, 14)
     checks.append(("Python", version_ok, platform.python_version()))
     for package in (
-        "numpy", "sounddevice", "faster_whisper", "fastapi", "pypinyin", "anyascii"
+        "numpy", "sounddevice", "faster_whisper", "fastapi", "pypinyin", "anyascii",
+        "webview",
     ):
         try:
             module = importlib.import_module(package)

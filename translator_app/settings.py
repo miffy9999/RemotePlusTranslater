@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 class UserSettings:
-    SCHEMA_VERSION = 2
+    SCHEMA_VERSION = 4
 
     def __init__(self, data_root: Path):
         self.path = data_root / "user-settings.json"
@@ -40,7 +40,7 @@ class UserSettings:
                 data = json.loads(self.path.read_text(encoding="utf-8"))
             except (OSError, ValueError, TypeError):
                 return {}
-        if not isinstance(data, dict) or data.get("schema_version", 1) not in {1, 2}:
+        if not isinstance(data, dict) or data.get("schema_version", 1) not in {1, 2, 3, 4}:
             return {}
         # Treat this file as untrusted input. It can come from an older build,
         # a partial manual edit, or another PC with different device values.

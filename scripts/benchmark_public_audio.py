@@ -20,7 +20,7 @@ FILES = {
 }
 
 
-def main() -> None:
+def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     cfg = load_config()
@@ -69,7 +69,8 @@ def main() -> None:
         encoding="utf-8",
     )
     print("SUMMARY", json.dumps(summary, ensure_ascii=False))
+    return 1 if summary["failed"] else 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

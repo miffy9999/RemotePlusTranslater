@@ -7,6 +7,7 @@ import re
 from pathlib import Path
 from urllib.parse import urlparse
 
+from translator_app import __version__
 
 ROOT = Path(__file__).resolve().parent.parent
 TOKEN = re.compile(r"\{\{([a-z0-9_]+)\}\}")
@@ -70,6 +71,8 @@ def validate_info(info: dict, info_path: Path) -> list[str]:
         value = str(info.get(field, "")).strip()
         if not value or any(marker.casefold() in value.casefold() for marker in REPLACEMENT_MARKERS):
             errors.append(f"{field} is missing or still contains a placeholder")
+    if str(info.get("product_version", "")).strip() != __version__:
+        errors.append(f"product_version must match the application version {__version__}")
 
     for field in ("publisher_email", "operator_email"):
         email = str(info.get(field, ""))

@@ -11,6 +11,10 @@ let collapsedQuickPhraseSave = Promise.resolve();
 let quickPhraseCategorySaving = false;
 let reconnectDelay = 700;
 let toastTimer;
+let wavJobId = null;
+let wavPollTimer = null;
+let wavObjectUrl = null;
+let wavPlayEnd = null;
 
 const messages = {
   ja: {subtitle:'フロントデスク翻訳チャット',uiLanguage:'表示言語',connecting:'接続中',connected:'ローカル接続済み',reconnecting:'再接続中',settings:'通話設定',starting:'起動中',customerLanguage:'お客様の言語',pause:'一時停止',resume:'再開',inputDevice:'音声入力デバイス',systemDefault:'システム既定',modeNote:'お客様の音声は日本語に翻訳されます。スタッフは右側に日本語を入力します。',conversation:'会話',latestFirst:'最新発話を優先',clear:'履歴を消去',loadingTitle:'システムを準備しています',loadingBody:'準備が完了するとお客様の音声を聞き始めます。',readyTitle:'システム準備完了',readyBody:'お客様の音声を待っています。',replyPlaceholder:'日本語で返答を入力…',translate:'翻訳',composerHint:'Enterで送信・Shift+Enterで改行。翻訳文の下にカタカナとローマ字の読み方が表示されます。',incoming:'お客様 → 日本語',reply:'スタッフ → お客様',katakana:'日本語読み',romanized:'ローマ字読み',translating:'翻訳中…',listening:'聞き取り中',recognizing:'音声認識中',paused:'一時停止中',warning:'注意',error:'エラー',emptyReply:'日本語の返答を入力してください。',sendFailed:'返答を送信できませんでした。'},
@@ -21,14 +25,22 @@ const messages = {
 };
 
 const phraseMessages = {
-  ja: {quickPhrases:'よく使う文章',quickPhrasePlaceholder:'日本語・英語の文章を登録…',quickPhraseSearchPlaceholder:'日本語・英語の単語を検索…',noQuickPhrases:'登録された文章はありません。',noPhraseMatches:'一致する文章はありません。',uncategorized:'未分類',phraseCategory:'カテゴリー',saveCategory:'保存',clearCategory:'分類解除',deletePhrase:'削除',phraseLoaded:'入力欄に移動しました。',phraseAdded:'文章を登録しました。',categorySaved:'カテゴリーを保存しました。'},
-  ko: {quickPhrases:'자주 쓰는 문장',quickPhrasePlaceholder:'일본어·영어 문장 등록…',quickPhraseSearchPlaceholder:'일본어·영어 단어 검색…',noQuickPhrases:'등록된 문장이 없습니다.',noPhraseMatches:'검색 결과가 없습니다.',uncategorized:'미분류',phraseCategory:'카테고리',saveCategory:'저장',clearCategory:'분류 해제',deletePhrase:'삭제',phraseLoaded:'번역 입력창으로 이동했습니다.',phraseAdded:'문장을 등록했습니다.',categorySaved:'카테고리를 저장했습니다.'},
-  en: {quickPhrases:'Quick phrases',quickPhrasePlaceholder:'Register a Japanese or English phrase…',quickPhraseSearchPlaceholder:'Search for a Japanese or English word…',noQuickPhrases:'No phrases registered.',noPhraseMatches:'No matching phrases.',uncategorized:'Uncategorized',phraseCategory:'Category',saveCategory:'Save',clearCategory:'Remove category',deletePhrase:'Delete',phraseLoaded:'Moved to the translation box.',phraseAdded:'Phrase registered.',categorySaved:'Category saved.'},
-  zh: {quickPhrases:'常用语句',quickPhrasePlaceholder:'添加日语句子…',quickPhraseSearchPlaceholder:'搜索句子中的词语…',noQuickPhrases:'尚未添加句子。',noPhraseMatches:'没有匹配的句子。',uncategorized:'未分类',phraseCategory:'分类',saveCategory:'保存',clearCategory:'取消分类',deletePhrase:'删除',phraseLoaded:'已移至翻译输入框。',phraseAdded:'句子已添加。',categorySaved:'分类已保存。'},
-  es: {quickPhrases:'Frases frecuentes',quickPhrasePlaceholder:'Registrar una frase en japonés…',quickPhraseSearchPlaceholder:'Buscar una palabra en las frases…',noQuickPhrases:'No hay frases registradas.',noPhraseMatches:'No hay frases coincidentes.',uncategorized:'Sin categoría',phraseCategory:'Categoría',saveCategory:'Guardar',clearCategory:'Quitar categoría',deletePhrase:'Eliminar',phraseLoaded:'Se movió al cuadro de traducción.',phraseAdded:'Frase registrada.',categorySaved:'Categoría guardada.'}
+  ja: {quickPhrases:'よく使う文章',quickPhrasePlaceholder:'文章を登録…',quickPhraseSearchPlaceholder:'文章を検索…',noQuickPhrases:'登録された文章はありません。',noPhraseMatches:'一致する文章はありません。',uncategorized:'未分類',phraseCategory:'カテゴリー',saveCategory:'保存',clearCategory:'分類解除',deletePhrase:'削除',phraseLoaded:'入力欄に移動しました。',phraseAdded:'文章を登録しました。',categorySaved:'カテゴリーを保存しました。'},
+  ko: {quickPhrases:'자주 쓰는 문장',quickPhrasePlaceholder:'문장 등록…',quickPhraseSearchPlaceholder:'문장 검색…',noQuickPhrases:'등록된 문장이 없습니다.',noPhraseMatches:'검색 결과가 없습니다.',uncategorized:'미분류',phraseCategory:'카테고리',saveCategory:'저장',clearCategory:'분류 해제',deletePhrase:'삭제',phraseLoaded:'번역 입력창으로 이동했습니다.',phraseAdded:'문장을 등록했습니다.',categorySaved:'카테고리를 저장했습니다.'},
+  en: {quickPhrases:'Quick phrases',quickPhrasePlaceholder:'Register phrase…',quickPhraseSearchPlaceholder:'Search phrases…',noQuickPhrases:'No phrases registered.',noPhraseMatches:'No matching phrases.',uncategorized:'Uncategorized',phraseCategory:'Category',saveCategory:'Save',clearCategory:'Remove category',deletePhrase:'Delete',phraseLoaded:'Moved to the translation box.',phraseAdded:'Phrase registered.',categorySaved:'Category saved.'},
+  zh: {quickPhrases:'常用语句',quickPhrasePlaceholder:'添加常用语…',quickPhraseSearchPlaceholder:'搜索常用语…',noQuickPhrases:'尚未添加句子。',noPhraseMatches:'没有匹配的句子。',uncategorized:'未分类',phraseCategory:'分类',saveCategory:'保存',clearCategory:'取消分类',deletePhrase:'删除',phraseLoaded:'已移至翻译输入框。',phraseAdded:'句子已添加。',categorySaved:'分类已保存。'},
+  es: {quickPhrases:'Frases frecuentes',quickPhrasePlaceholder:'Registrar frase…',quickPhraseSearchPlaceholder:'Buscar frases…',noQuickPhrases:'No hay frases registradas.',noPhraseMatches:'No hay frases coincidentes.',uncategorized:'Sin categoría',phraseCategory:'Categoría',saveCategory:'Guardar',clearCategory:'Quitar categoría',deletePhrase:'Eliminar',phraseLoaded:'Se movió al cuadro de traducción.',phraseAdded:'Frase registrada.',categorySaved:'Categoría guardada.'}
 };
 
-function t(key) { return (phraseMessages[ui]||phraseMessages.ja)[key] || (messages[ui] || messages.ja)[key] || messages.ja[key] || key; }
+const wavMessages = {
+  ja: {wavImport:'録音WAVを翻訳',wavImportHint:'お客様とスタッフの会話を時間順に表示します。',wavStart:'WAV解析を開始',wavCancel:'中止',wavChoose:'WAVファイルを選択してください。',wavTooLarge:'WAVは512 MB以下を選択してください。',wavUploading:'WAVを読み込んでいます…',wavProcessing:'音声を解析中 {done}/{total}',wavCompleted:'解析が完了しました。マイクは一時停止中です。必要なら「再開」を押してください。',wavFailed:'WAV解析に失敗しました。',wavCancelled:'WAV解析を中止しました。',wavRoleCustomer:'お客様（推定）',wavRoleStaff:'スタッフ（推定）',wavRoleUnknown:'話者不明',wavPlay:'この部分を再生'},
+  ko: {wavImport:'녹음 WAV 번역',wavImportHint:'고객과 직원의 대화를 시간순으로 표시합니다.',wavStart:'WAV 분석 시작',wavCancel:'중지',wavChoose:'WAV 파일을 선택하세요.',wavTooLarge:'512 MB 이하의 WAV를 선택하세요.',wavUploading:'WAV를 불러오는 중…',wavProcessing:'음성 분석 중 {done}/{total}',wavCompleted:'분석을 완료했습니다. 마이크는 일시 정지 상태입니다. 필요하면 “다시 시작”을 누르세요.',wavFailed:'WAV 분석에 실패했습니다.',wavCancelled:'WAV 분석을 중지했습니다.',wavRoleCustomer:'고객(추정)',wavRoleStaff:'직원(추정)',wavRoleUnknown:'화자 미확인',wavPlay:'이 구간 재생'},
+  en: {wavImport:'Translate recorded WAV',wavImportHint:'Shows customer and staff speech in chronological order.',wavStart:'Analyze WAV',wavCancel:'Cancel',wavChoose:'Choose a WAV file.',wavTooLarge:'Choose a WAV no larger than 512 MB.',wavUploading:'Loading WAV…',wavProcessing:'Analyzing speech {done}/{total}',wavCompleted:'Analysis complete. The microphone remains paused; select Resume when needed.',wavFailed:'WAV analysis failed.',wavCancelled:'WAV analysis cancelled.',wavRoleCustomer:'Customer (estimated)',wavRoleStaff:'Staff (estimated)',wavRoleUnknown:'Unknown speaker',wavPlay:'Play this section'},
+  zh: {wavImport:'翻译录音WAV',wavImportHint:'按时间顺序显示客人与员工的对话。',wavStart:'开始分析WAV',wavCancel:'取消',wavChoose:'请选择WAV文件。',wavTooLarge:'请选择不超过512 MB的WAV。',wavUploading:'正在读取WAV…',wavProcessing:'正在分析语音 {done}/{total}',wavCompleted:'分析完成。麦克风仍处于暂停状态，需要时请点“继续”。',wavFailed:'WAV分析失败。',wavCancelled:'WAV分析已取消。',wavRoleCustomer:'客人（推测）',wavRoleStaff:'员工（推测）',wavRoleUnknown:'说话人不明',wavPlay:'播放此片段'},
+  es: {wavImport:'Traducir WAV grabado',wavImportHint:'Muestra la conversación en orden cronológico.',wavStart:'Analizar WAV',wavCancel:'Cancelar',wavChoose:'Seleccione un archivo WAV.',wavTooLarge:'Seleccione un WAV de 512 MB como máximo.',wavUploading:'Cargando WAV…',wavProcessing:'Analizando audio {done}/{total}',wavCompleted:'Análisis terminado. El micrófono sigue pausado; pulse Continuar cuando sea necesario.',wavFailed:'Error al analizar el WAV.',wavCancelled:'Análisis WAV cancelado.',wavRoleCustomer:'Cliente (estimado)',wavRoleStaff:'Personal (estimado)',wavRoleUnknown:'Hablante desconocido',wavPlay:'Reproducir este fragmento'}
+};
+
+function t(key) { return (wavMessages[ui]||wavMessages.ja)[key] || (phraseMessages[ui]||phraseMessages.ja)[key] || (messages[ui] || messages.ja)[key] || messages.ja[key] || key; }
 function toast(message) { const el=$('#toast'); el.textContent=message; el.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),3500); }
 function setTranslations() {
   document.documentElement.lang=ui;
@@ -41,10 +53,14 @@ function setTranslations() {
 }
 function languageName(code) { const item=languages.find(x=>x.code===code); return item ? `${item.native_name} · ${item.name}` : code || '-'; }
 function updateCardLabels(card) {
+  if(card.dataset.wavRole){card.querySelector('.meta b').textContent=t(`wavRole${card.dataset.wavRole[0].toUpperCase()}${card.dataset.wavRole.slice(1)}`)}
+  else {
   const direction=card.dataset.direction;
   card.querySelector('.meta b').textContent=direction==='reply'?t('reply'):t('incoming');
+  }
   const kana=card.querySelector('.kana-label'); if(kana) kana.textContent=t('katakana');
   const roman=card.querySelector('.roman-label'); if(roman) roman.textContent=t('romanized');
+  const play=card.querySelector('.wav-play');if(play)play.textContent=t('wavPlay');
 }
 function makeCard(id, direction) {
   $('#empty').hidden=true;
@@ -55,8 +71,8 @@ function makeCard(id, direction) {
 }
 function scrollFeed(){const feed=$('#feed'); feed.scrollTop=feed.scrollHeight;}
 function showTranscript(data) {
-  if(data.speech_mode!=='staff') return;
-  const id=String(data.utterance_id); const card=cards.get(id)||makeCard(id,'reply');
+  const direction=data.speech_mode==='staff'?'reply':'incoming';
+  const id=String(data.utterance_id); const card=cards.get(id)||makeCard(id,direction);
   card.querySelector('.source').textContent=data.text; card.querySelector('.main').textContent=t('translating');
 }
 function showTranslation(data) {
@@ -77,11 +93,57 @@ function phaseText(phase){return ({listening:t('listening'),recognizing:t('recog
 function renderState(){
   $('#pause').textContent=state.paused?t('resume'):t('pause');
   const phase=state.paused?'paused':state.phase||'starting'; $('#phase strong').textContent=phaseText(phase);
-  $('#phase').className=`phase ${phase}`; if(state.input_language) $('#partner').textContent=languageName(state.input_language);
+  $('#phase').className=`phase ${phase}`; $('#partner').textContent=languageName(state.input_language);
   const empty=$('#empty'); if(!cards.size){empty.hidden=false; const ready=state.ready&&state.translator_ready; empty.querySelector('h3').textContent=ready?t('readyTitle'):t('loadingTitle'); empty.querySelector('p').textContent=ready?t('readyBody'):t('loadingBody');}
 }
 function applyState(next){state={...state,...next}; renderState(); if(state.input_language&&$('#language').options.length) $('#language').value=state.input_language; if(state.input_device!==undefined&&$('#input-device').options.length) $('#input-device').value=String(state.input_device);}
 async function api(path, options={}){const response=await fetch(path,{headers:{'Content-Type':'application/json',...(options.headers||{})},...options}); if(!response.ok){let detail='';try{detail=(await response.json()).detail}catch{}throw Error(detail||`${response.status}`)}return response.status===204?{}:response.json();}
+function wavText(key, values={}){return Object.entries(values).reduce((text,[name,value])=>text.replace(`{${name}}`,String(value)),t(key))}
+function wavTime(seconds){const value=Math.max(0,Number(seconds)||0);const minutes=Math.floor(value/60);return `${String(minutes).padStart(2,'0')}:${String(Math.floor(value%60)).padStart(2,'0')}`}
+function setWavBusy(busy){$('#start-wav').disabled=busy;$('#cancel-wav').hidden=!busy;$('#language').disabled=busy;$('#input-device').disabled=busy;$('#pause').disabled=busy;$('#reply-text').disabled=busy;$('#send-reply').disabled=busy}
+function resetWavControls(){wavJobId=null;clearTimeout(wavPollTimer);wavPollTimer=null;setWavBusy(false)}
+function playWavSection(start,end){const player=$('#wav-player');wavPlayEnd=Number(end);player.currentTime=Math.max(0,Number(start)||0);player.play().catch(err=>toast(err.message))}
+function renderWavEntries(job){
+  (job.entries||[]).forEach(entry=>{
+    const id=`wav-${job.id}-${entry.index}`;
+    const direction=entry.role==='staff'?'reply':entry.role==='customer'?'incoming':'unknown';
+    const card=cards.get(id)||makeCard(id,direction);
+    card.dataset.wavRole=entry.role;card.dataset.direction=direction;card.className=`entry ${direction}`;
+    card.querySelector('.main').textContent=entry.translated||'';
+    card.querySelector('.source').textContent=entry.source||'';
+    const meta=card.querySelector('.lang');meta.replaceChildren();
+    const label=document.createElement('span');label.textContent=`${wavTime(entry.start_seconds)}–${wavTime(entry.end_seconds)} · ${languageName(entry.source_language)} → ${languageName(entry.target_language)}`;
+    const play=document.createElement('button');play.type='button';play.className='wav-play';play.textContent=t('wavPlay');play.onclick=()=>playWavSection(entry.start_seconds,entry.end_seconds);
+    meta.append(label,play);updateCardLabels(card)
+  });
+  scrollFeed()
+}
+async function pollWavImport(){
+  if(!wavJobId)return;
+  try{
+    const job=await api(`/api/wav-import/${encodeURIComponent(wavJobId)}`);
+    $('#wav-progress').value=job.progress||0;
+    if(job.status==='queued'||job.status==='processing'||job.status==='cancelling'){
+      $('#wav-status').textContent=wavText('wavProcessing',{done:job.processed_segments||0,total:job.total_segments||0});
+      wavPollTimer=setTimeout(pollWavImport,700);return
+    }
+    if(job.status==='completed'){renderWavEntries(job);$('#wav-status').textContent=t('wavCompleted');$('#wav-player').hidden=false}
+    else if(job.status==='cancelled'){$('#wav-status').textContent=t('wavCancelled')}
+    else {$('#wav-status').textContent=`${t('wavFailed')} ${job.error||''}`.trim()}
+    resetWavControls()
+  }catch(err){$('#wav-status').textContent=`${t('wavFailed')} ${err.message}`;resetWavControls()}
+}
+async function startWavImport(){
+  const file=$('#wav-file').files[0];if(!file){toast(t('wavChoose'));return}if(file.size>512*1024*1024){toast(t('wavTooLarge'));return}
+  if(wavObjectUrl)URL.revokeObjectURL(wavObjectUrl);wavObjectUrl=URL.createObjectURL(file);$('#wav-player').src=wavObjectUrl;$('#wav-player').hidden=true;
+  setWavBusy(true);$('#wav-progress').hidden=false;$('#wav-progress').value=0;$('#wav-status').textContent=t('wavUploading');
+  try{
+    const response=await fetch(`/api/wav-import?customer_language=${encodeURIComponent($('#language').value)}`,{method:'POST',headers:{'Content-Type':'audio/wav'},body:file});
+    if(!response.ok){let detail='';try{detail=(await response.json()).detail}catch{}throw Error(detail||String(response.status))}
+    const job=await response.json();[...cards.entries()].filter(([id])=>id.startsWith('wav-')).forEach(([id,card])=>{card.remove();cards.delete(id)});wavJobId=job.id;pollWavImport()
+  }catch(err){$('#wav-status').textContent=`${t('wavFailed')} ${err.message}`;resetWavControls()}
+}
+async function cancelWavImport(){if(!wavJobId)return;clearTimeout(wavPollTimer);wavPollTimer=null;$('#cancel-wav').disabled=true;try{await api(`/api/wav-import/${encodeURIComponent(wavJobId)}`,{method:'DELETE'});$('#wav-status').textContent=t('wavCancelled')}catch(err){toast(err.message)}finally{$('#cancel-wav').disabled=false;pollWavImport()}}
 async function control(payload){applyState(await api('/api/control',{method:'POST',body:JSON.stringify(payload)}));}
 function useQuickPhrase(text){const field=$('#reply-text');field.value=text;field.focus();field.setSelectionRange(text.length,text.length);field.scrollIntoView({block:'nearest'});toast(t('phraseLoaded'));}
 function normalizePhraseSearch(value){return value.normalize('NFKC').toLocaleLowerCase('ja-JP');}
@@ -182,6 +244,9 @@ $('#ui-language').onchange=e=>{ui=e.target.value;storeLocalSetting('remoteplus-u
 $('#language').onchange=e=>control({active_language:e.target.value,reply_language:'auto'}).catch(err=>toast(err.message));
 $('#input-device').onchange=e=>control({input_device:e.target.value}).catch(err=>toast(err.message));
 $('#pause').onclick=()=>control({paused:!state.paused}).catch(err=>toast(err.message));
+$('#start-wav').onclick=startWavImport;
+$('#cancel-wav').onclick=cancelWavImport;
+$('#wav-player').ontimeupdate=event=>{if(wavPlayEnd!==null&&event.target.currentTime>=wavPlayEnd){event.target.pause();wavPlayEnd=null}};
 $('#clear-history').onclick=async()=>{try{await api('/api/history',{method:'DELETE'});cards.forEach(x=>x.remove());cards.clear();renderState()}catch(err){toast(err.message)}};
 $('#reply-form').onsubmit=async event=>{event.preventDefault();const field=$('#reply-text');const text=field.value.trim();if(!text){toast(t('emptyReply'));return}const button=$('#send-reply');button.disabled=true;try{await api('/api/reply',{method:'POST',body:JSON.stringify({text})});field.value=''}catch(err){toast(`${t('sendFailed')} ${err.message}`)}finally{button.disabled=false;field.focus()}};
 $('#reply-text').onkeydown=event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();$('#reply-form').requestSubmit()}};
@@ -192,6 +257,8 @@ $('#clear-quick-phrase-category').onclick=()=>updateQuickPhraseCategory('');
 $('#quick-phrase-category').onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();updateQuickPhraseCategory(event.target.value)}else if(event.key==='Escape')closeQuickPhraseMenu()};
 document.addEventListener('click',event=>{const menu=$('#quick-phrase-menu');if(!menu.hidden&&!menu.contains(event.target))closeQuickPhraseMenu()});
 window.addEventListener('blur',closeQuickPhraseMenu);
+window.addEventListener('beforeunload',()=>{if(wavObjectUrl)URL.revokeObjectURL(wavObjectUrl)});
 
 setTranslations();
+fetch('/api/ui-ready',{method:'POST'}).catch(()=>{});
 loadInitial().then(connect).catch(err=>{toast(err.message);connect()});

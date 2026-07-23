@@ -36,7 +36,7 @@ if ($rebuildVenv) {
 }
 & $venvPython -m pip install --upgrade pip setuptools wheel
 if ($LASTEXITCODE -ne 0) { throw "Packaging tool installation failed: $LASTEXITCODE" }
-& $venvPython -m pip install -e '.[dev]'
+& $venvPython -m pip install --upgrade -e '.[dev]'
 if ($LASTEXITCODE -ne 0) { throw "Application dependency installation failed: $LASTEXITCODE" }
 & $venvPython -m translator_app.cli doctor
 if ($LASTEXITCODE -ne 0) { throw "Installation doctor failed: $LASTEXITCODE" }

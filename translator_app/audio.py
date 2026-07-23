@@ -17,7 +17,7 @@ from .config import AudioConfig, sounddevice_value
 LOOPBACK_PREFIX = "loopback:"
 OUTPUT_PREFIX = "output:"
 MetricsCallback = Callable[..., None]
-SpeechContext = Callable[[], tuple[str, str]]
+SpeechContext = Callable[[], tuple[str, str] | tuple[str, str, str]]
 SpeechStartedSink = Callable[[int, str, str], None]
 LiveSnapshotSink = Callable[["LiveSnapshot"], None]
 
@@ -102,6 +102,9 @@ class SpeechSegmenter:
         self.block_samples = cfg.sample_rate * cfg.block_ms // 1000
         self.block_seconds = self.block_samples / cfg.sample_rate
         self.pre_blocks = max(1, math.ceil(cfg.pre_roll_ms / cfg.block_ms))
+        self.start_confirm_blocks = max(
+            1, math.ceil(cfg.speech_start_confirm_ms / cfg.block_ms)
+        )
         self.end_blocks = max(1, math.ceil(cfg.end_silence_ms / cfg.block_ms))
         self.keep_tail_blocks = max(0, math.ceil(cfg.tail_keep_ms / cfg.block_ms))
         self.min_blocks = max(1, math.ceil(cfg.min_speech_ms / cfg.block_ms))
@@ -111,12 +114,14 @@ class SpeechSegmenter:
         self.speaking = False
         self.silent_blocks = 0
         self.voiced_blocks = 0
+        self.start_candidate_blocks = 0
         self.noise_floor = 0.002
         self.utterance_id = 0
         self.speech_started_at = 0.0
         self.speech_ended_at = 0.0
         self.recognition_language = "en"
         self.reply_language = "en"
+        self.speech_mode = "customer"
         self.live_revision = 0
         self.last_live_emit_at = 0.0
 
@@ -126,11 +131,13 @@ class SpeechSegmenter:
         self.speaking = False
         self.silent_blocks = 0
         self.voiced_blocks = 0
+        self.start_candidate_blocks = 0
         self.utterance_id = 0
         self.speech_started_at = 0.0
         self.speech_ended_at = 0.0
         self.recognition_language = "en"
         self.reply_language = "en"
+        self.speech_mode = "customer"
         self.live_revision = 0
         self.last_live_emit_at = 0.0
 
@@ -142,6 +149,7 @@ class SpeechSegmenter:
         candidate_utterance_id: int | None = None,
         recognition_language: str = "en",
         reply_language: str = "en",
+        speech_mode: str = "customer",
     ) -> _SegmentResult | None:
         frame_ended_at = time.monotonic() if frame_ended_at is None else frame_ended_at
         candidate_utterance_id = self.utterance_id + 1 if candidate_utterance_id is None else candidate_utterance_id
@@ -157,15 +165,23 @@ class SpeechSegmenter:
         if not self.speaking:
             self.pre_roll.append(frame.copy())
             if rms >= start_threshold:
+                self.start_candidate_blocks += 1
+            else:
+                self.start_candidate_blocks = 0
+            if self.start_candidate_blocks >= self.start_confirm_blocks:
                 self.speaking = True
                 self.frames = list(self.pre_roll)
-                self.voiced_blocks = 1
+                self.voiced_blocks = self.start_candidate_blocks
                 self.silent_blocks = 0
                 self.utterance_id = candidate_utterance_id
-                self.speech_started_at = max(0.0, frame_ended_at - self.block_seconds)
+                self.speech_started_at = max(
+                    0.0,
+                    frame_ended_at - self.start_candidate_blocks * self.block_seconds,
+                )
                 self.speech_ended_at = frame_ended_at
                 self.recognition_language = recognition_language
                 self.reply_language = reply_language
+                self.speech_mode = "customer"
             return None
 
         self.frames.append(frame.copy())
@@ -196,7 +212,7 @@ class SpeechSegmenter:
                 speech_started_at=self.speech_started_at,
                 speech_ended_at=self.speech_ended_at or frame_ended_at,
                 ready_at=frame_ended_at,
-                speech_mode="customer",
+                speech_mode=self.speech_mode,
                 recognition_language=self.recognition_language,
                 reply_language=self.reply_language,
             )
@@ -228,7 +244,7 @@ class SpeechSegmenter:
             speech_started_at=self.speech_started_at,
             captured_at=captured_at,
             speech_seconds=speech_seconds,
-            speech_mode="customer",
+            speech_mode=self.speech_mode,
             recognition_language=self.recognition_language,
         )
 
@@ -280,16 +296,22 @@ class AudioCapture(threading.Thread):
     def last_utterance_id(self) -> int:
         return self._next_utterance_id
 
-    def _speech_context(self) -> tuple[str, str]:
+    def _speech_context(self) -> tuple[str, str, str]:
         if self.context is None:
-            return "en", "en"
+            return "customer", "en", "en"
         try:
-            language, reply_language = self.context()
+            context = self.context()
+            if len(context) == 2:
+                language, reply_language = context
+                speech_mode = "customer"
+            else:
+                speech_mode, language, reply_language = context
+            speech_mode = "customer"
             language = str(language or "en").strip().lower()
             reply_language = str(reply_language or "en").strip().lower()
-            return language or "en", reply_language or "en"
+            return speech_mode, language or "en", reply_language or "en"
         except Exception:
-            return "en", "en"
+            return "customer", "en", "en"
 
     def reserve_utterance_id(self) -> int:
         """Reserve an ID for a typed staff reply without colliding with audio."""
@@ -338,7 +360,7 @@ class AudioCapture(threading.Thread):
             if was_speaking and now >= self._next_gap_warning_at:
                 self.status("warning", "Audio frames were lost; the incomplete utterance was discarded")
                 self._next_gap_warning_at = now + 10.0
-        language, reply_language = self._speech_context()
+        speech_mode, language, reply_language = self._speech_context()
         was_speaking = self.segmenter.speaking
         result = self.segmenter.process(
             frame,
@@ -346,6 +368,7 @@ class AudioCapture(threading.Thread):
             candidate_utterance_id=self._next_utterance_id + 1,
             recognition_language=language,
             reply_language=reply_language,
+            speech_mode=speech_mode,
         )
         if self.segmenter.speaking and self.segmenter.utterance_id > self._next_utterance_id:
             self._next_utterance_id = self.segmenter.utterance_id

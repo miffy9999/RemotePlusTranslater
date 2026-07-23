@@ -2,11 +2,50 @@ from __future__ import annotations
 
 import ctypes
 import os
+import subprocess
 from ctypes import wintypes
 
 
 _JOB_HANDLE = None
 _INSTANCE_HANDLE = None
+
+
+def hidden_subprocess_options() -> dict[str, object]:
+    """Return Windows process options that never allocate or show a console."""
+    if os.name != "nt":
+        return {}
+    startup_info = subprocess.STARTUPINFO()
+    startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startup_info.wShowWindow = subprocess.SW_HIDE
+    return {
+        "creationflags": subprocess.CREATE_NO_WINDOW,
+        "startupinfo": startup_info,
+    }
+
+
+def activate_existing_window(title: str = "RemotePlus Translator") -> bool:
+    """Restore the existing app window when the shortcut is clicked twice."""
+    if os.name != "nt":
+        return False
+    try:
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        user32.FindWindowW.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR]
+        user32.FindWindowW.restype = wintypes.HWND
+        user32.IsIconic.argtypes = [wintypes.HWND]
+        user32.IsIconic.restype = wintypes.BOOL
+        user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+        user32.SetForegroundWindow.argtypes = [wintypes.HWND]
+        user32.SetForegroundWindow.restype = wintypes.BOOL
+        handle = user32.FindWindowW(None, title)
+        if not handle:
+            return False
+        if user32.IsIconic(handle):
+            user32.ShowWindow(handle, 9)  # SW_RESTORE
+        else:
+            user32.ShowWindow(handle, 5)  # SW_SHOW
+        return bool(user32.SetForegroundWindow(handle))
+    except Exception:
+        return False
 
 
 def acquire_single_instance(name: str = "Local\\RemotePlusTranslator") -> bool:

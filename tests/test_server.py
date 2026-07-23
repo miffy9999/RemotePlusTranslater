@@ -6,11 +6,11 @@ from translator_app.config import load_config
 from translator_app.server import create_app
 
 
-def make_client(tmp_path):
+def make_client(tmp_path, **app_kwargs):
     cfg = load_config()
     cfg.data_root = tmp_path
     return TestClient(
-        create_app(cfg, start_backend=False),
+        create_app(cfg, start_backend=False, **app_kwargs),
         base_url=f"http://127.0.0.1:{cfg.server.port}",
     )
 
@@ -35,6 +35,17 @@ def test_state_exposes_languages_and_reading_capabilities(tmp_path):
         assert "ko" in data["reading"]["katakana_languages"]
 
 
+def test_ui_ready_health_signal_and_removed_staff_voice_mode_is_rejected(tmp_path):
+    with make_client(tmp_path) as client:
+        authenticate(client)
+        assert client.app.state.ui_ready_event.is_set() is False
+        assert client.post("/api/ui-ready").status_code == 204
+        assert client.app.state.ui_ready_event.is_set() is True
+        response = client.post("/api/control", json={"speech_mode": "staff"})
+        assert response.status_code == 422
+        assert "speech_mode" not in client.get("/api/state").json()["state"]
+
+
 def test_staff_reply_endpoint_accepts_text_and_rejects_stale_tts_fields(tmp_path):
     with make_client(tmp_path) as client:
         authenticate(client)
@@ -43,6 +54,101 @@ def test_staff_reply_endpoint_accepts_text_and_rejects_stale_tts_fields(tmp_path
         assert response.json()["utterance_id"] > 0
         assert client.post("/api/control", json={"tts_enabled": False}).status_code == 422
         assert client.post("/api/reply", json={"text": ""}).status_code == 400
+
+
+def test_wav_import_upload_pauses_live_capture_and_exposes_status(tmp_path):
+    class FakeWavManager:
+        def __init__(self):
+            self.jobs = {}
+
+        def submit(self, path, customer_language):
+            assert path.read_bytes() == b"RIFF" + b"\0" * 40
+            path.unlink()
+            job = {
+                "id": "wav-job",
+                "customer_language": customer_language,
+                "status": "completed",
+                "progress": 1.0,
+                "entries": [],
+            }
+            self.jobs[job["id"]] = job
+            return job
+
+        def status(self, job_id):
+            return self.jobs.get(job_id)
+
+        def cancel(self, job_id):
+            return False
+
+        def close(self):
+            return None
+
+    manager = FakeWavManager()
+    with make_client(tmp_path, wav_import_manager=manager) as client:
+        authenticate(client)
+        response = client.post(
+            "/api/wav-import?customer_language=ko",
+            content=b"RIFF" + b"\0" * 40,
+            headers={"content-type": "audio/wav"},
+        )
+        assert response.status_code == 202
+        assert response.json()["id"] == "wav-job"
+        assert client.app.state.controller.snapshot()["paused"] is True
+        assert client.get("/api/wav-import/wav-job").status_code == 200
+
+
+def test_wav_import_rejects_non_wav_content_type(tmp_path):
+    with make_client(tmp_path) as client:
+        authenticate(client)
+        response = client.post(
+            "/api/wav-import?customer_language=ko",
+            content=b"not a wav",
+            headers={"content-type": "text/plain"},
+        )
+        assert response.status_code == 415
+
+
+def test_server_removes_wav_temporary_files_left_by_a_crash(tmp_path):
+    imports = tmp_path / "wav-imports"
+    imports.mkdir()
+    stale = imports / "remoteplus-wav-crashed.wav"
+    unrelated = imports / "keep.wav"
+    stale.write_bytes(b"stale")
+    unrelated.write_bytes(b"original")
+
+    with make_client(tmp_path):
+        pass
+
+    assert not stale.exists()
+    assert unrelated.read_bytes() == b"original"
+
+
+def test_live_mutations_are_rejected_while_wav_import_owns_models(tmp_path):
+    class BusyWavManager:
+        def active(self):
+            return True
+
+        def status(self, _job_id):
+            return None
+
+        def cancel(self, _job_id):
+            return False
+
+        def close(self):
+            return None
+
+    with make_client(tmp_path, wav_import_manager=BusyWavManager()) as client:
+        authenticate(client)
+        assert client.post("/api/reply", json={"text": "確認します"}).status_code == 409
+        assert client.post(
+            "/api/control", json={"active_language": "ko"}
+        ).status_code == 409
+        assert client.post("/api/control", json={"paused": True}).status_code == 200
+        assert client.post(
+            "/api/wav-import?customer_language=ko",
+            content=b"RIFF" + b"\0" * 40,
+            headers={"content-type": "audio/wav"},
+        ).status_code == 409
 
 
 def test_quick_phrases_can_be_registered_listed_and_deleted(tmp_path):

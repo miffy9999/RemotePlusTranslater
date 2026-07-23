@@ -4,6 +4,7 @@ Set-Location $PSScriptRoot
 
 $commercialMetadata = $null
 $commercialInfoPath = '.\legal\distributor-info.local.json'
+$webView2Installer = '.\build\redist\MicrosoftEdgeWebView2RuntimeInstallerX64.exe'
 if ($CommercialRelease) {
     if (-not (Test-Path -LiteralPath $commercialInfoPath)) {
         throw 'Copy legal\distributor-info.example.json to legal\distributor-info.local.json and enter the real operator information.'
@@ -13,15 +14,27 @@ if ($CommercialRelease) {
     } catch {
         throw "Invalid commercial distributor metadata: $($_.Exception.Message)"
     }
+    if (-not (Test-Path -LiteralPath $webView2Installer)) {
+        throw "Offline hotel deployment requires the WebView2 Evergreen x64 standalone installer: $webView2Installer"
+    }
+    $webView2Signature = Get-AuthenticodeSignature -LiteralPath $webView2Installer
+    if ($webView2Signature.Status -ne 'Valid' -or
+        $webView2Signature.SignerCertificate.Subject -notmatch 'Microsoft') {
+        throw 'The bundled WebView2 installer must have a valid Microsoft Authenticode signature.'
+    }
 }
 
 if (-not (Test-Path '.venv\Scripts\python.exe')) {
     throw 'Run install.bat first.'
 }
 
-& '.\.venv\Scripts\python.exe' -m pip install -e '.[dev]'
+& '.\.venv\Scripts\python.exe' -m pip install --upgrade -e '.[dev]'
 if ($LASTEXITCODE -ne 0) {
     throw "Dependency installation failed with exit code $LASTEXITCODE"
+}
+$version = (& '.\.venv\Scripts\python.exe' -c 'from translator_app import __version__; print(__version__)').Trim()
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($version)) {
+    throw 'Could not determine the application version.'
 }
 Remove-Item -Recurse -Force '.\dist\RemotePlusTranslator' -ErrorAction SilentlyContinue
 & '.\.venv\Scripts\python.exe' -m PyInstaller --noconfirm --clean '.\build\local_bridge.spec'
@@ -45,6 +58,21 @@ if ($CommercialRelease) {
     Copy-Item '.\PRIVACY_NOTICE_JA.md' '.\dist\RemotePlusTranslator\PRIVACY_NOTICE_JA.md' -Force
 }
 Copy-Item '.\docs' '.\dist\RemotePlusTranslator\docs' -Recurse -Force
+$manualDocsTarget = '.\dist\RemotePlusTranslator\docs\manual_ja'
+if (Test-Path -LiteralPath $manualDocsTarget) {
+    # The release needs only the finished PDF, not HTML sources or QA screenshots.
+    Remove-Item -LiteralPath $manualDocsTarget -Recurse -Force
+}
+$manualPdfs = @(
+    Get-ChildItem -LiteralPath '.\docs\manual_ja' -File -Filter "*_$version.pdf" |
+        Where-Object { $_.Name -like 'RemotePlus_Translator_*' }
+)
+if ($manualPdfs.Count -ne 1) {
+    throw "Expected exactly one finished manual PDF for version $version; found $($manualPdfs.Count)."
+}
+$manualPdf = $manualPdfs[0]
+Copy-Item -LiteralPath $manualPdf.FullName `
+    -Destination (Join-Path '.\dist\RemotePlusTranslator' $manualPdf.Name) -Force
 & '.\.venv\Scripts\python.exe' '.\scripts\generate_compliance.py' '.\dist\RemotePlusTranslator'
 if ($LASTEXITCODE -ne 0) {
     throw 'Compliance inventory is incomplete. Add the missing license files before release.'
@@ -122,15 +150,15 @@ if ($doctor.ExitCode -ne 0) {
 
 $iscc = Get-Command ISCC.exe -ErrorAction SilentlyContinue
 if ($CommercialRelease -and $iscc) {
-    & $iscc.Source '.\build\installer.iss'
+    & $iscc.Source "/DMyAppVersion=$version" '.\build\installer.iss'
     if ($LASTEXITCODE -ne 0) {
         throw "Inno Setup failed with exit code $LASTEXITCODE"
     }
     Write-Host 'Installer created in dist\installer' -ForegroundColor Green
-    Sign-CommercialArtifact ".\dist\installer\RemotePlusTranslator-Setup-0.7.0.exe"
+    Sign-CommercialArtifact ".\dist\installer\RemotePlusTranslator-Setup-$version.exe"
     Write-SignatureReport @(
         '.\dist\RemotePlusTranslator\RemotePlusTranslator.exe',
-        '.\dist\installer\RemotePlusTranslator-Setup-0.7.0.exe'
+        ".\dist\installer\RemotePlusTranslator-Setup-$version.exe"
     )
 } else {
     if ($CommercialRelease) { throw 'Inno Setup 6 is required for -CommercialRelease.' }

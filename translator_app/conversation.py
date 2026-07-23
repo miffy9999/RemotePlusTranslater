@@ -19,7 +19,7 @@ from .audio import AudioCapture, LiveSnapshot, Utterance, validate_input_device
 from .config import AppConfig
 from .diagnostics import log_exception
 from .events import EventBus
-from .hymt2 import create_translator
+from .hymt2 import create_translator, needs_conversation_context
 from .languages import get_language
 from .reading import reading_guide, romanized_guide
 from .stt import Recognition, WhisperRecognizer
@@ -87,6 +87,14 @@ class ReadingJob:
     language: str
 
 
+@dataclass(slots=True)
+class DialogueTurn:
+    utterance_id: int
+    text: str
+    language: str
+    speech_mode: str
+
+
 _NOISE_TEXT = re.compile(r"^(thanks for watching|subscribe|ご視聴ありがとうございました|字幕視聴ありがとうございました)$", re.IGNORECASE)
 _JAPANESE_SCRIPT = re.compile(r"[\u3040-\u30ff\u3400-\u9fff]")
 _LATIN_SCRIPT = re.compile(r"[A-Za-z]")
@@ -139,9 +147,13 @@ def _create_debug_logger(data_root: Path) -> logging.Logger | None:
     try:
         log_dir = data_root / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
-        # Normal timing logs are only useful for the current field session.
-        # Persistent failures are captured separately in errors.log.
-        for old_log in log_dir.glob("timing-*.log*"):
+        # Retain a bounded set of previous field sessions for regression work.
+        old_logs = sorted(
+            log_dir.glob("timing-*.log*"),
+            key=lambda path: path.stat().st_mtime,
+            reverse=True,
+        )
+        for old_log in old_logs[8:]:
             try:
                 old_log.unlink()
             except OSError:
@@ -204,9 +216,13 @@ class ConversationController:
         # need to take _state_lock themselves and may probe slow audio drivers.
         self._control_lock = threading.Lock()
         self._capture_lock = threading.Lock()
+        self.recognizer_lock = threading.Lock()
+        self.translator_lock = threading.Lock()
         self._latest_lock = threading.Lock()
         self._latest_started_by_mode: dict[str, int] = {"customer": 0, "staff": 0}
         self._live_lock = threading.Lock()
+        self._context_lock = threading.Lock()
+        self._dialogue_context: deque[DialogueTurn] = deque(maxlen=8)
         self._live_decode_done: dict[int, threading.Event] = {}
         self._utterances: queue.Queue[Utterance] = queue.Queue(maxsize=1)
         self._recognitions: queue.Queue[RecognitionJob] = queue.Queue(maxsize=1)
@@ -263,12 +279,39 @@ class ConversationController:
             initial_utterance_id=initial_id,
         )
 
-    def _capture_context(self) -> tuple[str, str]:
+    def _capture_context(self) -> tuple[str, str, str]:
         with self._state_lock:
             customer = self.state.input_language
             reply = self.state.reply_language
             target = reply if reply != "auto" else self.state.active_language or customer
-        return customer, target
+        return "customer", customer, target
+
+    def _remember_dialogue_turn(
+        self,
+        utterance_id: int,
+        text: str,
+        language: str,
+        speech_mode: str,
+    ) -> None:
+        turn = DialogueTurn(utterance_id, text.strip(), language, speech_mode)
+        if not turn.text:
+            return
+        with self._context_lock:
+            retained = [item for item in self._dialogue_context if item.utterance_id != utterance_id]
+            retained.append(turn)
+            retained.sort(key=lambda item: item.utterance_id)
+            self._dialogue_context.clear()
+            self._dialogue_context.extend(retained[-self._dialogue_context.maxlen :])
+
+    def _previous_dialogue_context(self, utterance_id: int) -> str:
+        with self._context_lock:
+            previous = [item for item in self._dialogue_context if item.utterance_id < utterance_id]
+        lines = [f"{item.speech_mode}: {item.text}" for item in previous[-2:]]
+        return "\n".join(lines)
+
+    def clear_dialogue_context(self) -> None:
+        with self._context_lock:
+            self._dialogue_context.clear()
 
     def _speech_started(self, utterance_id: int, speech_mode: str, language: str) -> None:
         with self._latest_lock:
@@ -308,7 +351,7 @@ class ConversationController:
             pipeline="customer_audio_staff_text_reading_guide",
             live_preview=False,
             final_model=self.cfg.stt.model,
-            staff_input="text",
+            staff_input="voice_or_text",
         )
         self._translation_worker.start()
         self._reading_worker.start()
@@ -349,9 +392,15 @@ class ConversationController:
                 self.translator.cancel_active_request()
             except Exception:
                 pass
+        if hasattr(self.translator, "begin_shutdown"):
+            try:
+                self.translator.begin_shutdown()
+            except Exception:
+                log_exception("translation engine immediate shutdown failed")
         if hasattr(self.translator, "close"):
             try:
-                self.translator.close()
+                with self.translator_lock:
+                    self.translator.close()
             except Exception:
                 log_exception("translation engine shutdown failed")
         join_deadline = time.monotonic() + 6
@@ -570,7 +619,8 @@ class ConversationController:
             started = time.monotonic()
             self._status("loading", "Loading final speech model")
             self._log_perf("whisper_load_started", model=self.cfg.stt.model)
-            self.recognizer.load()
+            with self.recognizer_lock:
+                self.recognizer.load()
             self._ready.set()
             self._log_perf("whisper_ready", seconds=f"{time.monotonic() - started:.3f}")
             if self._stop.is_set():
@@ -636,7 +686,8 @@ class ConversationController:
                 self._recognizing_active.set()
                 self._status("recognizing", "Recognizing")
                 try:
-                    result = self.recognizer.transcribe(item.audio, language=forced)
+                    with self.recognizer_lock:
+                        result = self.recognizer.transcribe(item.audio, language=forced)
                 except Exception as exc:
                     self._mark_finalized(item.utterance_id)
                     self.bus.publish("preview_discard", utterance_id=item.utterance_id)
@@ -665,12 +716,19 @@ class ConversationController:
                         cleaned_characters=len(cleaned_text),
                     )
                     text = cleaned_text
-                    result = Recognition(text=text, language=forced, probability=result.probability)
+                    result = Recognition(
+                        text=text,
+                        language=forced,
+                        probability=result.probability,
+                        confidence=result.confidence,
+                        no_speech_probability=result.no_speech_probability,
+                    )
                 if not text or _NOISE_TEXT.match(text):
                     self.bus.publish("preview_discard", utterance_id=item.utterance_id)
                     self._log_perf("recognition_skipped", utterance_id=item.utterance_id, speech_mode=item.speech_mode, reason="empty_or_noise")
                     self._status("listening", "Listening")
                     continue
+                self._remember_dialogue_turn(item.utterance_id, text, forced, item.speech_mode)
                 self.bus.publish("transcript", utterance_id=item.utterance_id, text=text, language=forced, probability=round(result.probability, 3), final=True)
                 self._put_latest_recognition(RecognitionJob(result, forced, item.speech_mode, item.duration, stt_started, stt_seconds, item.utterance_id, item.speech_ended_at, item.ready_at, item.speech_seconds, item.vad_tail_seconds, item.reply_language))
                 self._status("listening", "Listening")
@@ -683,17 +741,20 @@ class ConversationController:
         started = time.monotonic()
         try:
             self._log_perf("translator_load_started")
-            self.translator.load()
+            with self.translator_lock:
+                self.translator.load()
+                if hasattr(self.translator, "warmup"):
+                    self.translator.warmup()
             if self._stop.is_set() or getattr(self.translator, "ready", True) is False:
                 self._translator_failed.set()
                 return
             process_seconds = time.monotonic() - started
             self._log_perf("translator_process_ready", seconds=f"{process_seconds:.3f}")
-            warmup_started = time.monotonic()
-            if hasattr(self.translator, "warmup"):
-                self.translator.warmup()
             self._translator_ready.set()
-            self._log_perf("translator_ready", seconds=f"{time.monotonic() - started:.3f}", warmup_seconds=f"{time.monotonic() - warmup_started:.3f}")
+            self._log_perf(
+                "translator_ready",
+                seconds=f"{time.monotonic() - started:.3f}",
+            )
             self.bus.publish("state", **self.snapshot())
         except Exception as exc:
             self._translator_failed.set()
@@ -792,7 +853,21 @@ class ConversationController:
         self._status("translating", "Translating")
         self._log_perf("translation_started", utterance_id=job.utterance_id, speech_mode=job.speech_mode, source_language=source, target_language=target, stt_to_translation_queue_seconds=f"{max(0.0, started - (job.stt_started_at + job.stt_seconds)):.3f}")
         try:
-            translated = self.translator.translate(text, source, target)
+            with self.translator_lock:
+                previous_text = self._previous_dialogue_context(job.utterance_id)
+                if (
+                    previous_text
+                    and needs_conversation_context(text, source)
+                    and hasattr(self.translator, "translate_contextual")
+                ):
+                    translated = self.translator.translate_contextual(
+                        text,
+                        source,
+                        target,
+                        previous_text=previous_text,
+                    )
+                else:
+                    translated = self.translator.translate(text, source, target)
         except Exception as exc:
             self._translating_active.clear()
             if self._is_stale(job):
@@ -846,6 +921,7 @@ class ConversationController:
             0.0,
             reply if reply != "auto" else active,
         )
+        self._remember_dialogue_turn(utterance_id, text, selected, "customer")
         self._translate_job(job)
 
     def submit_staff_text(self, text: str) -> int:
@@ -884,6 +960,7 @@ class ConversationController:
             0.0,
             target,
         )
+        self._remember_dialogue_turn(utterance_id, clean, source_language, "staff")
         self._put_latest_recognition(job)
         self.bus.publish(
             "transcript",
@@ -934,6 +1011,7 @@ class ConversationController:
     @_serialized_control
     def control(self, *, paused: bool | None = None, active_language: str | None = None, reply_language: str | None = None, input_device: str | int | None = None, enabled_languages: list[str] | None = None) -> dict:
         previous_input_device: str | int | None = None
+        clear_context = False
         if input_device is not None:
             with self._state_lock:
                 previous_input_device = self.state.input_device
@@ -963,6 +1041,7 @@ class ConversationController:
                 self.state.active_language = language
                 self.state.active_language_at = time.time()
                 self.cfg.conversation.language_lock = language
+                clear_context = True
             if reply_language is not None:
                 language = reply_language.lower().strip()
                 if language != "auto" and (language == "ja" or language not in (self.state.enabled_languages or []) or get_language(language) is None):
@@ -977,6 +1056,8 @@ class ConversationController:
             forced = self.state.input_language
             enabled_snapshot = list(self.state.enabled_languages or [])
             paused_snapshot = self.state.paused
+        if clear_context:
+            self.clear_dialogue_context()
         for recognizer in (self.recognizer, self.live_recognizer):
             if recognizer is None:
                 continue

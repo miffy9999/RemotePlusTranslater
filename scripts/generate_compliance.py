@@ -9,10 +9,13 @@ from pathlib import Path
 
 from packaging.requirements import Requirement
 
+from translator_app import __version__
+
 
 ROOT_PACKAGES = {
     "faster-whisper", "numpy", "sounddevice", "soundcard", "pywin32", "fastapi",
-    "starlette", "pydantic", "uvicorn", "pypinyin", "anyascii", "pyinstaller",
+    "starlette", "pydantic", "uvicorn", "pypinyin", "anyascii", "pywebview",
+    "pyinstaller",
 }
 LICENSE_NAMES = re.compile(r"^(licen[cs]e|copying|notice|authors?|lgpl|gpl)(\.|$)", re.IGNORECASE)
 
@@ -59,6 +62,9 @@ def generate(destination: Path) -> dict:
     fallback_license = {
         "ctranslate2": project_mit,
         "flatbuffers": apache_2,
+        "proxy-tools": Path(__file__).resolve().parent.parent
+        / "legal"
+        / "PROXY_TOOLS-BSD.txt",
         "tokenizers": apache_2,
     }
     for dist in dependency_closure():
@@ -96,7 +102,13 @@ def generate(destination: Path) -> dict:
         "bomFormat": "CycloneDX",
         "specVersion": "1.5",
         "version": 1,
-        "metadata": {"component": {"type": "application", "name": "RemotePlus Translator", "version": "0.7.0"}},
+        "metadata": {
+            "component": {
+                "type": "application",
+                "name": "RemotePlus Translator",
+                "version": __version__,
+            }
+        },
         "components": components,
         "properties": [
             {"name": "remoteplus:missing-license-files", "value": ",".join(missing_license_files)}

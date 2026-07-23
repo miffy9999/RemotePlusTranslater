@@ -16,6 +16,223 @@ def _phrase(pattern: str, en: str, ko: str, zh: str, es: str) -> Phrase:
 
 PHRASES = (
     _phrase(
+        r"^おはよう(?:ございます)?[。.!！]?$",
+        "Good morning.",
+        "안녕하세요.",
+        "早上好。",
+        "Buenos días.",
+    ),
+    _phrase(
+        r"^こんにちは[。.!！]?$",
+        "Hello.",
+        "안녕하세요.",
+        "您好。",
+        "Hola.",
+    ),
+    _phrase(
+        r"^こんばんは[。.!！]?$",
+        "Good evening.",
+        "안녕하세요.",
+        "晚上好。",
+        "Buenas tardes.",
+    ),
+    _phrase(
+        r"^おやすみなさい[。.!！]?$",
+        "Good night.",
+        "안녕히 주무세요.",
+        "晚安。",
+        "Buenas noches.",
+    ),
+    _phrase(
+        r"^はじめまして[。.!！]?$",
+        "It's a pleasure to meet you.",
+        "처음 뵙겠습니다.",
+        "很高兴认识您。",
+        "Mucho gusto.",
+    ),
+    _phrase(
+        r"^(?:どうも)?ありがとうございます[。.!！]?$",
+        "Thank you very much.",
+        "감사합니다.",
+        "非常感谢。",
+        "Muchas gracias.",
+    ),
+    _phrase(
+        r"^どういたしまして[。.!！]?$",
+        "You're welcome.",
+        "천만에요.",
+        "不客气。",
+        "De nada.",
+    ),
+    _phrase(
+        r"^(?:ごめんなさい|申し訳ありません)[。.!！]?$",
+        "I'm sorry.",
+        "죄송합니다.",
+        "对不起。",
+        "Lo siento.",
+    ),
+    _phrase(
+        r"^大丈夫ですか[。.!！?？]?$",
+        "Are you all right?",
+        "괜찮으세요?",
+        "您没事吧？",
+        "¿Se encuentra bien?",
+    ),
+    _phrase(
+        r"^(?:大丈夫|問題ありません)です?[。.!！]?$",
+        "It's all right.",
+        "괜찮습니다.",
+        "没问题。",
+        "No hay problema.",
+    ),
+    _phrase(
+        r"^はい、?そうです[。.!！]?$",
+        "Yes, that's right.",
+        "네, 맞습니다.",
+        "是的，没错。",
+        "Sí, así es.",
+    ),
+    _phrase(
+        r"^いいえ、?違います[。.!！]?$",
+        "No, that's not correct.",
+        "아니요, 그렇지 않습니다.",
+        "不，不是这样。",
+        "No, no es así.",
+    ),
+    _phrase(
+        r"^(?:よく)?わかりません[。.!！]?$",
+        "I'm not sure.",
+        "잘 모르겠습니다.",
+        "我不太清楚。",
+        "No estoy seguro.",
+    ),
+    _phrase(
+        r"^お願いします[。.!！]?$",
+        "Yes, please.",
+        "부탁드립니다.",
+        "拜托了。",
+        "Sí, por favor.",
+    ),
+    _phrase(
+        r"^(?:それ|そちら|これ|こちら)でお願いします[。.!！]?$",
+        "That one, please.",
+        "그걸로 부탁드립니다.",
+        "请按那个办理。",
+        "Ese, por favor.",
+    ),
+    _phrase(
+        r"^それなら大丈夫です[。.!！]?$",
+        "That will be fine.",
+        "그렇다면 괜찮습니다.",
+        "那样就可以。",
+        "En ese caso, está bien.",
+    ),
+    _phrase(
+        r"^それは含まれていますか[。.!！?？]?$",
+        "Is that included?",
+        "그것도 포함되어 있나요?",
+        "那个包含在内吗？",
+        "¿Eso está incluido?",
+    ),
+    _phrase(
+        r"^もちろんです[。.!！]?$",
+        "Certainly.",
+        "물론입니다.",
+        "当然可以。",
+        "Por supuesto.",
+    ),
+    _phrase(
+        r"^失礼いたします[。.!！]?$",
+        "Excuse me.",
+        "실례하겠습니다.",
+        "失陪了。",
+        "Disculpe.",
+    ),
+    _phrase(
+        r"^さようなら[。.!！]?$",
+        "Goodbye.",
+        "안녕히 가세요.",
+        "再见。",
+        "Adiós.",
+    ),
+    _phrase(
+        r"^また明日[。.!！]?$",
+        "See you tomorrow.",
+        "내일 뵙겠습니다.",
+        "明天见。",
+        "Hasta mañana.",
+    ),
+    _phrase(
+        r"^お気をつけて(?:お帰り)?ください[。.!！]?$",
+        "Have a safe journey.",
+        "조심히 돌아가세요.",
+        "请慢走。",
+        "Que tenga buen viaje.",
+    ),
+    _phrase(
+        r"^またお越しください[。.!！]?$",
+        "We look forward to welcoming you again.",
+        "다음에 또 방문해 주세요.",
+        "欢迎您再次光临。",
+        "Esperamos volver a recibirle.",
+    ),
+    _phrase(
+        r"^よかったです[。.!！]?$",
+        "I'm glad to hear that.",
+        "다행입니다.",
+        "那太好了。",
+        "Me alegro.",
+    ),
+    _phrase(
+        r"^聞こえません[。.!！]?$",
+        "I can't hear you.",
+        "잘 들리지 않습니다.",
+        "我听不清。",
+        "No le oigo bien.",
+    ),
+    _phrase(
+        r"^もう少し大きな声でお願いします[。.!！]?$",
+        "Could you speak a little louder, please?",
+        "조금 더 큰 목소리로 말씀해 주세요.",
+        "请说大声一点。",
+        "¿Podría hablar un poco más alto, por favor?",
+    ),
+    _phrase(
+        r"^どういう意味ですか[。.!！?？]?$",
+        "What do you mean?",
+        "무슨 뜻인가요?",
+        "您是什么意思？",
+        "¿Qué quiere decir?",
+    ),
+    _phrase(
+        r"^お名前は何ですか[。.!！?？]?$",
+        "May I have your name?",
+        "성함이 어떻게 되시나요?",
+        "请问您叫什么名字？",
+        "¿Podría indicarme su nombre?",
+    ),
+    _phrase(
+        r"^どこですか[。.!！?？]?$",
+        "Where is it?",
+        "어디에 있나요?",
+        "在哪里？",
+        "¿Dónde está?",
+    ),
+    _phrase(
+        r"^何時ですか[。.!！?？]?$",
+        "What time is it?",
+        "몇 시인가요?",
+        "几点？",
+        "¿A qué hora?",
+    ),
+    _phrase(
+        r"^いくらですか[。.!！?？]?$",
+        "How much is it?",
+        "얼마인가요?",
+        "多少钱？",
+        "¿Cuánto cuesta?",
+    ),
+    _phrase(
         r"^(?:わかりました|分かりました|承知しました|かしこまりました|了解しました)[。.!！]?$",
         "Certainly.",
         "네, 알겠습니다.",
@@ -240,11 +457,18 @@ PHRASES = (
         "La salida tardía está disponible hasta las dos de la tarde.",
     ),
     _phrase(
-        r"^(?:少々|しばらく)(?:、)?(?:お待ちください|待ってください)[。.!！]?$",
+        r"^(?:少々|しばらく|ちょっと)(?:、)?(?:お待ちください|待ってください)[。.!！]?$",
         "Please wait a moment.",
         "잠시만 기다려 주세요.",
         "请稍等片刻。",
         "Espere un momento, por favor.",
+    ),
+    _phrase(
+        r"^(?:確認いたします|確認します)ので、?(?:少々)?お待ちください[。.!！]?$",
+        "Please wait a moment while I check.",
+        "확인하는 동안 잠시만 기다려 주세요.",
+        "请稍等片刻，我来为您确认。",
+        "Espere un momento mientras lo compruebo.",
     ),
     _phrase(
         r"^(?:(?:ご)?(?:不便|迷惑)をおかけし(?:て)?(?:、)?(?:大変)?申し訳ございません|(?:大変)?申し訳ございません(?:、)?(?:ご)?(?:不便|迷惑)をおかけしました)[。.!！]?$",
@@ -282,7 +506,14 @@ PHRASES = (
         "Corregiremos el cargo.",
     ),
     _phrase(
-        r"^朝食会場(?:は|が)?(?:2|二)階(?:で|にあり、?|にございます、?)(?:営業時間は)?(?:午前)?(?:6時30分|6時半|六時半)(?:から|～|〜)(?:午前)?(?:10|十)時(?:まで)?(?:です|でございます)?[。.!！]?$",
+        r"^(?:ご)?(?:請求|料金|請求内容)(?:を)?確認して(?:訂正|修正)(?:いた)?します[。.!！]?$",
+        "We will review the charge and correct it.",
+        "청구 내용을 확인하고 정정하겠습니다.",
+        "我们会核对费用并予以更正。",
+        "Revisaremos el cargo y lo corregiremos.",
+    ),
+    _phrase(
+        r"^朝食会場(?:は|が)?(?:2|二)階(?:で、?|にあり、?|にございます、?)(?:営業時間は)?(?:午前)?(?:6時30分|6時半|六時半)(?:から|～|〜)(?:午前)?(?:10|十)時(?:まで)?(?:です|でございます)?[。.!！]?$",
         "The breakfast venue is on the second floor and is open from 6:30 to 10:00 a.m.",
         "조식 장소는 2층이며 오전 6시 30분부터 10시까지 운영합니다.",
         "早餐地点在二楼，开放时间为上午六点半到十点。",
@@ -305,9 +536,36 @@ PHRASES = (
 )
 
 
+CUSTOMER_NO_CLEANING = {
+    "en": re.compile(r"^Pleasedonotcleantheroomtoday[.!]?$", re.IGNORECASE),
+    "ko": re.compile(r"^오늘은객실청소를하지말아주세요[。.!！]?$"),
+    "zh": re.compile(r"^今天请不要打扫房间[。.!！]?$"),
+    "es": re.compile(
+        r"^Porfavor,nolimpielahabitaciónhoy[.!]?$", re.IGNORECASE
+    ),
+}
+
+CUSTOMER_EXCLUSION = {
+    "en": re.compile(r"^(?:Please)?(?:leavethatout|donotaddthat)[.!]?$", re.IGNORECASE),
+    "ko": re.compile(r"^(?:그건|그것은|그거는)(?:빼|제외해|추가하지말아)주세요[。.!！]?$"),
+}
+
+
 def translate_hotel_phrase(text: str, target_code: str) -> str | None:
     compact = re.sub(r"\s+", "", text.strip())
     for phrase in PHRASES:
         if phrase.pattern.search(compact):
             return phrase.translations.get(target_code)
+    return None
+
+
+def translate_customer_hotel_phrase(text: str, source_code: str) -> str | None:
+    """Protect a small set of exact, high-risk customer requests into Japanese."""
+    pattern = CUSTOMER_NO_CLEANING.get(source_code)
+    compact = re.sub(r"\s+", "", text.strip())
+    if pattern is not None and pattern.fullmatch(compact):
+        return "今日は客室を清掃しないでください。"
+    exclusion = CUSTOMER_EXCLUSION.get(source_code)
+    if exclusion is not None and exclusion.fullmatch(compact):
+        return "それは追加しないでください。"
     return None

@@ -23,9 +23,11 @@ from .conversation import ConversationController
 from .events import EventBus
 from .feedback import FeedbackStore
 from .languages import CUSTOMER_LANGUAGE_CODES, public_languages
+from .process_cleanup import hidden_subprocess_options
 from .reading import SUPPORTED_READING_LANGUAGES
 from .quick_phrases import QuickPhraseStore
 from .settings import UserSettings
+from .wav_import import MAX_WAV_BYTES, WavImportManager, WavImportProcessor
 
 
 def _fallback_devices(message: str) -> dict[str, list]:
@@ -42,7 +44,6 @@ def _run_device_probe(root: Path, code: str, timeout_seconds: float) -> dict[str
     env["PYTHONPATH"] = str(root) + (
         os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else ""
     )
-    flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
     output_file = (
         Path(tempfile.gettempdir())
         / f"remoteplus-device-{os.getpid()}-{secrets.token_hex(4)}.json"
@@ -60,8 +61,8 @@ def _run_device_probe(root: Path, code: str, timeout_seconds: float) -> dict[str
             env=env,
             capture_output=True,
             timeout=timeout_seconds,
-            creationflags=flags,
             check=False,
+            **hidden_subprocess_options(),
         )
     except subprocess.TimeoutExpired:
         return _fallback_devices(
@@ -163,15 +164,36 @@ def create_app(
     cfg: AppConfig | None = None,
     start_backend: bool = True,
     recognizer=None,
+    wav_import_manager=None,
 ) -> FastAPI:
     config = cfg or load_config()
+    stale_wav_root = config.data_root / "wav-imports"
+    if stale_wav_root.is_dir():
+        for stale_wav in stale_wav_root.glob("remoteplus-wav-*.wav"):
+            try:
+                stale_wav.unlink()
+            except OSError:
+                pass
     bus = EventBus()
     controller = ConversationController(config, bus, recognizer=recognizer)
+    wav_imports = wav_import_manager or WavImportManager(
+        WavImportProcessor(
+            controller.recognizer,
+            controller.translator,
+            config.audio,
+            controller.recognizer_lock,
+            controller.translator_lock,
+        )
+    )
     feedback = FeedbackStore(config.data_root)
     quick_phrases = QuickPhraseStore(config.data_root)
     user_settings = UserSettings(config.data_root)
     devices_cache: dict[str, object] = {"expires_at": 0.0, "payload": None}
     devices_lock = threading.Lock()
+
+    def wav_import_active() -> bool:
+        checker = getattr(wav_imports, "active", None)
+        return bool(checker()) if checker is not None else False
 
     # Every supported customer language is selectable. Japanese remains the
     # fixed staff language and is therefore excluded from this list.
@@ -200,15 +222,19 @@ def create_app(
         if start_backend:
             controller.start()
         yield
+        if hasattr(wav_imports, "close"):
+            wav_imports.close()
         controller.stop()
 
     app = FastAPI(title="RemotePlus Translator", lifespan=lifespan)
     app.state.controller = controller
     app.state.auth_token = auth_token
+    app.state.wav_imports = wav_imports
     app.state.desktop_client_count = 0
     app.state.desktop_client_seen = False
     app.state.desktop_last_disconnect = 0.0
     app.state.desktop_client_lock = threading.Lock()
+    app.state.ui_ready_event = threading.Event()
 
     @app.middleware("http")
     async def protect_local_api(request: Request, call_next):
@@ -247,7 +273,6 @@ def create_app(
         return {
             "app": "remoteplus-translator",
             "version": __version__,
-            "update_layer": "app_update" in Path(__file__).parts,
             "ok": True,
         }
 
@@ -262,6 +287,10 @@ def create_app(
                 "romanization": "all",
             },
         }
+
+    @app.post("/api/ui-ready", status_code=204)
+    def ui_ready():
+        app.state.ui_ready_event.set()
 
     @app.get("/api/devices")
     def devices():
@@ -279,10 +308,24 @@ def create_app(
     def control(request: ControlRequest):
         try:
             payload = request.model_dump()
+            mutable_during_wav = (
+                "active_language",
+                "reply_language",
+                "input_device",
+                "enabled_languages",
+            )
+            if wav_import_active() and any(
+                payload.get(key) is not None for key in mutable_during_wav
+            ):
+                raise HTTPException(409, "Wait for the WAV import to finish")
             if payload.get("enabled_languages") is not None:
                 payload["enabled_languages"] = list(CUSTOMER_LANGUAGE_CODES)
             state = controller.control(**payload)
-            persistent_keys = {"active_language", "reply_language", "input_device"}
+            persistent_keys = {
+                "active_language",
+                "reply_language",
+                "input_device",
+            }
             if any(payload.get(key) is not None for key in persistent_keys):
                 try:
                     user_settings.save(state)
@@ -296,11 +339,79 @@ def create_app(
 
     @app.post("/api/reply", status_code=202)
     def staff_reply(request: StaffReplyRequest):
+        if wav_import_active():
+            raise HTTPException(409, "Wait for the WAV import to finish")
         try:
             utterance_id = controller.submit_staff_text(request.text)
             return {"accepted": True, "utterance_id": utterance_id}
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
+
+    @app.post("/api/wav-import", status_code=202)
+    async def import_wav(request: Request, customer_language: str):
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                if int(content_length) > MAX_WAV_BYTES:
+                    raise HTTPException(413, "WAV file is larger than 512 MB")
+            except ValueError as exc:
+                raise HTTPException(400, "Invalid Content-Length") from exc
+        content_type = request.headers.get("content-type", "").partition(";")[0].strip()
+        if content_type not in {
+            "audio/wav",
+            "audio/x-wav",
+            "audio/wave",
+            "application/octet-stream",
+        }:
+            raise HTTPException(415, "Upload an uncompressed PCM WAV file")
+        if wav_import_active():
+            raise HTTPException(409, "Another WAV import is already running")
+        imports_root = config.data_root / "wav-imports"
+        imports_root.mkdir(parents=True, exist_ok=True)
+        descriptor, temporary_name = tempfile.mkstemp(
+            prefix="remoteplus-wav-", suffix=".wav", dir=imports_root
+        )
+        os.close(descriptor)
+        temporary = Path(temporary_name)
+        size = 0
+        try:
+            with temporary.open("wb") as handle:
+                async for chunk in request.stream():
+                    size += len(chunk)
+                    if size > MAX_WAV_BYTES:
+                        raise HTTPException(413, "WAV file is larger than 512 MB")
+                    handle.write(chunk)
+            if size < 44:
+                raise HTTPException(400, "WAV file is empty or incomplete")
+            was_paused = bool(controller.snapshot().get("paused"))
+            if not was_paused:
+                controller.control(paused=True)
+            try:
+                return wav_imports.submit(temporary, customer_language)
+            except RuntimeError as exc:
+                if not was_paused:
+                    controller.control(paused=False)
+                raise HTTPException(409, str(exc)) from exc
+            except ValueError as exc:
+                if not was_paused:
+                    controller.control(paused=False)
+                raise HTTPException(400, str(exc)) from exc
+        except Exception:
+            temporary.unlink(missing_ok=True)
+            raise
+
+    @app.get("/api/wav-import/{job_id}")
+    def wav_import_status(job_id: str):
+        result = wav_imports.status(job_id)
+        if result is None:
+            raise HTTPException(404, "WAV import not found")
+        return result
+
+    @app.delete("/api/wav-import/{job_id}")
+    def cancel_wav_import(job_id: str):
+        if not wav_imports.cancel(job_id):
+            raise HTTPException(409, "WAV import is not running")
+        return {"cancelled": True}
 
     @app.get("/api/quick-phrases")
     def list_quick_phrases():
@@ -354,6 +465,7 @@ def create_app(
 
     @app.delete("/api/history")
     def clear_history():
+        controller.clear_dialogue_context()
         bus.clear_history_and_publish()
         return {"cleared": True}
 

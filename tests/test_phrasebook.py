@@ -1,6 +1,9 @@
 import pytest
 
-from translator_app.phrasebook import translate_hotel_phrase
+from translator_app.phrasebook import (
+    translate_customer_hotel_phrase,
+    translate_hotel_phrase,
+)
 
 
 def test_allergy_reply_is_safe_in_all_customer_languages():
@@ -115,3 +118,100 @@ def test_common_taxi_and_reservation_name_variants_use_fast_path():
     assert translate_hotel_phrase(
         "ご予約のお名前をお伺いしてもよろしいでしょうか。", "en"
     ) == "May I have the name on the reservation, please?"
+
+
+def test_combined_check_wait_charge_and_breakfast_phrases_preserve_all_facts():
+    assert translate_hotel_phrase(
+        "確認いたしますので、少々お待ちください。", "es"
+    ) == "Espere un momento mientras lo compruebo."
+    assert translate_hotel_phrase(
+        "請求内容を確認して訂正いたします。", "ko"
+    ) == "청구 내용을 확인하고 정정하겠습니다."
+    assert translate_hotel_phrase(
+        "朝食会場は2階で、午前6時30分から10時までです。", "en"
+    ) == "The breakfast venue is on the second floor and is open from 6:30 to 10:00 a.m."
+
+
+@pytest.mark.parametrize(
+    ("source_code", "source"),
+    (
+        ("en", "Please do not clean the room today."),
+        ("ko", "오늘은 객실 청소를 하지 말아 주세요."),
+        ("zh", "今天请不要打扫房间。"),
+        ("es", "Por favor, no limpie la habitación hoy."),
+    ),
+)
+def test_no_cleaning_request_never_loses_negation(source_code, source):
+    assert translate_customer_hotel_phrase(source, source_code) == (
+        "今日は客室を清掃しないでください。"
+    )
+
+
+@pytest.mark.parametrize(
+    ("source", "expected_ko"),
+    (
+        ("おはようございます。", "안녕하세요."),
+        ("こんにちは。", "안녕하세요."),
+        ("こんばんは。", "안녕하세요."),
+        ("おやすみなさい。", "안녕히 주무세요."),
+        ("はじめまして。", "처음 뵙겠습니다."),
+        ("ありがとうございます。", "감사합니다."),
+        ("どういたしまして。", "천만에요."),
+        ("申し訳ありません。", "죄송합니다."),
+        ("大丈夫ですか。", "괜찮으세요?"),
+        ("大丈夫です。", "괜찮습니다."),
+        ("はい、そうです。", "네, 맞습니다."),
+        ("いいえ、違います。", "아니요, 그렇지 않습니다."),
+        ("よくわかりません。", "잘 모르겠습니다."),
+        ("もちろんです。", "물론입니다."),
+        ("失礼いたします。", "실례하겠습니다."),
+        ("さようなら。", "안녕히 가세요."),
+        ("また明日。", "내일 뵙겠습니다."),
+        ("お気をつけてお帰りください。", "조심히 돌아가세요."),
+        ("よかったです。", "다행입니다."),
+        ("聞こえません。", "잘 들리지 않습니다."),
+        ("どういう意味ですか。", "무슨 뜻인가요?"),
+        ("お名前は何ですか。", "성함이 어떻게 되시나요?"),
+        ("どこですか。", "어디에 있나요?"),
+        ("何時ですか。", "몇 시인가요?"),
+        ("いくらですか。", "얼마인가요?"),
+    ),
+)
+def test_daily_conversation_uses_natural_korean_not_literal_fragments(
+    source, expected_ko
+):
+    assert translate_hotel_phrase(source, "ko") == expected_ko
+
+
+@pytest.mark.parametrize(
+    ("target", "expected"),
+    (
+        ("en", "Good evening."),
+        ("ko", "안녕하세요."),
+        ("zh", "晚上好。"),
+        ("es", "Buenas tardes."),
+    ),
+)
+def test_konbanwa_is_a_greeting_in_primary_languages(target, expected):
+    assert translate_hotel_phrase("こんばんは。", target) == expected
+
+
+@pytest.mark.parametrize(
+    ("source", "target", "expected"),
+    [
+        ("それでお願いします。", "ko", "그걸로 부탁드립니다."),
+        ("そちらでお願いします。", "en", "That one, please."),
+        ("それなら大丈夫です。", "ko", "그렇다면 괜찮습니다."),
+        ("それは含まれていますか。", "en", "Is that included?"),
+    ],
+)
+def test_referential_service_formulas_preserve_speaker_intent(source, target, expected):
+    assert translate_hotel_phrase(source, target) == expected
+
+
+@pytest.mark.parametrize(
+    ("source", "language"),
+    [("그건 빼 주세요.", "ko"), ("Please leave that out.", "en")],
+)
+def test_customer_exclusion_request_never_repeats_the_previous_offer(source, language):
+    assert translate_customer_hotel_phrase(source, language) == "それは追加しないでください。"

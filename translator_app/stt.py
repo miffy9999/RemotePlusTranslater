@@ -22,6 +22,8 @@ class Recognition:
     language: str
     probability: float = 1.0
     quality_retry_used: bool = False
+    confidence: float | None = None
+    no_speech_probability: float = 0.0
 
 
 def contains_japanese_kana(text: str) -> bool:
@@ -191,14 +193,24 @@ class WhisperRecognizer:
             (float(segment.avg_logprob) for segment in rows if hasattr(segment, "avg_logprob")),
             default=None,
         )
-        return text, _info, confidence
+        no_speech_values = [
+            float(segment.no_speech_prob)
+            for segment in rows
+            if hasattr(segment, "no_speech_prob")
+        ]
+        no_speech_probability = min(no_speech_values) if no_speech_values else (1.0 if not rows else 0.0)
+        return text, _info, confidence, no_speech_probability
 
     def transcribe(self, audio: np.ndarray, *, language: str | None = None) -> Recognition:
         self.load()
-        auto_mode = language is None and self.selected_language == "auto"
+        auto_mode = language == "auto" or (
+            language is None and self.selected_language == "auto"
+        )
         forced = None if auto_mode else self._effective_language(language)
         hotword_language = forced or self.context_language or (self.enabled_languages[0] if self.enabled_languages else "en")
-        raw_text, _info, confidence = self._decode(audio, forced, hotword_language, self.beam_size)
+        raw_text, _info, confidence, no_speech_probability = self._decode(
+            audio, forced, hotword_language, self.beam_size
+        )
         text = collapse_repetitions(raw_text)
         quality_retry_used = False
         should_retry = (
@@ -213,7 +225,7 @@ class WhisperRecognizer:
             )
         )
         if should_retry:
-            retry_text, retry_info, retry_confidence = self._decode(
+            retry_text, retry_info, retry_confidence, retry_no_speech_probability = self._decode(
                 audio,
                 forced,
                 hotword_language,
@@ -234,7 +246,11 @@ class WhisperRecognizer:
             )
             if retry_is_better:
                 text, _info = collapse_repetitions(retry_text), retry_info
+                confidence = retry_confidence
+                no_speech_probability = retry_no_speech_probability
                 quality_retry_used = True
+        if no_speech_probability >= self.cfg.no_speech_probability_threshold:
+            text = ""
         if text and self.apply_corrections and self._correction_pattern is not None:
             text = apply_corrections(text, self.cfg.corrections)
         detected = forced or getattr(_info, "language", "") or hotword_language
@@ -244,4 +260,6 @@ class WhisperRecognizer:
             language=detected,
             probability=probability,
             quality_retry_used=quality_retry_used,
+            confidence=confidence,
+            no_speech_probability=no_speech_probability,
         )

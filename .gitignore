@@ -25,3 +25,6 @@ legal/counsel-review.local.*
 *.p12
 *.pvk
 signature-report.json
+finetune/checkpoints/
+finetune/merged-model/
+finetune/candidate-gguf/

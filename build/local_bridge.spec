@@ -10,6 +10,7 @@ datas += collect_data_files("faster_whisper")
 datas += collect_data_files("soundcard")
 datas += collect_data_files("pypinyin")
 datas += collect_data_files("anyascii")
+datas += collect_data_files("webview")
 
 binaries = collect_dynamic_libs("ctranslate2")
 system32 = os.path.join(os.environ.get("WINDIR", r"C:\Windows"), "System32")
@@ -26,6 +27,7 @@ hiddenimports += collect_submodules("uvicorn")
 hiddenimports += collect_submodules("soundcard")
 hiddenimports += collect_submodules("pypinyin")
 hiddenimports += collect_submodules("anyascii")
+hiddenimports += collect_submodules("webview")
 
 a = Analysis(
     [os.path.join(project_root, "launcher.py")],
@@ -51,6 +53,7 @@ exe = EXE(
     strip=False,
     upx=False,
     console=False,
+    version=os.path.join(project_root, "build", "version_info.txt"),
 )
 coll = COLLECT(
     exe,

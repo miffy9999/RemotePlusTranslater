@@ -23,7 +23,7 @@ def test_runtime_and_error_logs_are_written_without_customer_text(tmp_path):
     assert "RuntimeError: test failure" in errors
 
 
-def test_new_session_clears_normal_logs_but_keeps_prior_error_log(tmp_path):
+def test_new_session_preserves_prior_runtime_timing_and_error_evidence(tmp_path):
     log_dir = tmp_path / "logs"
     log_dir.mkdir()
     (log_dir / "runtime.log").write_text("old normal log", encoding="utf-8")
@@ -34,8 +34,8 @@ def test_new_session_clears_normal_logs_but_keeps_prior_error_log(tmp_path):
     for handler in logger.handlers:
         handler.flush()
 
-    assert "old normal log" not in (log_dir / "runtime.log").read_text(encoding="utf-8")
-    assert not list(log_dir.glob("timing-*.log*"))
+    assert "old normal log" in (log_dir / "runtime.log").read_text(encoding="utf-8")
+    assert (log_dir / "timing-old.log").read_text(encoding="utf-8") == "old timing log"
     assert "prior error evidence" in (log_dir / "errors.log").read_text(encoding="utf-8")
 
 
