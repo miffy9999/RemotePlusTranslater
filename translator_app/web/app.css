@@ -166,7 +166,7 @@ main {
   margin: 0 auto;
   padding: 16px 24px;
   display: grid;
-  grid-template-columns: 390px minmax(0, 1fr);
+  grid-template-columns: 430px minmax(0, 1fr);
   gap: 16px;
   min-height: 0
 }
@@ -253,8 +253,349 @@ main {
   min-height: 0;
   padding: 16px;
   display: grid;
-  grid-template-rows: auto auto auto auto 1fr;
+  grid-template-rows: repeat(4, auto) minmax(0, 1fr);
   gap: 14px
+}
+
+.wav-import {
+  flex: 0 0 auto;
+  margin: 12px 16px 0;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: var(--surface-2);
+  overflow: hidden
+}
+
+.wav-import-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 42px;
+  padding: 9px 12px 9px 34px;
+  position: relative;
+  cursor: pointer;
+  list-style: none;
+  font-size: 13px
+}
+
+.wav-import-heading::-webkit-details-marker {
+  display: none
+}
+
+.wav-import-heading::before {
+  content: "";
+  position: absolute;
+  left: 14px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--accent);
+  border-bottom: 2px solid var(--accent);
+  transform: translateY(-2px) rotate(45deg);
+  transition: transform .15s ease
+}
+
+.wav-import[open] .wav-import-heading::before {
+  transform: translateY(2px) rotate(225deg)
+}
+
+.wav-import[open] .wav-import-heading {
+  border-bottom: 1px solid var(--line)
+}
+
+.wav-import-heading small {
+  margin: 0;
+  text-align: right;
+  font-size: 10px
+}
+
+.wav-import-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px 10px;
+  padding: 10px 12px 12px
+}
+
+.wav-import input[type="file"] {
+  min-width: 0;
+  width: 100%;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px
+}
+
+.wav-import-actions {
+  display: flex;
+  gap: 6px
+}
+
+.wav-import-actions button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  white-space: nowrap
+}
+
+.wav-import-actions .primary {
+  border-color: var(--accent)
+}
+
+.wav-import progress {
+  grid-column: 1/-1;
+  width: 100%;
+  height: 8px;
+  accent-color: var(--accent)
+}
+
+.wav-status {
+  grid-column: 1/-1;
+  min-height: 1.2em;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4
+}
+
+.wav-status:empty {
+  display: none
+}
+
+.wav-import audio {
+  grid-column: 1/-1;
+  width: 100%;
+  height: 34px
+}
+
+.quick-phrases {
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding-top: 13px;
+  border-top: 1px solid var(--line)
+}
+
+.quick-phrases-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px
+}
+
+.quick-phrases-heading small,
+.quick-phrase-empty {
+  color: var(--muted);
+  font-size: 11px
+}
+
+.quick-phrases-heading small {
+  margin: 0
+}
+
+.quick-phrase-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 38px;
+  gap: 7px
+}
+
+.quick-phrase-tools {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(128px, .58fr);
+  gap: 7px
+}
+
+.quick-phrase-form input {
+  min-width: 0;
+  height: 42px
+}
+
+.quick-phrase-form input,
+.quick-phrase-search,
+.quick-phrase-menu input {
+  width: 100%;
+  padding: 0 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  outline: none
+}
+
+.quick-phrase-form input:focus,
+.quick-phrase-search:focus,
+.quick-phrase-menu input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(31, 95, 87, .12)
+}
+
+.quick-phrase-search {
+  height: 42px
+}
+
+.quick-phrase-form button,
+.quick-phrase-delete {
+  border: 1px solid var(--line-strong);
+  background: #fff;
+  color: var(--accent);
+  font-size: 20px;
+  font-weight: 700
+}
+
+.quick-phrase-form button:hover,
+.quick-phrase-delete:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft)
+}
+
+.quick-phrase-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  scrollbar-gutter: stable
+}
+
+.quick-phrase-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px
+}
+
+.quick-phrase-group-toggle {
+  position: relative;
+  min-height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 7px 4px 24px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--soft);
+  text-align: left;
+  font-size: 11px;
+  font-weight: 750
+}
+
+.quick-phrase-group-toggle:hover {
+  background: var(--accent-soft)
+}
+
+.quick-phrase-group-toggle:disabled {
+  cursor: default
+}
+
+.quick-phrase-group-toggle::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  width: 6px;
+  height: 6px;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-2px) rotate(45deg)
+}
+
+.quick-phrase-group.collapsed .quick-phrase-group-toggle::before {
+  transform: translateX(-2px) rotate(-45deg)
+}
+
+.quick-phrase-group-toggle small {
+  margin: 0;
+  font-size: 10px
+}
+
+.quick-phrase-group-body {
+  display: flex;
+  flex-direction: column;
+  gap: 5px
+}
+
+.quick-phrase-group.collapsed .quick-phrase-group-body {
+  display: none
+}
+
+.quick-phrase-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 32px;
+  gap: 5px
+}
+
+.quick-phrase-use {
+  min-width: 0;
+  padding: 8px 9px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  color: var(--text);
+  text-align: left;
+  line-height: 1.35;
+  overflow-wrap: anywhere
+}
+
+.quick-phrase-use:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft)
+}
+
+.quick-phrase-delete {
+  font-size: 17px;
+  color: var(--muted)
+}
+
+.quick-phrase-empty {
+  margin: 2px 0 0
+}
+
+.quick-phrase-menu {
+  position: fixed;
+  z-index: 60;
+  width: min(280px, calc(100vw - 16px));
+  padding: 11px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 14px 36px rgba(31, 36, 41, .18)
+}
+
+.quick-phrase-menu[hidden] {
+  display: none
+}
+
+.quick-phrase-menu label {
+  display: grid;
+  gap: 6px;
+  color: var(--soft);
+  font-size: 12px;
+  font-weight: 700
+}
+
+.quick-phrase-menu input {
+  height: 38px;
+  font-weight: 400
+}
+
+.quick-phrase-menu>div {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 9px
+}
+
+.quick-phrase-menu button {
+  min-height: 36px;
+  padding: 0 9px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px
 }
 
 .status-strip {
@@ -472,6 +813,10 @@ main {
   background: var(--staff)
 }
 
+.entry.unknown::before {
+  background: var(--muted)
+}
+
 .entry .meta {
   display: flex;
   align-items: center;
@@ -533,6 +878,21 @@ main {
   color: #193d42
 }
 
+.entry.unknown {
+  background: var(--surface-2)
+}
+
+.wav-play {
+  min-height: 26px;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--accent);
+  font: inherit;
+  font-size: 11px
+}
+
 .entry.live {
   opacity: .82
 }
@@ -546,16 +906,98 @@ main {
   margin-top: 10px;
   padding: 10px 12px;
   border-radius: 11px;
-  background: #111827;
-  border: 1px solid #020617;
-  color: #f8fafc;
+  background: var(--staff-soft);
+  border: 1px solid #ead7bd;
+  color: var(--staff);
   font-size: 15px;
   line-height: 1.9;
   word-break: break-word
 }
 
+/* Typed staff replies stay attached to the conversation instead of using a
+   separate modal, so an operator can follow the call like a normal chat. */
+.reply-composer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  padding: 14px 18px 6px;
+  border-top: 1px solid var(--line);
+  background: #fff;
+}
+
+.reply-composer textarea {
+  width: 100%;
+  min-height: 54px;
+  max-height: 150px;
+  resize: vertical;
+  border: 1px solid var(--line-strong, #c8d1dc);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: var(--ink);
+  background: #fff;
+  font: inherit;
+  line-height: 1.45;
+}
+
+.reply-composer textarea:focus {
+  outline: 3px solid rgba(32, 111, 174, .14);
+  border-color: var(--accent, #206fae);
+}
+
+.reply-composer button {
+  min-width: 88px;
+  align-self: stretch;
+}
+
+.composer-hint,
+.mode-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.composer-hint {
+  padding: 0 18px 13px;
+  background: #fff;
+}
+
+.reading-guide > div {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.reading-guide > div + div {
+  margin-top: 7px;
+}
+
+.reading-kana,
+.reading-roman {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.reading-roman {
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  font-weight: 600;
+}
+
+@media (max-width: 720px) {
+  .reply-composer {
+    grid-template-columns: 1fr;
+  }
+
+  .reply-composer button {
+    min-height: 44px;
+  }
+}
+
 .reading-guide .reading-label {
-  color: #93c5fd;
+  color: var(--staff);
   font-weight: 780;
   margin-right: 6px
 }
@@ -566,28 +1008,29 @@ main {
 }
 
 .reading-guide .reading-base {
-  color: #f8fafc
+  color: var(--staff)
 }
 
 .reading-guide rt {
   font-size: .72em;
-  color: #f8fafc !important;
+  color: var(--staff) !important;
   font-weight: 900;
   letter-spacing: .02em;
   text-shadow: 0 1px 1px rgba(0, 0, 0, .55)
 }
 
-.reading-guide .reading-kana {
-  color: #f8fafc !important
+.reading-guide .reading-kana,
+.reading-guide .reading-roman {
+  color: var(--staff) !important
 }
 
 .reading-guide .reading-token {
-  color: #f8fafc;
+  color: var(--staff);
   font-weight: 760
 }
 
 .reading-guide .reading-punctuation {
-  color: #f8fafc;
+  color: var(--staff);
   font-weight: 800
 }
 
@@ -636,7 +1079,7 @@ ruby {
 
 @media (max-width:980px) {
   main {
-    grid-template-columns: 330px minmax(0, 1fr);
+    grid-template-columns: 360px minmax(0, 1fr);
     padding: 12px;
     gap: 12px
   }
@@ -687,7 +1130,7 @@ ruby {
   }
 
   .controls {
-    max-height: 330px
+    max-height: 52vh
   }
 
   .control-stack {
@@ -698,8 +1141,18 @@ ruby {
 
   .status-strip,
   .main-field,
-  .quick-controls {
+  .quick-controls,
+  .wav-import,
+  .quick-phrases {
     grid-column: 1/-1
+  }
+
+  .mode-note {
+    display: none
+  }
+
+  .quick-phrases {
+    max-height: 210px
   }
 
   .field select {

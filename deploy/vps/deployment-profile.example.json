@@ -1,0 +1,12 @@
+{
+  "site_domain": "remoteplus.example.com",
+  "download_domain": "download.remoteplus.example.com",
+  "admin_email": "admin@example.com",
+  "allowed_cidrs": [
+    "203.0.113.10/32",
+    "10.8.0.0/24"
+  ],
+  "privacy_url": "https://remoteplus.example.com/privacy",
+  "publisher_name": "RemotePlus Hotel Operations",
+  "support_email": "support@example.com"
+}

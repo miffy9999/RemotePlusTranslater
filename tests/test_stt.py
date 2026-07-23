@@ -1,6 +1,7 @@
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
 from translator_app.config import SttConfig
 from translator_app.stt import (
@@ -139,3 +140,36 @@ def test_lower_confidence_quality_retry_does_not_replace_better_first_pass():
     result = recognizer.transcribe(np.zeros(16000, dtype=np.float32), language="en")
     assert result.text == "correct answer"
     assert result.quality_retry_used is False
+
+
+def test_high_no_speech_probability_rejects_background_noise_text():
+    class FakeModel:
+        def transcribe(self, audio, **kwargs):
+            return [
+                SimpleNamespace(
+                    text="Thank you for watching",
+                    avg_logprob=-0.3,
+                    no_speech_prob=0.97,
+                )
+            ], SimpleNamespace(language="en", language_probability=0.8)
+
+    recognizer = WhisperRecognizer(SttConfig(), lambda *_: None)
+    recognizer.model = FakeModel()
+    result = recognizer.transcribe(np.zeros(16000, dtype=np.float32), language="en")
+    assert result.text == ""
+    assert result.no_speech_probability == pytest.approx(0.97)
+
+
+def test_explicit_auto_language_overrides_selected_customer_language():
+    class FakeModel:
+        def transcribe(self, audio, **kwargs):
+            assert kwargs["language"] is None
+            return [SimpleNamespace(text="いらっしゃいませ")], SimpleNamespace(
+                language="ja", language_probability=0.95
+            )
+
+    recognizer = WhisperRecognizer(SttConfig(), lambda *_: None)
+    recognizer.model = FakeModel()
+    recognizer.set_selected_language("ko")
+    result = recognizer.transcribe(np.zeros(16000, dtype=np.float32), language="auto")
+    assert result.language == "ja"

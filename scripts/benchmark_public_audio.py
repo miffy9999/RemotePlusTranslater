@@ -15,13 +15,12 @@ WAV_ROOT = ROOT / "benchmarks/public_audio/spoken-language-identification-test-w
 FILES = {
     "en": "en-english.wav",
     "ko": "ko-korean.wav",
-    "ja": "ja-japanese.wav",
     "zh": "zh-chinese.wav",
     "es": "es-spanish.wav",
 }
 
 
-def main() -> None:
+def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
     cfg = load_config()
@@ -30,11 +29,10 @@ def main() -> None:
     recognizer.load()
     rows = []
     for expected, filename in FILES.items():
-        # Production uses a fixed customer language and a push-to-talk staff
-        # mode that forces Japanese. This benchmark follows that real routing
-        # instead of testing the removed automatic-language mode.
-        mode = "staff" if expected == "ja" else "customer"
-        selected = "ja" if mode == "staff" else expected
+        # Production uses one fixed customer language per call. Staff replies
+        # are typed and therefore do not consume the STT model.
+        mode = "customer"
+        selected = expected
         recognizer.set_selected_language(selected)
         audio = decode_audio(str(WAV_ROOT / filename), sampling_rate=cfg.audio.sample_rate)
         result = recognizer.transcribe(audio, language=selected)
@@ -71,7 +69,8 @@ def main() -> None:
         encoding="utf-8",
     )
     print("SUMMARY", json.dumps(summary, ensure_ascii=False))
+    return 1 if summary["failed"] else 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

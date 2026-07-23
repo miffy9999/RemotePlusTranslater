@@ -1,7 +1,7 @@
 """Run a real-model endurance test without needing a microphone or guest data.
 
-The test reuses public speech samples, local Whisper and Hy-MT2, and harmless
-fixed TTS phrases. It intentionally overlaps one STT and one translation task
+The test reuses public speech samples, local Whisper and Hy-MT2. It
+intentionally overlaps one STT and one translation task
 per cycle, matching the CPU contention possible during a continuous call.
 """
 
@@ -18,11 +18,10 @@ from typing import Any
 
 from faster_whisper.audio import decode_audio
 
-from translator_app.audio import PlaybackGate
 from translator_app.config import load_config
 from translator_app.hymt2 import create_translator
+from translator_app.reading import reading_guide, romanized_guide
 from translator_app.stt import WhisperRecognizer
-from translator_app.tts import EdgeSpeaker, SpeechRequest
 
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -32,7 +31,6 @@ SAMPLES = (
     ("ko", "ko-korean.wav", "객실에 수건 두 장을 가져다 주세요."),
     ("zh", "zh-chinese.wav", "请给305房间送两条毛巾。"),
     ("es", "es-spanish.wav", "Por favor, traiga dos toallas a la habitación 305."),
-    ("ja", "ja-japanese.wav", "305号室にタオルを2枚お持ちください。"),
 )
 
 
@@ -62,11 +60,10 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="RemotePlus real-model endurance test")
     parser.add_argument("--minutes", type=float, default=30.0)
     parser.add_argument("--interval-seconds", type=float, default=10.0)
-    parser.add_argument("--tts-interval-seconds", type=float, default=60.0)
     parser.add_argument("--stt-threads", type=int, help="temporary Whisper CPU thread override")
     parser.add_argument("--hymt2-threads", type=int, help="temporary Hy-MT2 CPU thread override")
     args = parser.parse_args()
-    if args.minutes <= 0 or args.interval_seconds <= 0 or args.tts_interval_seconds <= 0:
+    if args.minutes <= 0 or args.interval_seconds <= 0:
         raise SystemExit("All durations must be positive")
 
     try:
@@ -81,7 +78,6 @@ def main() -> int:
         cfg.translation.hymt2_threads = max(1, args.hymt2_threads)
     recognizer = WhisperRecognizer(cfg.stt, lambda phase, message: print(f"STT {phase}: {message}"))
     translator = create_translator(cfg.translation, lambda phase, message: print(f"MT {phase}: {message}"))
-    speaker = EdgeSpeaker(cfg.tts, cfg.audio, PlaybackGate(cfg.audio.post_tts_mute_ms), lambda *_: None)
     audio = {
         language: decode_audio(str(WAV_ROOT / filename), sampling_rate=cfg.audio.sample_rate)
         for language, filename, _ in SAMPLES
@@ -93,7 +89,6 @@ def main() -> int:
 
     started_at = datetime.now().isoformat(timespec="seconds")
     deadline = time.monotonic() + args.minutes * 60
-    next_tts = time.monotonic()
     index = 0
     rows: list[dict[str, Any]] = []
     memories: list[dict[str, int]] = []
@@ -105,7 +100,7 @@ def main() -> int:
         while time.monotonic() < deadline:
             cycle_started = time.monotonic()
             language, _filename, hotel_text = SAMPLES[index % len(SAMPLES)]
-            target = "en" if language == "ja" else "ja"
+            target = "ja"
             stt_future = executor.submit(timed, recognizer.transcribe, audio[language], language=language)
             mt_future = executor.submit(timed, translator.translate, hotel_text, language, target)
             (stt_result, stt_seconds) = stt_future.result()
@@ -120,18 +115,11 @@ def main() -> int:
                 "ok": bool(stt_result.text and translation),
             }
 
-            if time.monotonic() >= next_tts:
-                request = SpeechRequest(index + 1, translation, target, time.monotonic())
-                tts_started = time.monotonic()
-                try:
-                    path = speaker._synthesize_with_retry(request)
-                    row["tts_seconds"] = round(time.monotonic() - tts_started, 3)
-                    row["tts_bytes"] = path.stat().st_size
-                    path.unlink(missing_ok=True)
-                except Exception as exc:
-                    row["tts_error"] = repr(exc)
-                    row["ok"] = False
-                next_tts = time.monotonic() + args.tts_interval_seconds
+            # Exercise both reading formats without adding another model call.
+            reading_started = time.monotonic()
+            reading_guide(hotel_text, language)
+            romanized_guide(hotel_text, language)
+            row["reading_seconds"] = round(time.monotonic() - reading_started, 6)
 
             if process is not None:
                 snapshot = memory_snapshot(process)
@@ -152,7 +140,7 @@ def main() -> int:
             translator.close()
 
     stt = [row["stt_seconds"] for row in rows]
-    tts = [row["tts_seconds"] for row in rows if "tts_seconds" in row]
+    reading = [row["reading_seconds"] for row in rows]
     report = {
         "started_at": started_at,
         "requested_minutes": args.minutes,
@@ -162,7 +150,7 @@ def main() -> int:
         "cycles": len(rows),
         "failed_cycles": sum(not row["ok"] for row in rows),
         "stt_seconds": {"median": round(statistics.median(stt), 3) if stt else None, "p95": percentile(stt, 0.95), "max": max(stt, default=None)},
-        "tts_seconds": {"median": round(statistics.median(tts), 3) if tts else None, "p95": percentile(tts, 0.95), "max": max(tts, default=None)},
+        "reading_seconds": {"median": round(statistics.median(reading), 6) if reading else None, "p95": percentile(reading, 0.95), "max": max(reading, default=None)},
         "memory": {
             "samples": len(memories),
             "start_total_rss_mib": round(memories[0]["total_rss_bytes"] / 1024 / 1024, 1) if memories else None,

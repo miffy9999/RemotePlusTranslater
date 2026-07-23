@@ -12,6 +12,7 @@ import webbrowser
 from pathlib import Path
 
 from .config import load_config
+from .diagnostics import configure_runtime_logging, runtime_logger
 from .process_cleanup import enable_windows_process_cleanup
 
 
@@ -32,11 +33,13 @@ def _debug_startup(message: str) -> None:
 
 
 def doctor() -> int:
-    os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
     checks: list[tuple[str, bool, str]] = []
     version_ok = (3, 11) <= sys.version_info[:2] < (3, 14)
     checks.append(("Python", version_ok, platform.python_version()))
-    for package in ("numpy", "sounddevice", "faster_whisper", "fastapi", "sherpa_onnx", "pygame"):
+    for package in (
+        "numpy", "sounddevice", "faster_whisper", "fastapi", "pypinyin", "anyascii",
+        "webview",
+    ):
         try:
             module = importlib.import_module(package)
             checks.append((package, True, getattr(module, "__version__", "installed")))
@@ -50,18 +53,8 @@ def doctor() -> int:
             runtime = cfg.root / cfg.translation.hymt2_runtime / "llama-server.exe"
             checks.append(("Hy-MT2 model", model.exists(), str(model)))
             checks.append(("llama.cpp runtime", runtime.exists(), str(runtime)))
-        from .tts_packs import TtsPackManager
-        tts_languages = TtsPackManager(
-            cfg.data_root, cfg.tts.bundled_data_root
-        ).installed_languages()
-        checks.append(("TTS runtime", cfg.tts.backend == "local", "local sherpa-onnx; no cloud speech service"))
-        checks.append((
-            "TTS voice packs",
-            True,
-            ", ".join(sorted(tts_languages))
-            or "none yet; the normal app start downloads reviewed packs automatically",
-        ))
         checks.append(("live captions", True, "disabled for final-STT priority"))
+        checks.append(("staff replies", True, "typed Japanese or English with reading guides"))
     except Exception as exc:
         checks.append(("configuration", False, str(exc)))
     if os.environ.get("REMOTEPLUS_ENUMERATE_AUDIO_DEVICES") == "1":
@@ -94,14 +87,10 @@ def prepare() -> int:
 
     _emit("Final speech model is downloaded once and then used locally.")
     _emit("Live preview is disabled for queue stability and CPU priority.")
-    _emit("Reply speech uses verified local ONNX voices; no Windows language packs are required.")
+    _emit("Staff replies use typed Japanese or English and local reading-guide rules.")
     WhisperRecognizer(cfg.stt, report, label="final").load()
     if cfg.translation.backend == "hymt2":
         prepare_hymt2_files(cfg.translation, report)
-    from .tts_packs import TtsPackManager
-    TtsPackManager(cfg.data_root, cfg.tts.bundled_data_root).install_for_languages(
-        cfg.conversation.enabled_languages, report
-    )
     translator = create_translator(cfg.translation, report)
     translator.load()
     if hasattr(translator, "close"):
@@ -111,16 +100,11 @@ def prepare() -> int:
 
 
 def device_probe(kind: str) -> int:
-    os.environ.setdefault("PYGAME_HIDE_SUPPORT_PROMPT", "1")
     if kind == "input":
         from .audio import list_audio_devices
 
         result = list_audio_devices()
         payload = {"inputs": result.get("inputs", []), "warnings": result.get("warnings", [])}
-    elif kind == "output":
-        from .tts import LocalSpeaker
-
-        payload = {"outputs": LocalSpeaker.output_devices(), "warnings": []}
     else:
         return 2
     encoded = json.dumps(payload, ensure_ascii=False)
@@ -136,6 +120,8 @@ def serve() -> int:
     _debug_startup("serve loading config")
     cfg = load_config()
     cfg.data_root.mkdir(parents=True, exist_ok=True)
+    configure_runtime_logging(cfg.data_root)
+    runtime_logger().info("serve start pid=%s data_root=%s", os.getpid(), cfg.data_root)
     _debug_startup("serve importing server")
     from .server import create_app
     _debug_startup("serve importing uvicorn")
@@ -166,8 +152,7 @@ def main() -> int:
     sub.add_parser("doctor", help="check installation and audio input")
     sub.add_parser("prepare", help="download local speech and translation models")
     probe = sub.add_parser("device-probe", help=argparse.SUPPRESS)
-    probe.add_argument("kind", choices=("input", "output"))
-    sub.add_parser("tts-worker", help=argparse.SUPPRESS)
+    probe.add_argument("kind", choices=("input",))
     args = parser.parse_args()
     if args.command is None or args.command == "desktop":
         return desktop()
@@ -179,9 +164,6 @@ def main() -> int:
         return prepare()
     if args.command == "device-probe":
         return device_probe(args.kind)
-    if args.command == "tts-worker":
-        from .tts import tts_worker_main
-        return tts_worker_main()
     return 2
 
 

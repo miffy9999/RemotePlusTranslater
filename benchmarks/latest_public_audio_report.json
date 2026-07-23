@@ -2,8 +2,8 @@
   "summary": {
     "test_type": "fixed_language_execution_smoke",
     "transcript_accuracy_evaluated": false,
-    "samples": 5,
-    "passed": 5,
+    "samples": 4,
+    "passed": 4,
     "failed": []
   },
   "rows": [
@@ -24,16 +24,6 @@
       "detected": "ko",
       "probability": 1.0,
       "text": "자신의 꿈을 포기하는 것은 죽음과 같다",
-      "text_present": true,
-      "smoke_passed": true
-    },
-    {
-      "mode": "staff",
-      "selected": "ja",
-      "expected": "ja",
-      "detected": "ja",
-      "probability": 1.0,
-      "text": "キタダビマトキ",
       "text_present": true,
       "smoke_passed": true
     },

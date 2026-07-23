@@ -25,7 +25,7 @@ def valid_info() -> dict:
         "operator_phone": "+81-3-0000-0001",
         "operator_email": "privacy@example.invalid",
         "operator_privacy_url": "https://example.invalid/privacy",
-        "product_version": "0.6.0",
+        "product_version": "0.8.4",
         "effective_date": "2026-07-13",
         "support_end_date": "Internal IT lifecycle policy",
         "governing_law": "Laws of Japan",

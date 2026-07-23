@@ -26,7 +26,7 @@ $env:REMOTEPLUS_SIGN_CERT_SHA1 = "인증서_지문"
 .\build.ps1 -CommercialRelease
 ```
 
-빌드 스크립트는 인증서의 개인키, 용도, 만료일을 확인하고 앱 EXE, TTS worker, 설치 프로그램을 각각
+빌드 스크립트는 인증서의 개인키, 용도, 만료일을 확인하고 앱 EXE와 설치 프로그램을 각각
 SHA-256과 타임스탬프로 서명한다. 서명이 `Valid`가 아니면 운영 빌드는 실패한다. 결과는
 `dist\signature-report.json`에 남는다.
 

@@ -1,228 +1,206 @@
-from types import SimpleNamespace
 import threading
 import time
 
 import pytest
 
 from translator_app.config import load_config
-from translator_app.conversation import (
-    ConversationController,
-    RecognitionJob,
-    _NOISE_TEXT,
-    _create_debug_logger,
-)
+from translator_app.conversation import ConversationController, RecognitionJob, _NOISE_TEXT
 from translator_app.events import EventBus
 from translator_app.stt import Recognition
 
 
 class FakeRecognizer:
-    def __init__(self): self.selected_language = "auto"
-    def load(self): pass
-    def transcribe(self, audio): return Recognition("", "en", 1.0)
-    def set_selected_language(self, language): self.selected_language = language
+    def __init__(self):
+        self.selected_language = "en"
+
+    def load(self):
+        pass
+
+    def transcribe(self, _audio, *, language=None):
+        return Recognition("", language or "en", 1.0)
+
+    def set_selected_language(self, language):
+        self.selected_language = language
 
 
 class FakeTranslator:
-    def __init__(self): self.calls = []
-    def load(self): pass
-    def translate(self, text, source_code, target_code):
-        self.calls.append((text, source_code, target_code))
-        return f"{target_code}:{text}"
-
-
-class FakeSpeaker:
     def __init__(self):
         self.calls = []
-        self.cfg = SimpleNamespace(enabled=True)
-    def speak(self, text, language): self.calls.append((text, language))
-    def stop(self): pass
-    def interrupt(self, **_kwargs): pass
-    def is_alive(self): return False
-    def join(self, timeout=None): pass
+
+    def load(self):
+        pass
+
+    def translate(self, text, source_code, target_code):
+        self.calls.append((text, source_code, target_code))
+        return {"ko": "입력하겠습니다.", "zh": "请稍等一下。"}.get(
+            target_code, f"{target_code}:{text}"
+        )
 
 
 def make_controller():
     translator = FakeTranslator()
     bus = EventBus()
     controller = ConversationController(load_config(), bus, FakeRecognizer(), translator)
-    controller.speaker = FakeSpeaker()
     return controller, translator, bus
 
 
-def test_incoming_sets_partner_language_and_translates_to_japanese():
+def test_customer_recognition_uses_selected_language_and_translates_to_japanese():
     controller, translator, bus = make_controller()
-    controller.process_recognition(Recognition("Hello", "en", 0.98))
-    assert controller.state.active_language == "en"
+    controller.process_recognition(Recognition("Hello", "fr", 0.2))
     assert translator.calls == [("Hello", "en", "ja")]
     assert bus.history()[-1]["data"]["direction"] == "incoming"
 
 
-def test_japanese_reply_returns_to_last_partner_and_speaks():
+def test_typed_japanese_reply_uses_target_snapshot():
     controller, translator, bus = make_controller()
-    controller.control(active_language="es")
-    controller.process_recognition(Recognition("Hola", "es", 0.99))
-    controller.control(speech_mode="staff")
-    controller.process_recognition(Recognition("こんにちは", "ja", 0.99))
-    assert translator.calls[-1] == ("こんにちは", "ja", "es")
-    assert controller.speaker.calls == [("es:こんにちは", "es")]
-    assert bus.history()[-1]["data"]["direction"] == "reply"
-    assert controller.state.input_language == "es"
-    assert controller.state.active_language == "es"
-
-
-def test_completed_reply_can_be_replayed_after_interruption():
-    controller, _, _ = make_controller()
-    controller.control(enabled_languages=["en", "ko", "es"])
-
-    request_id = controller.replay_tts("Please wait a moment.", "en")
-
-    assert request_id == 0
-    assert controller.speaker.calls == [("Please wait a moment.", "en")]
-
-
-def test_manual_reply_language_overrides_recent_partner():
-    controller, translator, bus = make_controller()
-    controller.process_recognition(Recognition("Hello", "en", 0.99))
-    state = controller.control(reply_language="es")
-    controller.control(speech_mode="staff")
-    controller.process_recognition(Recognition("確認します", "ja", 0.99))
-    assert state["reply_language"] == "es"
-    assert translator.calls[-1] == ("確認します", "ja", "es")
-    assert controller.speaker.calls == [("es:確認します", "es")]
-    assert bus.history()[-1]["data"]["target_language"] == "es"
-
-
-def test_manual_reply_language_works_without_recent_partner():
-    controller, translator, _ = make_controller()
-    controller.control(reply_language="ko", speech_mode="staff")
-    controller.process_recognition(Recognition("少々お待ちください", "ja", 0.99))
-    assert translator.calls[-1] == ("少々お待ちください", "ja", "ko")
-
-
-def test_disabled_reply_language_is_rejected_and_removed_language_resets_auto():
-    controller, _, _ = make_controller()
-    controller.control(enabled_languages=["en", "ko", "es"])
-    with pytest.raises(ValueError, match="Reply language"):
-        controller.control(reply_language="fr")
+    controller._translator_ready.set()
+    controller.control(reply_language="ko")
+    utterance_id = controller.submit_staff_text("入力します")
     controller.control(reply_language="es")
-    state = controller.control(enabled_languages=["en", "ko"])
-    assert state["reply_language"] == "auto"
-
-
-def test_low_confidence_language_uses_recent_partner():
-    controller, translator, _ = make_controller()
-    controller.process_recognition(Recognition("Hello", "en", 0.99))
-    controller.process_recognition(Recognition("More", "fr", 0.2))
-    assert translator.calls[-1][1] == "en"
-
-
-def test_manual_input_language_controls_recognizer_and_routing():
-    controller, translator, _ = make_controller()
-    controller.control(active_language="ko")
-    assert controller.state.input_language == "ko"
-    assert controller.recognizer.selected_language == "ko"
-    controller.process_recognition(Recognition("룸서비스 부탁합니다", "en", 0.2))
-    assert translator.calls[-1][1] == "ko"
-
-
-def test_input_device_can_change_before_audio_starts(monkeypatch):
-    controller, _, _ = make_controller()
-    monkeypatch.setattr("translator_app.conversation.validate_input_device", lambda _device: None)
-    old_capture = controller.capture
-    state = controller.control(input_device=3)
-    assert state["input_device"] == 3
-    assert controller.cfg.audio.input_device == 3
-    assert controller.capture is not old_capture
-
-
-def test_output_device_can_change_without_restarting_capture():
-    controller, _, _ = make_controller()
-    old_capture = controller.capture
-    device = "edge:Speakers"
-    state = controller.control(output_device=device)
-    assert state["output_device"] == device
-    assert controller.cfg.audio.output_device == device
-    assert controller.capture is old_capture
-
-
-def test_legacy_output_device_is_rejected():
-    controller, _, _ = make_controller()
-    with pytest.raises(ValueError, match="output_device"):
-        controller.control(output_device="output:{speaker-guid}")
-
-
-def test_staff_mode_forces_japanese_even_when_recognition_metadata_is_wrong():
-    controller, translator, _ = make_controller()
-    controller.control(active_language="en", speech_mode="staff")
-    controller.process_recognition(Recognition("確認します", "en", 0.1))
-    assert translator.calls[-1] == ("確認します", "ja", "en")
-
-
-def test_invalid_input_device_is_rejected_before_capture_restart():
-    controller, _, _ = make_controller()
-    with pytest.raises(ValueError, match="input_device"):
-        controller.control(input_device="not-a-device")
-
-
-def test_reply_job_keeps_language_and_tts_snapshot_after_ui_changes():
-    controller, translator, bus = make_controller()
-    job = RecognitionJob(
-        Recognition("確認します", "ja", 1.0), "ja", "staff", 1.0,
-        0.0, 0.2, 10, 0.0, 0.0, 0.8, 0.2, "ko", True,
-    )
-    controller.control(reply_language="es", tts_enabled=False)
+    job = controller._recognitions.get_nowait()
     controller._translate_job(job)
-    assert translator.calls[-1] == ("確認します", "ja", "ko")
-    assert controller.speaker.calls[-1] == ("ko:確認します", "ko")
+    assert job.utterance_id == utterance_id
+    assert translator.calls[-1] == ("入力します", "ja", "ko")
     assert bus.history()[-1]["data"]["target_language"] == "ko"
 
 
-def test_running_old_translation_result_cannot_overwrite_new_speech():
+def test_typed_english_quick_phrase_is_not_mislabeled_as_japanese():
+    controller, translator, _ = make_controller()
+    controller._translator_ready.set()
+    controller.control(reply_language="ko")
+    controller.submit_staff_text("Please wait a moment.")
+    job = controller._recognitions.get_nowait()
+    assert job.language == "en"
+    controller._translate_job(job)
+    assert translator.calls[-1] == ("Please wait a moment.", "en", "ko")
+
+
+def test_ambiguous_staff_turn_uses_previous_dialogue_in_one_contextual_call():
+    class ContextTranslator(FakeTranslator):
+        def __init__(self):
+            super().__init__()
+            self.context_calls = []
+
+        def translate_contextual(
+            self,
+            text,
+            source_code,
+            target_code,
+            *,
+            previous_text="",
+            next_text="",
+        ):
+            self.context_calls.append(
+                (text, source_code, target_code, previous_text, next_text)
+            )
+            return "그것으로 부탁드립니다."
+
+    translator = ContextTranslator()
+    controller = ConversationController(
+        load_config(), EventBus(), FakeRecognizer(), translator
+    )
+    controller.control(reply_language="ko")
+    controller.submit_staff_text("朝食は洋食と和食から選べます。")
+    controller._translate_job(controller._recognitions.get_nowait())
+    controller.submit_staff_text("それでお願いします。")
+    controller._translate_job(controller._recognitions.get_nowait())
+
+    assert len(translator.context_calls) == 1
+    assert "朝食は洋食と和食" in translator.context_calls[0][3]
+    assert translator.context_calls[0][4] == ""
+
+
+def test_fullwidth_english_quick_phrase_is_detected_as_english():
+    controller, _, _ = make_controller()
+    controller.control(reply_language="ko")
+    controller.submit_staff_text("ＰＬＥＡＳＥ ＷＡＩＴ")
+    assert controller._recognitions.get_nowait().language == "en"
+
+
+def test_reading_worker_adds_katakana_and_romanization_without_blocking_translation():
+    controller, _, bus = make_controller()
+    controller._translator_ready.set()
+    controller.control(reply_language="ko")
+    controller._reading_worker.start()
+    controller.submit_staff_text("入力します")
+    controller._translate_job(controller._recognitions.get_nowait())
+    translations = [x for x in bus.history() if x["type"] == "translation"]
+    assert translations[-1]["data"]["reading"] == ""
+    deadline = time.monotonic() + 1
+    while not any(x["type"] == "reading" for x in bus.history()) and time.monotonic() < deadline:
+        time.sleep(0.01)
+    controller._stop.set()
+    controller._reading_worker.join(1)
+    reading = [x for x in bus.history() if x["type"] == "reading"][-1]["data"]
+    assert reading["reading"].startswith("イ")
+    assert reading["romanized_reading"].startswith("ip")
+
+
+def test_invalid_or_oversized_staff_reply_is_rejected():
+    controller, _, _ = make_controller()
+    with pytest.raises(ValueError, match="1 to 800"):
+        controller.submit_staff_text("   ")
+    with pytest.raises(ValueError, match="1 to 800"):
+        controller.submit_staff_text("あ" * 801)
+
+
+def test_shutdown_continues_when_audio_and_translator_cleanup_fail():
+    controller, _, _ = make_controller()
+
+    def fail():
+        raise RuntimeError("cleanup failed")
+
+    controller.capture.stop = fail
+    controller.translator.close = fail
+    controller.stop()
+    assert controller._stop.is_set()
+
+
+def test_shutdown_interrupts_engine_before_waiting_for_normal_close():
+    controller, _, _ = make_controller()
+    calls = []
+    controller.translator.begin_shutdown = lambda: calls.append("begin")
+    controller.translator.close = lambda: calls.append("close")
+    controller.stop()
+    assert calls == ["begin", "close"]
+
+
+def test_translator_warmup_holds_shared_model_lock_until_ready():
+    entered = threading.Event()
+    release = threading.Event()
+
+    class WarmTranslator(FakeTranslator):
+        ready = True
+
+        def warmup(self):
+            entered.set()
+            release.wait(1)
+
+    controller = ConversationController(
+        load_config(), EventBus(), FakeRecognizer(), WarmTranslator()
+    )
+    worker = threading.Thread(target=controller._warm_translator)
+    worker.start()
+    assert entered.wait(1)
+    assert controller.translator_lock.acquire(blocking=False) is False
+    release.set()
+    worker.join(1)
+    assert controller._translator_ready.is_set()
+
+
+def test_running_old_result_cannot_overwrite_newer_work():
     controller, translator, bus = make_controller()
     with controller._latest_lock:
-        controller._latest_started_by_mode["customer"] = 12
+        controller._latest_started_by_mode["staff"] = 12
     old = RecognitionJob(
-        Recognition("old", "en", 1.0), "en", "customer", 1.0,
-        0.0, 0.2, 11, 0.0, 0.0, 0.8, 0.2, "ja", False,
+        Recognition("old", "en"), "en", "customer", 1, 0, 0, 11, 0, 0, 1, 0, "en"
     )
     controller._translate_job(old)
     assert translator.calls == []
     assert bus.history() == []
 
 
-def test_snapshot_does_not_claim_dead_translation_engine_is_ready():
-    controller, _, _ = make_controller()
-    controller.translator.is_available = lambda: False
-    controller._ready.set()
-    controller._translator_ready.set()
-    state = controller.snapshot()
-    assert state["ready"] is True
-    assert state["translator_ready"] is False
-    assert state["phase"] == "warning"
-
-
-def test_production_translation_worker_consumes_latest_queued_job():
-    controller, translator, bus = make_controller()
-    controller._translator_ready.set()
-    old = RecognitionJob(Recognition("old", "en"), "en", "customer", 1, 0, 0, 1, 0, 0, 1, 0, "ja", False)
-    latest = RecognitionJob(Recognition("latest", "en"), "en", "customer", 1, 0, 0, 2, 0, 0, 1, 0, "ja", False)
-    controller._put_latest_recognition(old)
-    controller._put_latest_recognition(latest)
-    controller._translation_worker.start()
-    deadline = time.monotonic() + 1
-    while not bus.history() and time.monotonic() < deadline:
-        time.sleep(0.01)
-    controller._stop.set()
-    controller._translation_worker.join(timeout=1)
-    assert translator.calls == [("latest", "en", "ja")]
-    assert bus.history()[-1]["data"]["source"] == "latest"
-
-
-def test_normal_hotel_thank_you_is_not_classified_as_hallucination():
-    assert _NOISE_TEXT.fullmatch("Thank you") is None
-
-
-def test_control_requests_are_serialized_with_recognizer_updates():
+def test_manual_language_control_updates_recognizer_and_is_serialized():
     controller, _, _ = make_controller()
     entered = threading.Event()
     release = threading.Event()
@@ -240,87 +218,34 @@ def test_control_requests_are_serialized_with_recognizer_updates():
     first.start()
     assert entered.wait(1)
     second.start()
-    time.sleep(0.05)
+    time.sleep(0.03)
     assert second.is_alive()
     release.set()
     first.join(1)
     second.join(1)
-    assert controller.state.input_language == "es"
     assert controller.recognizer.selected_language == "es"
 
 
-def test_slow_device_validation_does_not_hold_audio_context_lock(monkeypatch):
+def test_live_microphone_is_fixed_to_customer_language_and_japanese_target():
     controller, _, _ = make_controller()
-    entered = threading.Event()
-    release = threading.Event()
-
-    def delayed_validation(_device):
-        entered.set()
-        release.wait(1)
-
-    monkeypatch.setattr("translator_app.conversation.validate_input_device", delayed_validation)
-    worker = threading.Thread(target=lambda: controller.control(input_device=3))
-    worker.start()
-    assert entered.wait(1)
-    started = time.perf_counter()
-    assert controller._capture_context()[0] == "customer"
-    assert time.perf_counter() - started < 0.1
-    release.set()
-    worker.join(1)
+    controller.control(active_language="en")
+    assert controller._capture_context() == ("customer", "en", "en")
+    assert controller.recognizer.selected_language == "en"
+    state = controller.snapshot()
+    assert "speech_mode" not in state
+    assert state["pipeline"] == "customer_audio_staff_text_reading_guide"
 
 
-def test_failed_stream_stop_does_not_commit_new_input_device(monkeypatch):
+def test_snapshot_does_not_claim_dead_translation_engine_is_ready():
     controller, _, _ = make_controller()
-    monkeypatch.setattr("translator_app.conversation.validate_input_device", lambda _device: None)
-
-    class StuckCapture:
-        dropped_utterances = 0
-        dropped_frames = 0
-
-        def stop(self):
-            pass
-
-        def is_alive(self):
-            return True
-
-        def join(self, timeout=None):
-            pass
-
-    old_capture = StuckCapture()
-    controller.capture = old_capture
-    controller._capture_started = True
-
-    with pytest.raises(ValueError, match="did not stop"):
-        controller.control(input_device=3)
-
-    assert controller.capture is old_capture
-    assert controller.state.input_device == "default"
-    assert controller.cfg.audio.input_device == "default"
+    controller.translator.is_available = lambda: False
+    controller._ready.set()
+    controller._translator_ready.set()
+    state = controller.snapshot()
+    assert state["ready"] is True
+    assert state["translator_ready"] is False
+    assert state["phase"] == "warning"
 
 
-def test_stop_cancels_active_translation_before_closing_engine():
-    controller, _, _ = make_controller()
-    order = []
-
-    class TranslatorWithShutdown:
-        def cancel_active_request(self):
-            order.append("cancel")
-            return True
-
-        def close(self):
-            order.append("close")
-
-    controller.translator = TranslatorWithShutdown()
-    controller.stop()
-
-    assert order == ["cancel", "close"]
-
-
-def test_debug_log_open_failure_does_not_prevent_startup(tmp_path, monkeypatch):
-    monkeypatch.setenv("REMOTEPLUS_DEBUG", "1")
-
-    def fail_file_handler(*_args, **_kwargs):
-        raise OSError("disk is read-only")
-
-    monkeypatch.setattr("translator_app.conversation.logging.FileHandler", fail_file_handler)
-    assert _create_debug_logger(tmp_path) is None
+def test_normal_thank_you_is_not_noise():
+    assert _NOISE_TEXT.fullmatch("Thank you") is None

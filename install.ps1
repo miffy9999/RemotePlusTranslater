@@ -19,15 +19,26 @@ function Find-Python {
 
 $python = Find-Python
 Write-Host "Using Python $(& $python.Exe @($python.Args) --version)" -ForegroundColor Cyan
-if (-not (Test-Path '.venv')) {
-    & $python.Exe @($python.Args) -m venv .venv
+$venvPython = Join-Path $PSScriptRoot '.venv\Scripts\python.exe'
+$rebuildVenv = -not (Test-Path -LiteralPath $venvPython)
+if (-not $rebuildVenv) {
+    try {
+        & $venvPython -c "import sys; raise SystemExit(0 if sys.maxsize > 2**32 else 1)" 2>$null
+        $rebuildVenv = $LASTEXITCODE -ne 0
+    } catch {
+        $rebuildVenv = $true
+    }
+}
+if ($rebuildVenv) {
+    Write-Host 'Creating or repairing the project virtual environment...' -ForegroundColor Yellow
+    & $python.Exe @($python.Args) -m venv --clear .venv
     if ($LASTEXITCODE -ne 0) { throw "Virtual environment creation failed: $LASTEXITCODE" }
 }
-& '.\.venv\Scripts\python.exe' -m pip install --upgrade pip setuptools wheel
+& $venvPython -m pip install --upgrade pip setuptools wheel
 if ($LASTEXITCODE -ne 0) { throw "Packaging tool installation failed: $LASTEXITCODE" }
-& '.\.venv\Scripts\python.exe' -m pip install -e '.[dev]'
+& $venvPython -m pip install --upgrade -e '.[dev]'
 if ($LASTEXITCODE -ne 0) { throw "Application dependency installation failed: $LASTEXITCODE" }
-& '.\.venv\Scripts\python.exe' -m translator_app.cli doctor
+& $venvPython -m translator_app.cli doctor
 if ($LASTEXITCODE -ne 0) { throw "Installation doctor failed: $LASTEXITCODE" }
-Write-Host "`nInstallation complete. Run prepare_models.bat once to download and verify the local STT, translation, and TTS models. Windows speech language packs are not required." -ForegroundColor Green
+Write-Host "`nInstallation complete. Run prepare_models.bat once to download and verify the local STT and translation models." -ForegroundColor Green
 Read-Host 'Press Enter to close'

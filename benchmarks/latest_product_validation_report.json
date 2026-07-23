@@ -1,9 +1,12 @@
 {
   "summary": {
-    "samples": 128,
+    "samples": 136,
     "forward_score": 1.0,
     "reverse_score": 1.0,
-    "failed": []
+    "failed": [],
+    "model_routed_samples": 78,
+    "model_latency_median_seconds": 4.752,
+    "model_latency_p95_seconds": 5.876
   },
   "rows": [
     {
@@ -21,10 +24,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "明日の予約をキャンセルする必要があります。",
+      "repeat": 1,
+      "translated": "明日の予約をキャンセルしたいです。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.076
+      "seconds": 3.864,
+      "model_routed": true
     },
     {
       "id": "f-en-02",
@@ -41,10 +46,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "私のパスポートが金庫からなくなっています。",
+      "repeat": 1,
+      "translated": "パスポートが金庫からなくなってしまいました。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.149
+      "seconds": 4.07,
+      "model_routed": true
     },
     {
       "id": "f-en-03",
@@ -62,10 +69,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "エアコンが大きな音を立てている。",
+      "repeat": 1,
+      "translated": "エアコンが大きな音を立てています。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.824
+      "seconds": 4.06,
+      "model_routed": true
     },
     {
       "id": "f-en-04",
@@ -85,10 +94,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "空港シャトルは車椅子で利用可能ですか？",
+      "repeat": 1,
+      "translated": "空港シャトルは車椅子で利用できますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.04
+      "seconds": 3.829,
+      "model_routed": true
     },
     {
       "id": "f-en-05",
@@ -108,10 +119,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "卵を使わないベジタリアンの朝食を用意してください。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.048
+      "seconds": 4.364,
+      "model_routed": true
     },
     {
       "id": "f-en-06",
@@ -127,10 +140,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "使用しなかったミニバーの品物のために請求がされました。",
+      "repeat": 1,
+      "translated": "使用しなかったミニバーの品物の料金が請求されました。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.202
+      "seconds": 5.876,
+      "model_routed": true
     },
     {
       "id": "f-en-07",
@@ -147,10 +162,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "今朝からお湯がありません。",
+      "repeat": 1,
+      "translated": "今朝からお湯が出ない状態です。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.74
+      "seconds": 5.667,
+      "model_routed": true
     },
     {
       "id": "f-en-08",
@@ -167,10 +184,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "プールの近くでキーカードを失いました。",
+      "repeat": 1,
+      "translated": "プールの近くでキーカードを失くしてしまいました。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.078
+      "seconds": 5.465,
+      "model_routed": true
     },
     {
       "id": "f-en-09",
@@ -188,10 +207,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "6時30分にモーニングコールを手配してください。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.185
+      "seconds": 6.807,
+      "model_routed": true
     },
     {
       "id": "f-en-10",
@@ -209,10 +230,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "今日は部屋を掃除しないでください。",
+      "repeat": 1,
+      "translated": "今日は客室を清掃しないでください。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.53
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "f-ko-01",
@@ -229,10 +252,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "明日の予約をキャンセルしたいです。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.048
+      "seconds": 4.794,
+      "model_routed": true
     },
     {
       "id": "f-ko-02",
@@ -249,10 +274,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "金庫に入れていたパスポートがなくなってしまいました。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.28
+      "seconds": 5.479,
+      "model_routed": true
     },
     {
       "id": "f-ko-03",
@@ -270,10 +297,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "エアコンから騒音が出ています。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.541
+      "seconds": 1.306,
+      "model_routed": true
     },
     {
       "id": "f-ko-04",
@@ -293,10 +322,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "空港シャトルに車椅子を乗せることができますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.363
+      "seconds": 5.795,
+      "model_routed": true
     },
     {
       "id": "f-ko-05",
@@ -316,10 +347,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "卵を除いてベジタリアンの朝食を用意してください。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.191
+      "seconds": 5.696,
+      "model_routed": true
     },
     {
       "id": "f-ko-06",
@@ -335,10 +368,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "使用されていないミニバーの品物が請求されました。",
+      "repeat": 1,
+      "translated": "利用されていないミニバーの品物が請求されました。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.163
+      "seconds": 4.069,
+      "model_routed": true
     },
     {
       "id": "f-ko-07",
@@ -355,10 +390,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "今日の朝からはお湯が出ません。",
+      "repeat": 1,
+      "translated": "今朝からお湯が出ないようです。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.042
+      "seconds": 3.788,
+      "model_routed": true
     },
     {
       "id": "f-ko-08",
@@ -375,10 +412,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "プールの近くで客室キーカードを失くしました。",
+      "repeat": 1,
+      "translated": "プールの近くで客室キーカードを失くしてしまいました。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.289
+      "seconds": 4.09,
+      "model_routed": true
     },
     {
       "id": "f-ko-09",
@@ -397,10 +436,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "朝の6時30分にモーニングコールをお願いします。",
+      "repeat": 1,
+      "translated": "朝6時30分にモーニングコールをお願いします。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.407
+      "seconds": 4.192,
+      "model_routed": true
     },
     {
       "id": "f-ko-10",
@@ -418,10 +459,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "今日は客室の清掃をしないでください。",
+      "repeat": 1,
+      "translated": "今日は客室を清掃しないでください。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.592
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "f-zh-01",
@@ -438,10 +481,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "明日の予約をキャンセルしたいです。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.012
+      "seconds": 3.501,
+      "model_routed": true
     },
     {
       "id": "f-zh-02",
@@ -458,10 +503,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "ルームキットの金庫に入れたパスポートがなくなってしまった。",
+      "repeat": 1,
+      "translated": "客室の金庫に入れたパスポートがなくなってしまいました。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.352
+      "seconds": 4.142,
+      "model_routed": true
     },
     {
       "id": "f-zh-03",
@@ -479,10 +526,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "エアコンが大きな騒音を立てている。",
+      "repeat": 1,
+      "translated": "エアコンから大きな音が出ています。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.722
+      "seconds": 0.893,
+      "model_routed": true
     },
     {
       "id": "f-zh-04",
@@ -502,10 +551,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "空港シャトルで車椅子を置けますか？",
+      "repeat": 1,
+      "translated": "空港シャトルで車椅子を利用できますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.472
+      "seconds": 3.871,
+      "model_routed": true
     },
     {
       "id": "f-zh-05",
@@ -525,10 +576,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "卵を使わないベジタリアンの朝食を用意してください。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.466
+      "seconds": 4.082,
+      "model_routed": true
     },
     {
       "id": "f-zh-06",
@@ -544,10 +597,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "ミニバーで、私が使用していない品物の料金が請求されました。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.738
+      "seconds": 4.883,
+      "model_routed": true
     },
     {
       "id": "f-zh-07",
@@ -564,10 +619,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "今日の朝からお湯がありません。",
+      "repeat": 1,
+      "translated": "今日の朝からお湯が使えません。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.099
+      "seconds": 4.305,
+      "model_routed": true
     },
     {
       "id": "f-zh-08",
@@ -584,10 +641,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "プールの近くでキーカードを失くしました。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.431
+      "seconds": 4.991,
+      "model_routed": true
     },
     {
       "id": "f-zh-09",
@@ -606,10 +665,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "朝6時30分に私を起こしてください。（重要語: モーニングコール）",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.464
+      "seconds": 4.376,
+      "model_routed": true
     },
     {
       "id": "f-zh-10",
@@ -627,10 +688,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "今日は部屋の掃除をしないでください。",
+      "repeat": 1,
+      "translated": "今日は客室を清掃しないでください。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.711
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "f-es-01",
@@ -647,10 +710,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "明日の予約をキャンセルしたいです。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.538
+      "seconds": 5.019,
+      "model_routed": true
     },
     {
       "id": "f-es-02",
@@ -667,10 +732,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "私のパスポートが部屋の金庫からなくなってしまった。",
+      "repeat": 1,
+      "translated": "お部屋の金庫からパスポートがなくなってしまいました。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.952
+      "seconds": 5.447,
+      "model_routed": true
     },
     {
       "id": "f-es-03",
@@ -689,10 +756,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "エアコンが大きな音を立てている。",
+      "repeat": 1,
+      "translated": "エアコンがうるさいです。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.754
+      "seconds": 1.149,
+      "model_routed": true
     },
     {
       "id": "f-es-04",
@@ -712,10 +781,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "空港シャトルは車椅子を利用できますか？",
+      "repeat": 1,
+      "translated": "空港シャトルで車椅子は利用できますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.761
+      "seconds": 5.149,
+      "model_routed": true
     },
     {
       "id": "f-es-05",
@@ -735,10 +806,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "卵を使わないベジタリアンの朝食を用意する。",
+      "repeat": 1,
+      "translated": "卵を使わないベジタリアンの朝食を用意してください。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.712
+      "seconds": 5.322,
+      "model_routed": true
     },
     {
       "id": "f-es-06",
@@ -754,10 +827,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "私は使用していないミニバーの品物を請求されました。",
+      "repeat": 1,
+      "translated": "使用していないミニバーの品物を請求されました。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.738
+      "seconds": 5.275,
+      "model_routed": true
     },
     {
       "id": "f-es-07",
@@ -774,10 +849,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "今朝からお湯はありません。",
+      "repeat": 1,
+      "translated": "今朝からお湯がありません。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.19
+      "seconds": 6.976,
+      "model_routed": true
     },
     {
       "id": "f-es-08",
@@ -794,10 +871,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "プールの近くでキーカードを失いました。",
+      "repeat": 1,
+      "translated": "プールの近くでキーカードを失くしてしまいました。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.658
+      "seconds": 8.191,
+      "model_routed": true
     },
     {
       "id": "f-es-09",
@@ -816,10 +895,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "6時30分にモーニングコールを設定してください。",
+      "repeat": 1,
+      "translated": "6時30分にモーニングコールを予約してください。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.687
+      "seconds": 5.143,
+      "model_routed": true
     },
     {
       "id": "f-es-10",
@@ -837,10 +918,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
-      "translated": "今日は部屋を掃除しないでください。",
+      "repeat": 1,
+      "translated": "今日は客室を清掃しないでください。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.71
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-en-01",
@@ -857,10 +940,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "Please give me your reservation number.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-en-02",
@@ -877,10 +962,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "We will deliver three additional towels to your room.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-en-03",
@@ -899,10 +986,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "The airport shuttle leaves at 8:00 a.m.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-en-04",
@@ -918,10 +1007,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "We will inform the kitchen about your peanut allergy.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-en-05",
@@ -941,10 +1032,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "Late check-out is available until 2:00 p.m.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-ko-01",
@@ -960,10 +1053,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "예약 번호를 알려 주세요.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-ko-02",
@@ -980,10 +1075,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "추가 수건 세 장을 객실로 가져다드리겠습니다.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-ko-03",
@@ -1002,10 +1099,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "공항 셔틀은 오전 8시에 출발합니다.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-ko-04",
@@ -1022,10 +1121,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "땅콩 알레르기가 있다고 주방에 전달하겠습니다.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-ko-05",
@@ -1045,10 +1146,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "레이트 체크아웃은 오후 2시까지 가능합니다.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-zh-01",
@@ -1065,10 +1168,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "请告诉我您的预订号码。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-zh-02",
@@ -1085,10 +1190,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "我们会把三条额外的毛巾送到您的房间。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-zh-03",
@@ -1109,10 +1216,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "机场班车上午八点出发。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-zh-04",
@@ -1128,10 +1237,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "我们会将您的花生过敏情况告知厨房。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-zh-05",
@@ -1152,10 +1263,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "延迟退房可以到下午两点。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-es-01",
@@ -1172,10 +1285,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "Por favor, indíqueme su número de reserva.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-es-02",
@@ -1192,10 +1307,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "Le llevaremos tres toallas adicionales a su habitación.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-es-03",
@@ -1217,10 +1334,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "El transporte al aeropuerto sale a las ocho de la mañana.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-es-04",
@@ -1237,10 +1356,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "Informaremos a la cocina de su alergia al cacahuete.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-es-05",
@@ -1261,10 +1382,12 @@
         ]
       ],
       "corpus": "hotel_translation_extended",
+      "repeat": 1,
       "translated": "La salida tardía está disponible hasta las dos de la tarde.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "f-en-h1",
@@ -1283,10 +1406,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
+      "repeat": 1,
       "translated": "6時30分にモーニングコールをお願いできますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.827
+      "seconds": 5.273,
+      "model_routed": true
     },
     {
       "id": "f-en-h2",
@@ -1302,10 +1427,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "私はグルテンにアレルギーがあり、グルテンフリーの食事が必要です。",
+      "repeat": 1,
+      "translated": "グルテンにアレルギーがあるので、グルテンフリーの食事が必要です。",
       "score": 1.0,
       "missed": [],
-      "seconds": 2.012
+      "seconds": 5.813,
+      "model_routed": true
     },
     {
       "id": "f-en-h3",
@@ -1319,10 +1446,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "部屋にベビーベッドを置くことはできますか？",
+      "repeat": 1,
+      "translated": "ベビーベッドを部屋に置いてもらえますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.386
+      "seconds": 4.908,
+      "model_routed": true
     },
     {
       "id": "f-en-h4",
@@ -1346,10 +1475,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "隣の部屋がうるさいです。部屋を変えることはできますか？",
+      "repeat": 1,
+      "translated": "隣の部屋がうるさいので、部屋を変更してもらえますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.037
+      "seconds": 2.377,
+      "model_routed": true
     },
     {
       "id": "f-en-h5",
@@ -1366,10 +1497,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
+      "repeat": 1,
       "translated": "会社名で発行された領収書が必要です。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.39
+      "seconds": 4.957,
+      "model_routed": true
     },
     {
       "id": "f-ko-h1",
@@ -1388,10 +1521,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "朝の6時30分に起こしてくれますか？（重要語: モーニングコール）",
+      "repeat": 1,
+      "translated": "6時30分に起こしてくれますか？（重要語: モーニングコール）",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.706
+      "seconds": 5.029,
+      "model_routed": true
     },
     {
       "id": "f-ko-h2",
@@ -1407,10 +1542,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
+      "repeat": 1,
       "translated": "グルテンアレルギーがあるため、グルテンフリーの食事が必要です。",
       "score": 1.0,
       "missed": [],
-      "seconds": 2.232
+      "seconds": 6.148,
+      "model_routed": true
     },
     {
       "id": "f-ko-h3",
@@ -1424,10 +1561,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "客室にベビーベッドを置いてもらえますか？",
+      "repeat": 1,
+      "translated": "ベビーベッドを客室に設置してもらえますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.703
+      "seconds": 4.616,
+      "model_routed": true
     },
     {
       "id": "f-ko-h4",
@@ -1452,10 +1591,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "隣の部屋がとても騒がしいですが、別の部屋に移ることはできますか？",
+      "repeat": 1,
+      "translated": "隣の部屋がとても騒がしいですが、別の部屋に変更できますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.457
+      "seconds": 2.407,
+      "model_routed": true
     },
     {
       "id": "f-ko-h5",
@@ -1472,10 +1613,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "会社名で領収書を発行してください。",
+      "repeat": 1,
+      "translated": "会社名の領収書を発行していただけますか。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.513
+      "seconds": 4.924,
+      "model_routed": true
     },
     {
       "id": "f-zh-h1",
@@ -1494,10 +1637,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "6時30分に私を起こしてくれますか？（重要語: モーニングコール）",
+      "repeat": 1,
+      "translated": "6時30分にモーニングコールしてもらえますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.78
+      "seconds": 1.394,
+      "model_routed": true
     },
     {
       "id": "f-zh-h2",
@@ -1513,10 +1658,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "私はグルテンにアレルギーがあり、グルテンフリーの食事が必要です。",
+      "repeat": 1,
+      "translated": "グルテンにアレルギーがあるので、グルテンフリーの食事が必要です。",
       "score": 1.0,
       "missed": [],
-      "seconds": 2.044
+      "seconds": 5.176,
+      "model_routed": true
     },
     {
       "id": "f-zh-h3",
@@ -1530,10 +1677,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "部屋にベビーベッドを置けますか？",
+      "repeat": 1,
+      "translated": "ベビーベッドを部屋に置いてもらえますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.299
+      "seconds": 4.373,
+      "model_routed": true
     },
     {
       "id": "f-zh-h4",
@@ -1557,10 +1706,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "隣の部屋がうるさいです。部屋を変えることはできますか？",
+      "repeat": 1,
+      "translated": "隣の部屋がうるさいので、別の部屋に変更できますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.076
+      "seconds": 1.684,
+      "model_routed": true
     },
     {
       "id": "f-zh-h5",
@@ -1577,10 +1728,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "会社名の下で領収書を発行してください。",
+      "repeat": 1,
+      "translated": "会社名から領収書を発行してください。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.43
+      "seconds": 4.219,
+      "model_routed": true
     },
     {
       "id": "f-es-h1",
@@ -1599,10 +1752,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "6時30分に起こしてくれますか？（重要語: モーニングコール）",
+      "repeat": 1,
+      "translated": "6時30分に起こしてもらえますか？（重要語: モーニングコール）",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.811
+      "seconds": 4.551,
+      "model_routed": true
     },
     {
       "id": "f-es-h2",
@@ -1618,10 +1773,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "私はグルテンにアレルギーがあり、グルテンを含まない食事が必要です。",
+      "repeat": 1,
+      "translated": "グルテンにアレルギーがあるので、グルテンフリーの食事が必要です。",
       "score": 1.0,
       "missed": [],
-      "seconds": 2.202
+      "seconds": 5.405,
+      "model_routed": true
     },
     {
       "id": "f-es-h3",
@@ -1635,10 +1792,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "ベビーベッドを部屋に置くことができますか？",
+      "repeat": 1,
+      "translated": "ベビーベッドを部屋に設置してもらえますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.82
+      "seconds": 4.788,
+      "model_routed": true
     },
     {
       "id": "f-es-h4",
@@ -1663,10 +1822,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "隣の部屋はとても騒音が大きいです。部屋を変えることはできますか？",
+      "repeat": 1,
+      "translated": "隣の部屋がとても騒音が大きいです。別の部屋に変更してもらえますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.41
+      "seconds": 2.575,
+      "model_routed": true
     },
     {
       "id": "f-es-h5",
@@ -1683,10 +1844,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "会社名の領収書が必要です。",
+      "repeat": 1,
+      "translated": "会社名で領収書が必要です。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.394
+      "seconds": 4.161,
+      "model_routed": true
     },
     {
       "id": "r-en-h1",
@@ -1702,10 +1865,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
+      "repeat": 1,
       "translated": "Please wait a moment while I check.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-en-h2",
@@ -1721,10 +1886,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
+      "repeat": 1,
       "translated": "We sincerely apologize for the inconvenience.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-en-h3",
@@ -1740,10 +1907,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "A staff member will come to your room shortly.",
+      "repeat": 1,
+      "translated": "Our staff will come to your room right away.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 3.751,
+      "model_routed": true
     },
     {
       "id": "r-en-h4",
@@ -1759,10 +1928,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
+      "repeat": 1,
       "translated": "We will arrange a taxi for you.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-en-h5",
@@ -1774,17 +1945,20 @@
           "charge"
         ],
         [
-          "check"
+          "check",
+          "review"
         ],
         [
           "correct"
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "We will check the charge and correct it if necessary.",
+      "repeat": 1,
+      "translated": "We will review the charge and correct it.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-ko-h1",
@@ -1800,10 +1974,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
+      "repeat": 1,
       "translated": "확인하는 동안 잠시만 기다려 주세요.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-ko-h2",
@@ -1819,10 +1995,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
+      "repeat": 1,
       "translated": "불편을 드려 진심으로 죄송합니다.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-ko-h3",
@@ -1839,10 +2017,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "직원이 곧 객실로 방문하겠습니다.",
+      "repeat": 1,
+      "translated": "담당 직원이 곧 방으로 갈게요.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 3.801,
+      "model_routed": true
     },
     {
       "id": "r-ko-h4",
@@ -1859,10 +2039,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
+      "repeat": 1,
       "translated": "택시를 불러 드리겠습니다.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-ko-h5",
@@ -1882,10 +2064,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "요금을 확인하고 필요한 경우 정정하겠습니다.",
+      "repeat": 1,
+      "translated": "청구 내용을 확인하고 정정하겠습니다.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-zh-h1",
@@ -1902,10 +2086,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "请稍等片刻，我们正在确认。",
+      "repeat": 1,
+      "translated": "请稍等片刻，我来为您确认。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-zh-h2",
@@ -1922,10 +2108,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
+      "repeat": 1,
       "translated": "给您带来不便，我们深表歉意。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-zh-h3",
@@ -1935,17 +2123,20 @@
       "expected_any": [
         [
           "工作人员",
-          "员工"
+          "员工",
+          "负责人员"
         ],
         [
           "房间"
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "工作人员很快会到您的房间。",
+      "repeat": 1,
+      "translated": "负责的工作人员会立刻到您的房间来。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 3.426,
+      "model_routed": true
     },
     {
       "id": "r-zh-h4",
@@ -1961,10 +2152,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
+      "repeat": 1,
       "translated": "我们会为您安排出租车。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-zh-h5",
@@ -1985,10 +2178,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "我们会核对费用，并在需要时进行更正。",
+      "repeat": 1,
+      "translated": "我们会核对费用并予以更正。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-es-h1",
@@ -2000,14 +2195,17 @@
           "espere"
         ],
         [
-          "comprob"
+          "comprob",
+          "comprue"
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "Espere un momento mientras lo comprobamos.",
+      "repeat": 1,
+      "translated": "Espere un momento mientras lo compruebo.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-es-h2",
@@ -2023,10 +2221,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
+      "repeat": 1,
       "translated": "Le pedimos sinceras disculpas por las molestias.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-es-h3",
@@ -2042,10 +2242,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "Un miembro del personal irá a su habitación en breve.",
+      "repeat": 1,
+      "translated": "El personal encargado vendrá a su habitación en breve.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 3.742,
+      "model_routed": true
     },
     {
       "id": "r-es-h4",
@@ -2062,10 +2264,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
+      "repeat": 1,
       "translated": "Le pediremos un taxi.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-es-h5",
@@ -2084,10 +2288,12 @@
         ]
       ],
       "corpus": "hotel_translation_holdout",
-      "translated": "Revisaremos el cargo y lo corregiremos si es necesario.",
+      "repeat": 1,
+      "translated": "Revisaremos el cargo y lo corregiremos.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "f-en-v1",
@@ -2107,10 +2313,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
-      "translated": "明日の朝までに洗濯物を返すことができますか？",
+      "repeat": 1,
+      "translated": "明日の朝まで洗濯物を返すことができますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.881
+      "seconds": 1.35,
+      "model_routed": true
     },
     {
       "id": "f-en-v2",
@@ -2140,10 +2348,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
-      "translated": "私のフライトが遅延しています。空港送迎の時間を変更してください。",
+      "repeat": 1,
+      "translated": "フライトが遅延しています。空港送迎の時間を変更してください。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.987
+      "seconds": 5.109,
+      "model_routed": true
     },
     {
       "id": "f-en-v3",
@@ -2165,10 +2375,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
-      "translated": "これは禁煙ルームですが、タバコのにおいがします。",
+      "repeat": 1,
+      "translated": "禁煙ルームですが、タバコのにおいがします。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.765
+      "seconds": 4.853,
+      "model_routed": true
     },
     {
       "id": "f-en-v4",
@@ -2190,10 +2402,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
-      "translated": "私の子供が発熱しています。医師を呼んでもらえますか？",
+      "repeat": 1,
+      "translated": "子供が発熱しています。医師を呼んでいただけますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.873
+      "seconds": 4.794,
+      "model_routed": true
     },
     {
       "id": "f-ko-v1",
@@ -2213,10 +2427,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
+      "repeat": 1,
       "translated": "明日の朝まで洗濯物を受け取ることができますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.968
+      "seconds": 1.71,
+      "model_routed": true
     },
     {
       "id": "f-ko-v2",
@@ -2245,10 +2461,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
-      "translated": "フライトが遅延したため、空港送迎の時間を変更してください。",
+      "repeat": 1,
+      "translated": "フライトが遅延してしまったので、空港送迎の時間を変更していただけますか。",
       "score": 1.0,
       "missed": [],
-      "seconds": 2.127
+      "seconds": 5.634,
+      "model_routed": true
     },
     {
       "id": "f-ko-v3",
@@ -2270,10 +2488,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
-      "translated": "禁煙の客室ですが、タバコのにおいがあります。",
+      "repeat": 1,
+      "translated": "禁煙の客室ですが、タバコのにおいがします。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.9
+      "seconds": 4.842,
+      "model_routed": true
     },
     {
       "id": "f-ko-v4",
@@ -2295,10 +2515,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
-      "translated": "子供が発熱しているのですが、医師を呼んでいただけますか？",
+      "repeat": 1,
+      "translated": "子供が発熱していますが、医師を呼んでいただけますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.938
+      "seconds": 4.918,
+      "model_routed": true
     },
     {
       "id": "f-zh-v1",
@@ -2319,10 +2541,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
-      "translated": "洗った服を明日の朝に届けてもいいですか？",
+      "repeat": 1,
+      "translated": "洗濯済みの服を明日の朝に届けてもらえますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.867
+      "seconds": 1.656,
+      "model_routed": true
     },
     {
       "id": "f-zh-v2",
@@ -2350,10 +2574,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
-      "translated": "私のフライトに遅延が発生しましたので、空港送迎時間を変更してください。",
+      "repeat": 1,
+      "translated": "フライトが遅延してしまったので、空港送迎の時間を変更してください。",
       "score": 1.0,
       "missed": [],
-      "seconds": 2.067
+      "seconds": 5.066,
+      "model_routed": true
     },
     {
       "id": "f-zh-v3",
@@ -2374,10 +2600,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
-      "translated": "これは禁煙室ですが、タバコのにおいがあります。",
+      "repeat": 1,
+      "translated": "禁煙の部屋ですが、タバコのにおいがあります。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.711
+      "seconds": 4.716,
+      "model_routed": true
     },
     {
       "id": "f-zh-v4",
@@ -2399,10 +2627,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
-      "translated": "私の子供が発熱したんですが、医師を呼ぶことができますか？",
+      "repeat": 1,
+      "translated": "子供が発熱しましたが、医師を呼んでもいいですか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.852
+      "seconds": 4.936,
+      "model_routed": true
     },
     {
       "id": "f-es-v1",
@@ -2423,10 +2653,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
+      "repeat": 1,
       "translated": "明日の朝、洗った服を返してもらえますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.977
+      "seconds": 1.608,
+      "model_routed": true
     },
     {
       "id": "f-es-v2",
@@ -2455,10 +2687,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
-      "translated": "私のフライトが遅延しました。空港送迎の時間を変更してください。",
+      "repeat": 1,
+      "translated": "フライトが遅延しています。空港送迎の時間を変更してください。",
       "score": 1.0,
       "missed": [],
-      "seconds": 2.297
+      "seconds": 5.7,
+      "model_routed": true
     },
     {
       "id": "f-es-v3",
@@ -2480,10 +2714,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
-      "translated": "禁煙用の部屋ですが、タバコのにおいがあります。",
+      "repeat": 1,
+      "translated": "禁煙用の部屋ですが、においがタバコのようです。",
       "score": 1.0,
       "missed": [],
-      "seconds": 1.929
+      "seconds": 5.119,
+      "model_routed": true
     },
     {
       "id": "f-es-v4",
@@ -2505,10 +2741,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
-      "translated": "私の子供が発熱しています。医師を呼ぶことができますか？",
+      "repeat": 1,
+      "translated": "子供が発熱しています。医師に連絡してもらえますか？",
       "score": 1.0,
       "missed": [],
-      "seconds": 2.011
+      "seconds": 5.154,
+      "model_routed": true
     },
     {
       "id": "r-en-v1",
@@ -2531,10 +2769,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
+      "repeat": 1,
       "translated": "The breakfast venue is on the second floor and is open from 6:30 to 10:00 a.m.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-en-v2",
@@ -2555,10 +2795,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
+      "repeat": 1,
       "translated": "We found your passport. Please bring identification to the front desk.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-en-v3",
@@ -2574,10 +2816,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
+      "repeat": 1,
       "translated": "In an emergency, we will arrange an ambulance.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-ko-v1",
@@ -2602,10 +2846,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
+      "repeat": 1,
       "translated": "조식 장소는 2층이며 오전 6시 30분부터 10시까지 운영합니다.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-ko-v2",
@@ -2626,10 +2872,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
+      "repeat": 1,
       "translated": "여권을 찾았습니다. 신분증을 가지고 프런트 데스크로 와 주세요.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-ko-v3",
@@ -2646,10 +2894,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
+      "repeat": 1,
       "translated": "응급 상황에는 구급차를 불러 드리겠습니다.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-zh-v1",
@@ -2674,10 +2924,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
+      "repeat": 1,
       "translated": "早餐地点在二楼，开放时间为上午六点半到十点。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-zh-v2",
@@ -2697,10 +2949,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
+      "repeat": 1,
       "translated": "我们找到了您的护照。请携带身份证件到前台领取。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-zh-v3",
@@ -2716,10 +2970,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
+      "repeat": 1,
       "translated": "紧急情况下，我们会为您安排救护车。",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-es-v1",
@@ -2744,10 +3000,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
+      "repeat": 1,
       "translated": "El desayuno se sirve en la segunda planta de 6:30 a 10:00 de la mañana.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-es-v2",
@@ -2767,10 +3025,12 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
+      "repeat": 1,
       "translated": "Hemos encontrado su pasaporte. Lleve un documento de identificación a recepción.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
     },
     {
       "id": "r-es-v3",
@@ -2786,10 +3046,187 @@
         ]
       ],
       "corpus": "hotel_translation_validation",
+      "repeat": 1,
       "translated": "En caso de emergencia, solicitaremos una ambulancia.",
       "score": 1.0,
       "missed": [],
-      "seconds": 0.0
+      "seconds": 0.0,
+      "model_routed": false
+    },
+    {
+      "id": "c-ja-ko-01",
+      "source": "ja",
+      "target": "ko",
+      "previous": "朝食は6時30分と7時のどちらになさいますか。",
+      "text": "それでお願いします。",
+      "next": "7時で予約いたします。",
+      "expected_any": [
+        [
+          "부탁",
+          "주세요"
+        ]
+      ],
+      "corpus": "hotel_context_validation",
+      "repeat": 1,
+      "translated": "그걸로 부탁드립니다.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0,
+      "model_routed": false
+    },
+    {
+      "id": "c-ja-en-01",
+      "source": "ja",
+      "target": "en",
+      "previous": "追加料金は1泊2,000円です。",
+      "text": "それは含まれていますか。",
+      "next": "税金は料金に含まれています。",
+      "expected_any": [
+        [
+          "includ"
+        ]
+      ],
+      "corpus": "hotel_context_validation",
+      "repeat": 1,
+      "translated": "Is that included?",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0,
+      "model_routed": false
+    },
+    {
+      "id": "c-ko-ja-01",
+      "source": "ko",
+      "target": "ja",
+      "previous": "공항 셔틀은 오전 8시에 출발합니다.",
+      "text": "그때는 어렵습니다.",
+      "next": "오전 9시 차량을 확인해 드리겠습니다.",
+      "expected_any": [
+        [
+          "難しい",
+          "難し"
+        ]
+      ],
+      "corpus": "hotel_context_validation",
+      "repeat": 1,
+      "translated": "その時間は難しいです。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 2.673,
+      "model_routed": true
+    },
+    {
+      "id": "c-en-ja-01",
+      "source": "en",
+      "target": "ja",
+      "previous": "The airport shuttle leaves at eight a.m.",
+      "text": "That is too early.",
+      "next": "I can check the nine a.m. service.",
+      "expected_any": [
+        [
+          "早"
+        ]
+      ],
+      "corpus": "hotel_context_validation",
+      "repeat": 1,
+      "translated": "現在は早すぎます。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 2.277,
+      "model_routed": true
+    },
+    {
+      "id": "c-ja-ko-02",
+      "source": "ja",
+      "target": "ko",
+      "previous": "禁煙室は明日からご用意できます。",
+      "text": "それなら大丈夫です。",
+      "next": "明日から禁煙室へ変更いたします。",
+      "expected_any": [
+        [
+          "괜찮",
+          "좋습니다"
+        ]
+      ],
+      "corpus": "hotel_context_validation",
+      "repeat": 1,
+      "translated": "그렇다면 괜찮습니다.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0,
+      "model_routed": false
+    },
+    {
+      "id": "c-ja-en-02",
+      "source": "ja",
+      "target": "en",
+      "previous": "ツインルームとダブルルームをご用意できます。",
+      "text": "そちらでお願いします。",
+      "next": "ダブルルームで承ります。",
+      "expected_any": [
+        [
+          "that",
+          "one"
+        ],
+        [
+          "please",
+          "like"
+        ]
+      ],
+      "corpus": "hotel_context_validation",
+      "repeat": 1,
+      "translated": "That one, please.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0,
+      "model_routed": false
+    },
+    {
+      "id": "c-ko-ja-02",
+      "source": "ko",
+      "target": "ja",
+      "previous": "추가 침대는 1박에 3만 원입니다.",
+      "text": "그건 빼 주세요.",
+      "next": "추가 침대 없이 예약하겠습니다.",
+      "expected_any": [
+        [
+          "追加しない",
+          "外して",
+          "除いて",
+          "なし"
+        ]
+      ],
+      "corpus": "hotel_context_validation",
+      "repeat": 1,
+      "translated": "それは追加しないでください。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0,
+      "model_routed": false
+    },
+    {
+      "id": "c-en-ja-02",
+      "source": "en",
+      "target": "ja",
+      "previous": "The extra bed costs thirty dollars per night.",
+      "text": "Please leave that out.",
+      "next": "I will book the room without an extra bed.",
+      "expected_any": [
+        [
+          "追加しない",
+          "外して",
+          "除いて",
+          "なし",
+          "不要"
+        ]
+      ],
+      "corpus": "hotel_context_validation",
+      "repeat": 1,
+      "translated": "それは追加しないでください。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.0,
+      "model_routed": false
     }
   ]
 }

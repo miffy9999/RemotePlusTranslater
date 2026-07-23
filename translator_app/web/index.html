@@ -4,12 +4,12 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RemotePlus Translator</title>
-  <link rel="stylesheet" href="/assets/app.css?v=reading-guide-contrast-20260709">
-  <link rel="stylesheet" href="/assets/device.css">
+  <link rel="stylesheet" href="/assets/app.css?v=quick-phrase-toolbar-20260723">
+  <link rel="stylesheet" href="/assets/device.css?v=text-chat-20260713">
 </head>
 <body>
   <header>
-    <div class="brand"><span class="mark">RP</span><div><h1>RemotePlus</h1><p data-i18n="subtitle">フロントデスク通訳コンソール</p></div></div>
+    <div class="brand"><span class="mark">RP</span><div><h1>RemotePlus</h1><p data-i18n="subtitle">フロントデスク翻訳チャット</p></div></div>
     <div class="header-actions">
       <label class="ui-language"><span data-i18n="uiLanguage">表示言語</span><select id="ui-language"><option value="ja">日本語</option><option value="ko">한국어</option><option value="en">English</option><option value="zh">中文</option><option value="es">Español</option></select></label>
       <div id="connection" class="connection"><i></i><span data-i18n="connecting">接続中</span></div>
@@ -18,43 +18,56 @@
 
   <main>
     <section class="panel controls">
-      <div class="panel-title">
-        <span data-i18n="channelSettings">現場設定</span>
-        <div id="phase" class="phase"><span class="pulse"></span><strong data-i18n="starting">起動中</strong></div>
-      </div>
+      <div class="panel-title"><span data-i18n="settings">通話設定</span><div id="phase" class="phase"><span class="pulse"></span><strong data-i18n="starting">起動中</strong></div></div>
       <div class="control-stack">
-        <div class="status-strip">
-          <div><small data-i18n="detectedLanguage">現在のお客様言語</small><strong id="partner">-</strong></div>
-          <button id="pause" class="primary" data-i18n="pause">一時停止</button>
-        </div>
-
-        <label class="field main-field"><span data-i18n="inputLanguage">お客様の入力言語</span><select id="language"></select></label>
+        <div class="status-strip"><div><small data-i18n="customerLanguage">お客様の言語</small><strong id="partner">-</strong></div><button id="pause" class="primary" data-i18n="pause">一時停止</button></div>
+        <label class="field main-field"><span data-i18n="customerLanguage">お客様の言語</span><select id="language"></select></label>
         <label class="field"><span data-i18n="inputDevice">音声入力デバイス</span><select id="input-device"><option value="default" data-i18n="systemDefault">システム既定</option></select></label>
-        <label class="field"><span data-i18n="outputDevice">音声出力デバイス</span><select id="output-device"><option value="default" data-i18n="systemDefault">システム既定</option></select></label>
-
-        <div class="quick-controls">
-          <div class="speech-mode-wrap">
-            <span data-i18n="speechMode">認識モード</span>
-            <button id="speech-mode" class="speech-mode" type="button" aria-pressed="false" title="Hold Space while staff speaks"><span></span><em data-i18n="staffSpeech">スタッフ発話・Spaceを押している間</em></button>
+        <p id="mode-note" class="mode-note" data-i18n="modeNote">お客様の音声は日本語に翻訳されます。</p>
+        <section class="quick-phrases" aria-labelledby="quick-phrases-title">
+          <div class="quick-phrases-heading"><strong id="quick-phrases-title" data-i18n="quickPhrases">よく使う文章</strong><small id="quick-phrase-count">0 / 40</small></div>
+          <div class="quick-phrase-tools">
+            <form id="quick-phrase-form" class="quick-phrase-form">
+              <input id="quick-phrase-text" maxlength="800" data-i18n-placeholder="quickPhrasePlaceholder" placeholder="文章を登録…">
+              <button id="add-quick-phrase" type="submit" title="Add" aria-label="Add">+</button>
+            </form>
+            <input id="quick-phrase-search" class="quick-phrase-search" type="search" data-i18n-placeholder="quickPhraseSearchPlaceholder" placeholder="文章を検索…">
           </div>
-          <button id="tts" class="toggle on" aria-pressed="true"><span></span><em data-i18n="ttsOn">TTS オン</em></button>
-          <button id="install-voice" class="primary" type="button" data-i18n="installVoice" hidden>音声をインストール</button>
-        </div>
+          <div id="quick-phrase-list" class="quick-phrase-list"></div>
+          <p id="quick-phrase-empty" class="quick-phrase-empty" data-i18n="noQuickPhrases">登録された文章はありません。</p>
+        </section>
       </div>
     </section>
 
     <section class="panel output">
-      <div class="panel-title"><span data-i18n="output">会話ログ</span><span><small data-i18n="outputHint">最新発話優先</small><button id="clear-history" class="mini" data-i18n="clearHistory">履歴を消去</button></span></div>
-      <div id="feed" class="feed" aria-live="polite">
-        <div id="empty" class="empty">
-          <h3 data-i18n="loadingTitle">システムを準備しています</h3>
-          <p data-i18n="loadingBody">準備が完了するとお客様の音声を聞き始めます。</p>
+      <div class="panel-title"><span data-i18n="conversation">会話</span><span><small data-i18n="latestFirst">最新発話を優先</small><button id="clear-history" class="mini" data-i18n="clear">履歴を消去</button></span></div>
+      <details class="wav-import">
+        <summary class="wav-import-heading"><strong id="wav-import-title" data-i18n="wavImport">録音WAVを翻訳</strong><small data-i18n="wavImportHint">お客様とスタッフの会話を時間順に表示します。</small></summary>
+        <div class="wav-import-body" aria-labelledby="wav-import-title">
+          <input id="wav-file" type="file" accept=".wav,audio/wav,audio/x-wav">
+          <div class="wav-import-actions"><button id="start-wav" class="primary" type="button" data-i18n="wavStart">WAV解析を開始</button><button id="cancel-wav" type="button" data-i18n="wavCancel" hidden>中止</button></div>
+          <progress id="wav-progress" max="1" value="0" hidden></progress>
+          <p id="wav-status" class="wav-status" aria-live="polite"></p>
+          <audio id="wav-player" controls preload="metadata" hidden></audio>
         </div>
+      </details>
+      <div id="feed" class="feed" aria-live="polite">
+        <div id="empty" class="empty"><h3 data-i18n="loadingTitle">システムを準備しています</h3><p data-i18n="loadingBody">準備が完了するとお客様の音声を聞き始めます。</p></div>
       </div>
+      <form id="reply-form" class="reply-composer">
+        <textarea id="reply-text" rows="2" maxlength="800" data-i18n-placeholder="replyPlaceholder" placeholder="日本語で返答を入力…"></textarea>
+        <button id="send-reply" class="primary" type="submit" data-i18n="translate">翻訳</button>
+      </form>
+      <p class="composer-hint" data-i18n="composerHint">Enterで送信・Shift+Enterで改行。翻訳文の下にカタカナとローマ字の読み方が表示されます。</p>
     </section>
   </main>
 
   <div id="toast" class="toast"></div>
-  <script src="/assets/app.js?v=staff-partner-ja-default-20260713"></script>
+  <div id="quick-phrase-menu" class="quick-phrase-menu" hidden>
+    <label><span data-i18n="phraseCategory">カテゴリー</span><input id="quick-phrase-category" maxlength="40" list="quick-phrase-categories"></label>
+    <datalist id="quick-phrase-categories"></datalist>
+    <div><button id="save-quick-phrase-category" class="primary" type="button" data-i18n="saveCategory">保存</button><button id="clear-quick-phrase-category" type="button" data-i18n="clearCategory">分類解除</button></div>
+  </div>
+  <script src="/assets/app.js?v=quick-phrase-toolbar-20260723"></script>
 </body>
 </html>

@@ -8,6 +8,7 @@ from translator_app.hymt2 import (
     HyMT2Translator,
     _verify_sha256,
     build_hymt2_prompt,
+    needs_conversation_context,
     TranslationResponseError,
 )
 from translator_app.languages import public_languages
@@ -29,6 +30,11 @@ def test_prompt_includes_matching_hotel_terminology_only():
 def test_prompt_without_terms_is_still_strict():
     prompt = build_hymt2_prompt("Hello", "en", "ja", [])
     assert "ONLY output the translated result" in prompt
+    assert "natural, polite hotel-service language" in prompt
+    assert "hotel call-center expressions" in prompt
+    assert "social function" in prompt
+    assert "Korean sentence order" in prompt
+    assert "Never add or remove facts" in prompt
     assert prompt.endswith("Hello")
 
 
@@ -50,6 +56,80 @@ def test_engine_request_failure_restarts_once():
     translator._load_locked = lambda: setattr(translator, "ready", True)
     assert translator.translate("Hello", "en", "ja") == "こんにちは"
     assert attempts == 2
+
+
+def test_shutdown_terminates_engine_immediately_and_prevents_restart():
+    cfg = SimpleNamespace(protected_terms=[], glossary={})
+    translator = HyMT2Translator(cfg, lambda *_: None)
+
+    class Process:
+        terminated = False
+
+        def poll(self):
+            return None
+
+        def terminate(self):
+            self.terminated = True
+
+    process = Process()
+    translator.process = process
+    translator.begin_shutdown()
+    assert process.terminated is True
+    assert translator._shutdown_requested.is_set() is True
+    translator._load_locked()
+    assert translator.ready is False
+
+
+def test_shutdown_during_engine_start_does_not_spawn_a_replacement(tmp_path, monkeypatch):
+    model = tmp_path / "model.gguf"
+    runtime = tmp_path / "runtime"
+    model.write_bytes(b"model")
+    runtime.mkdir()
+    (runtime / "llama-server.exe").write_bytes(b"runtime")
+    cfg = SimpleNamespace(
+        root=tmp_path,
+        data_root=tmp_path / "data",
+        hymt2_model=str(model.relative_to(tmp_path)),
+        hymt2_runtime=str(runtime.relative_to(tmp_path)),
+        hymt2_context=1024,
+        hymt2_threads=2,
+        hymt2_timeout_seconds=1,
+        hymt2_startup_poll_ms=20,
+    )
+    translator = HyMT2Translator(cfg, lambda *_: None)
+    processes = []
+
+    class Process:
+        stopped = False
+
+        def poll(self):
+            return 0 if self.stopped else None
+
+        def terminate(self):
+            self.stopped = True
+
+        def wait(self, timeout):
+            return 0
+
+        def kill(self):
+            self.stopped = True
+
+    def popen(*_args, **_kwargs):
+        process = Process()
+        processes.append(process)
+        return process
+
+    monkeypatch.setattr("translator_app.hymt2.subprocess.Popen", popen)
+
+    def health():
+        translator.begin_shutdown()
+        return False
+
+    translator._health = health
+    translator.load()
+    assert len(processes) == 1
+    assert processes[0].stopped is True
+    assert translator.process is None
 
 
 def test_ui_only_exposes_languages_supported_by_hymt2():
@@ -143,3 +223,26 @@ def test_context_guard_rejects_pathological_cjk_input_before_model_call():
     translator = HyMT2Translator(cfg, lambda *_: None)
     with pytest.raises(ValueError, match="too long"):
         translator.translate("客" * 801, "zh", "ja")
+
+
+def test_production_translation_path_treats_konbanwa_as_a_greeting():
+    cfg = SimpleNamespace(protected_terms=[], glossary={})
+    translator = HyMT2Translator(cfg, lambda *_: None)
+    assert translator.translate("こんばんは", "ja", "ko") == "안녕하세요."
+
+
+def test_context_prompt_translates_current_only_with_bounded_input_budget():
+    regular = build_hymt2_prompt("それでお願いします。", "ja", "ko", [])
+    contextual = build_hymt2_prompt(
+        "それでお願いします。",
+        "ja",
+        "ko",
+        [],
+        previous_text="朝食は洋食と和食から選べます。" * 20,
+        next_text="飲み物はコーヒーにします。" * 20,
+    )
+    assert "Translate only CURRENT" in contextual
+    assert "PREVIOUS:" in contextual and "NEXT:" in contextual
+    assert len(contextual) <= len(regular)
+    assert needs_conversation_context("それでお願いします。", "ja") is True
+    assert needs_conversation_context("予約番号は1234です。", "ja") is False

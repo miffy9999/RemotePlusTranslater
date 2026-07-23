@@ -52,7 +52,6 @@ def _config_snapshot() -> dict[str, Any]:
     audio = config.get("audio", {})
     stt = config.get("stt", {})
     translation = config.get("translation", {})
-    tts = config.get("tts", {})
     return {
         "config_path": str(path),
         "config_modified_unix": round(path.stat().st_mtime, 3),
@@ -66,7 +65,6 @@ def _config_snapshot() -> dict[str, Any]:
             key: translation.get(key)
             for key in ("hymt2_threads", "hymt2_context", "max_new_tokens", "hymt2_warmup")
         },
-        "tts": {key: tts.get(key) for key in ("backend", "edge_timeout_seconds", "latest_only")},
     }
 
 
@@ -75,9 +73,6 @@ def analyze(path: Path) -> dict[str, Any]:
         "stt_seconds": [],
         "translation_seconds": [],
         "speech_end_to_translation_seconds": [],
-        "speech_end_to_tts_start_seconds": [],
-        "speech_end_to_tts_finish_seconds": [],
-        "tts_synthesis_seconds": [],
         "stt_queue_wait_seconds": [],
     }
     events: Counter[str] = Counter()
@@ -93,13 +88,10 @@ def analyze(path: Path) -> dict[str, Any]:
         events[event] += 1
         if "utterance_id" in fields:
             utterances.add(fields["utterance_id"])
-        if event in {"stt_done", "translation_done", "tts_playback_started", "tts_playback_finished", "tts_edge_generated", "stt_started"}:
+        if event in {"stt_done", "translation_done", "stt_started"}:
             keys = {
                 "stt_done": ("stt_seconds",),
                 "translation_done": ("translation_seconds", "speech_end_to_translation_seconds"),
-                "tts_playback_started": ("speech_end_to_tts_start_seconds",),
-                "tts_playback_finished": ("speech_end_to_tts_finish_seconds",),
-                "tts_edge_generated": ("synthesis_seconds",),
                 "stt_started": ("queue_wait_seconds",),
             }[event]
             for key in keys:
@@ -107,7 +99,6 @@ def analyze(path: Path) -> dict[str, Any]:
                 if value is None:
                     continue
                 target = {
-                    "synthesis_seconds": "tts_synthesis_seconds",
                     "queue_wait_seconds": "stt_queue_wait_seconds",
                 }.get(key, key)
                 measures[target].append(value)

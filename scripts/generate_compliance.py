@@ -9,10 +9,13 @@ from pathlib import Path
 
 from packaging.requirements import Requirement
 
+from translator_app import __version__
+
 
 ROOT_PACKAGES = {
     "faster-whisper", "numpy", "sounddevice", "soundcard", "pywin32", "fastapi",
-    "starlette", "pydantic", "uvicorn", "sherpa-onnx", "pygame", "pyinstaller",
+    "starlette", "pydantic", "uvicorn", "pypinyin", "anyascii", "pywebview",
+    "pyinstaller",
 }
 LICENSE_NAMES = re.compile(r"^(licen[cs]e|copying|notice|authors?|lgpl|gpl)(\.|$)", re.IGNORECASE)
 
@@ -54,22 +57,15 @@ def generate(destination: Path) -> dict:
     licenses.mkdir(parents=True, exist_ok=True)
     components = []
     missing_license_files = []
-    apache_fallback = next(
-        (
-            dist.locate_file(item)
-            for dist in metadata.distributions()
-            if normalized(dist.metadata.get("Name", "")) == "sherpa-onnx"
-            for item in (dist.files or ())
-            if Path(str(item)).name.casefold() == "license" and dist.locate_file(item).is_file()
-        ),
-        None,
-    )
     project_mit = Path(__file__).resolve().parent.parent / "LICENSE"
+    apache_2 = Path(__file__).resolve().parent.parent / "legal" / "APACHE-2.0.txt"
     fallback_license = {
         "ctranslate2": project_mit,
-        "flatbuffers": apache_fallback,
-        "sherpa-onnx-core": apache_fallback,
-        "tokenizers": apache_fallback,
+        "flatbuffers": apache_2,
+        "proxy-tools": Path(__file__).resolve().parent.parent
+        / "legal"
+        / "PROXY_TOOLS-BSD.txt",
+        "tokenizers": apache_2,
     }
     for dist in dependency_closure():
         name = dist.metadata.get("Name", "unknown")
@@ -106,7 +102,13 @@ def generate(destination: Path) -> dict:
         "bomFormat": "CycloneDX",
         "specVersion": "1.5",
         "version": 1,
-        "metadata": {"component": {"type": "application", "name": "RemotePlus Translator", "version": "0.6.0"}},
+        "metadata": {
+            "component": {
+                "type": "application",
+                "name": "RemotePlus Translator",
+                "version": __version__,
+            }
+        },
         "components": components,
         "properties": [
             {"name": "remoteplus:missing-license-files", "value": ",".join(missing_license_files)}
