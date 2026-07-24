@@ -1,0 +1,315 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <title>RemotePlus Translator かんたん操作ガイド 0.8.4</title>
+  <style>
+    @page { size: A4 landscape; margin: 0; }
+    * { box-sizing: border-box; }
+    body { margin: 0; color: #172126; background: #ddd; font-family: "Yu Gothic", "Meiryo", sans-serif; }
+    .page { position: relative; width: 297mm; height: 210mm; padding: 14mm 17mm 13mm; overflow: hidden; background: #fff; page-break-after: always; }
+    .page:last-child { page-break-after: auto; }
+    body:has(.page:target) .page:not(:target) { display: none; }
+    h1, h2, h3, p { margin: 0; }
+    h1 { font-size: 31pt; line-height: 1.18; }
+    h2 { font-size: 23pt; line-height: 1.2; }
+    h3 { font-size: 16pt; }
+    p, li { font-size: 15pt; line-height: 1.45; }
+    .small { font-size: 10pt; color: #607078; }
+    .tiny { font-size: 8.5pt; color: #607078; }
+    .green { color: #16675e; }
+    .orange { color: #b96317; }
+    .red { color: #b32f2f; }
+    .muted { color: #617078; }
+    .topline { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8mm; }
+    .brand { display: flex; align-items: center; gap: 4mm; font-size: 15pt; font-weight: 800; }
+    .logo { display: grid; place-items: center; width: 12mm; height: 12mm; border-radius: 4mm; background: #202a30; color: #fff; font-size: 9pt; }
+    .page-no { position: absolute; right: 11mm; bottom: 6mm; color: #829097; font-size: 9pt; }
+    .version { padding: 2mm 4mm; border-radius: 99mm; background: #e7f4f1; color: #16675e; font-weight: 800; }
+    .hero { display: grid; grid-template-columns: 1.05fr .95fr; gap: 14mm; align-items: center; height: 150mm; }
+    .hero-flow { display: grid; gap: 5mm; }
+    .flow-row { display: flex; align-items: center; justify-content: center; gap: 4mm; }
+    .icon-box { min-width: 42mm; padding: 7mm 5mm; border: 2px solid #cbd8d5; border-radius: 6mm; text-align: center; background: #f8fbfa; }
+    .icon { display: block; font-size: 30pt; margin-bottom: 2mm; }
+    .arrow { color: #1e6b62; font-size: 28pt; font-weight: 900; }
+    .big-note { margin-top: 8mm; padding: 5mm 6mm; border-left: 4mm solid #1e6b62; background: #eef8f6; border-radius: 3mm; font-size: 18pt; font-weight: 800; }
+    .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7mm; }
+    .card { padding: 7mm; border: 2px solid #d8dfdd; border-radius: 6mm; background: #fff; }
+    .card .num, .bubble-num { display: grid; place-items: center; width: 14mm; height: 14mm; margin-bottom: 4mm; border-radius: 50%; color: #fff; background: #1e6b62; font-size: 20pt; font-weight: 900; }
+    .card p { margin-top: 3mm; }
+    .screen-wrap { position: relative; width: 100%; border: 2px solid #bfcac7; border-radius: 4mm; overflow: hidden; box-shadow: 0 4mm 10mm rgba(28, 47, 45, .12); }
+    .screen-wrap img { display: block; width: 100%; }
+    .screen-label { position: absolute; z-index: 3; display: grid; place-items: center; width: 13mm; height: 13mm; border-radius: 50%; color: #fff; background: #e26b2f; border: 1mm solid #fff; font-size: 18pt; font-weight: 900; box-shadow: 0 1mm 3mm #777; }
+    .outline { position: absolute; z-index: 2; border: 2.2mm solid #e26b2f; border-radius: 4mm; background: rgba(255, 179, 111, .08); }
+    .legend { display: flex; justify-content: center; gap: 12mm; margin-top: 4mm; font-size: 14pt; font-weight: 800; }
+    .legend span { display: inline-flex; align-items: center; gap: 2mm; }
+    .dot { display: inline-grid; place-items: center; width: 8mm; height: 8mm; border-radius: 50%; color: #fff; background: #e26b2f; font-size: 11pt; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 10mm; }
+    .steps { display: grid; gap: 5mm; }
+    .step { display: grid; grid-template-columns: 15mm 1fr; gap: 4mm; align-items: center; padding: 5mm; border: 2px solid #d7dfdd; border-radius: 5mm; }
+    .step b { display: grid; place-items: center; width: 13mm; height: 13mm; border-radius: 50%; background: #1e6b62; color: #fff; font-size: 19pt; }
+    .fake-select { margin-top: 3mm; padding: 4mm; border: 2px solid #98aaa6; border-radius: 4mm; background: #fff; font-size: 18pt; font-weight: 800; }
+    .speech-scene { display: flex; align-items: center; justify-content: space-between; gap: 6mm; margin-top: 8mm; }
+    .person { width: 48mm; text-align: center; font-size: 48pt; }
+    .speech { flex: 1; padding: 7mm; border: 2px solid #aac2bd; border-radius: 7mm; background: #f3faf8; font-size: 17pt; font-weight: 800; }
+    .chat-card { margin: 5mm 0; padding: 6mm 7mm; border-left: 3mm solid #1e6b62; border-radius: 4mm; background: #f7f9f8; box-shadow: 0 2mm 5mm #dfe5e3; }
+    .chat-card.staff { border-left-color: #bd7b2d; background: #fff9ef; }
+    .chat-card small { display: block; color: #65747a; font-size: 10pt; }
+    .chat-card strong { display: block; margin: 2mm 0; font-size: 18pt; }
+    .input-demo { display: flex; gap: 4mm; padding: 5mm; border: 2px solid #b9c6c3; border-radius: 5mm; }
+    .input-demo div { flex: 1; padding: 4mm; color: #66767c; border: 1px solid #c9d1cf; border-radius: 3mm; font-size: 16pt; }
+    .button { display: inline-grid; place-items: center; min-width: 31mm; padding: 4mm 6mm; border-radius: 4mm; background: #1e6b62; color: #fff; font-size: 16pt; font-weight: 900; }
+    .warn { padding: 5mm 6mm; border: 2px solid #e4b96e; border-radius: 4mm; background: #fff8e8; }
+    .ok { padding: 5mm 6mm; border: 2px solid #8fc2b8; border-radius: 4mm; background: #eef9f6; }
+    .no { padding: 5mm 6mm; border: 2px solid #e5a5a5; border-radius: 4mm; background: #fff1f1; }
+    .quick-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8mm; margin-top: 8mm; }
+    .quick { display: flex; align-items: center; gap: 5mm; padding: 5mm; border: 2px solid #d2dcda; border-radius: 5mm; }
+    .quick .qicon { font-size: 29pt; }
+    .wav-steps { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4mm; margin-top: 7mm; }
+    .wav-step { min-height: 43mm; display: grid; place-items: center; align-content: center; gap: 2mm; padding: 4mm 3mm; border: 2px solid #cbd8d5; border-radius: 5mm; background: #f8fbfa; text-align: center; }
+    .wav-step .icon { margin: 0; font-size: 25pt; }
+    .wav-step h3 { font-size: 13pt; line-height: 1.35; }
+    .wav-steps.remote { grid-template-columns: repeat(3, 1fr); }
+    .log-screen { position: relative; height: 88mm; overflow: hidden; border: 2px solid #bfcac7; border-radius: 4mm; background: #fff; box-shadow: 0 3mm 8mm rgba(28, 47, 45, .1); }
+    .log-screen img { display: block; width: 100%; height: auto; }
+    .log-play-outline { position: absolute; left: .6%; top: 34mm; width: 3.5%; bottom: 3mm; border: 2.2mm solid #e26b2f; border-radius: 3mm; background: rgba(255, 179, 111, .16); }
+    .log-callout { position: absolute; left: 4.8%; top: 36mm; padding: 2mm 4mm; border-radius: 99mm; background: #e26b2f; color: #fff; font-size: 14pt; font-weight: 900; }
+    .log-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5mm; margin-top: 5mm; }
+    .log-card { min-height: 30mm; display: grid; grid-template-columns: 11mm 1fr; gap: 3mm; align-items: center; padding: 4mm; border: 2px solid #d7dfdd; border-radius: 4mm; }
+    .log-card b { display: grid; place-items: center; width: 10mm; height: 10mm; border-radius: 50%; background: #1e6b62; color: #fff; font-size: 14pt; }
+    .log-card h3 { font-size: 14pt; line-height: 1.35; }
+    .checklist { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm 10mm; margin-top: 8mm; }
+    .check { display: flex; align-items: center; gap: 4mm; padding: 4mm; border-bottom: 1px solid #d8dfdd; font-size: 16pt; }
+    .check::before { content: "✓"; display: grid; place-items: center; width: 9mm; height: 9mm; border-radius: 50%; color: #fff; background: #1e6b62; font-weight: 900; }
+    .folder { padding: 6mm; border: 2px dashed #9badab; border-radius: 5mm; background: #f5f8f7; font-size: 16pt; }
+    .folder strong { color: #1e6b62; font-size: 20pt; }
+    .app-icon { display: block; width: 34mm; height: 28mm; margin: 0 auto 3mm; object-fit: contain; }
+    .compact .steps { gap: 3mm; }
+    .compact .step { padding: 3.5mm 5mm; }
+    .compact .chat-card { margin: 3mm 0; padding: 4mm 6mm; }
+    .compact .warn { padding: 3mm 5mm; }
+    #p4 .topline { margin-bottom: 3mm; }
+    #p4 .screen-wrap { width: 85%; margin: 0 auto; }
+    #p4 .legend { margin-top: 3mm; }
+    #p13 .two-col { grid-template-columns: .85fr 1.15fr; gap: 7mm; }
+    #p13 .checklist { gap: 3mm 6mm; margin-top: 2mm; }
+    #p13 .check { font-size: 14pt; }
+  </style>
+</head>
+<body>
+  <section class="page" id="p1">
+    <div class="topline"><div class="brand"><span class="logo">RP</span>RemotePlus Translator</div><span class="version">0.8.4</span></div>
+    <div class="hero">
+      <div>
+        <p class="green" style="font-size:18pt;font-weight:900;margin-bottom:5mm">ホテルスタッフ向け</p>
+        <h1>かんたん<br>操作ガイド</h1>
+        <div class="big-note">絵を見て、上から順番に<br>進めれば使えます。</div>
+      </div>
+      <div class="hero-flow">
+        <div class="flow-row"><div class="icon-box"><span class="icon">🧑</span><h3>お客様が話す</h3></div><span class="arrow">→</span><div class="icon-box"><span class="icon">🎤</span><h3>声を聞く</h3></div></div>
+        <div class="flow-row"><span class="arrow">↓</span></div>
+        <div class="flow-row"><div class="icon-box"><span class="icon">💬</span><h3>日本語で表示</h3></div><span class="arrow">→</span><div class="icon-box"><span class="icon">⌨️</span><h3>返事を入力</h3></div></div>
+      </div>
+    </div>
+    <div class="page-no">1 / 13</div>
+  </section>
+
+  <section class="page" id="p2">
+    <div class="topline"><h2>このアプリでできること</h2><span class="version">まず全体を知る</span></div>
+    <div class="cards">
+      <div class="card"><span class="num">1</span><span class="icon">🎤</span><h3>お客様の声を聞く</h3><p>英語・韓国語などを<br>聞き取ります。</p></div>
+      <div class="card"><span class="num">2</span><span class="icon">🇯🇵</span><h3>日本語にする</h3><p>話した内容が<br>日本語で出ます。</p></div>
+      <div class="card"><span class="num">3</span><span class="icon">⌨️</span><h3>返事を作る</h3><p>日本語か英語で<br>返事を入力します。</p></div>
+    </div>
+    <div class="flow-row" style="margin-top:12mm">
+      <div class="icon-box"><span class="icon">🌐</span><h3>インターネット不要</h3><p class="small">翻訳はこのパソコンの中</p></div>
+      <div class="icon-box"><span class="icon">🔒</span><h3>外へ送らない</h3><p class="small">通話音声はローカル処理</p></div>
+      <div class="icon-box"><span class="icon">📁</span><h3>WAVも読める</h3><p class="small">録音した会話を分析</p></div>
+    </div>
+    <div class="big-note">マイクの声は、選んだお客様の言語から日本語へ自動で翻訳します。</div>
+    <div class="page-no">2 / 13</div>
+  </section>
+
+  <section class="page" id="p3">
+    <div class="topline"><h2>① アプリを開く</h2><span class="version">いつもの起動</span></div>
+    <div class="two-col">
+      <div class="steps">
+        <div class="step"><b>1</b><div><h3>デスクトップのアイコンを探す</h3><p class="small">名前は RemotePlus Translator です。</p></div></div>
+        <div class="icon-box" style="width:100%"><img class="app-icon" src="app-icon.png" alt="RemotePlus Translator のアイコン"><h3>RemotePlus Translator</h3><p class="small">このアイコンを使います。</p></div>
+        <div class="step"><b>2</b><div><h3>アイコンを2回クリック</h3><p class="small">翻訳画面だけが開きます。</p></div></div>
+        <div class="step"><b>3</b><div><h3>画面が使えるまで待つ</h3><p class="small">「準備中」の表示が消えたら始められます。</p></div></div>
+      </div>
+      <div>
+        <div class="ok"><span class="icon">✅</span><h3>翻訳画面が1つ出ればOK</h3><p>左に設定、右に会話が見えます。</p></div>
+        <div class="warn" style="margin-top:8mm"><span class="icon">⏳</span><h3>すぐに出なくても少し待つ</h3><p>準備中にアイコンを何度も押さないでください。</p></div>
+      </div>
+    </div>
+    <div class="page-no">3 / 13</div>
+  </section>
+
+  <section class="page" id="p4">
+    <div class="topline"><h2>② 画面の場所を覚える</h2><span class="version">3か所だけ</span></div>
+    <div class="screen-wrap">
+      <img src="ui-main.png" alt="RemotePlus Translator の画面">
+      <span class="outline" style="left:1.2%;top:8.8%;width:29.5%;height:88%"></span>
+      <span class="outline" style="left:32.6%;top:8.8%;width:65.8%;height:77%"></span>
+      <span class="outline" style="left:33%;top:86.5%;width:64.5%;height:10%"></span>
+      <span class="screen-label" style="left:2.2%;top:10%">1</span>
+      <span class="screen-label" style="left:33.7%;top:10%">2</span>
+      <span class="screen-label" style="left:34%;top:87%">3</span>
+    </div>
+    <div class="legend"><span><i class="dot">1</i>通話の設定・よく使う文章</span><span><i class="dot">2</i>会話・録音WAV</span><span><i class="dot">3</i>返事を入力</span></div>
+    <div class="page-no">4 / 13</div>
+  </section>
+
+  <section class="page" id="p5">
+    <div class="topline"><h2>③ 話す前に2つ選ぶ</h2><span class="version">左の画面</span></div>
+    <div class="two-col">
+      <div class="card">
+        <span class="num">1</span><span class="icon">🌏</span><h3>お客様の言語</h3>
+        <div class="fake-select">한국어 · Korean　⌄</div>
+        <p>お客様が話す言語を<br>1つ選びます。</p>
+      </div>
+      <div class="card">
+        <span class="num">2</span><span class="icon">🎙️</span><h3>音声入力デバイス</h3>
+        <div class="fake-select">システム既定　⌄</div>
+        <p>ふつうは<br>「システム既定」でOK。</p>
+      </div>
+    </div>
+    <div class="warn" style="margin-top:10mm"><h3>⚠ 言語をまちがえると、正しく聞き取れません。</h3><p>英語のお客様なら English、韓国語なら Korean を選びます。</p></div>
+    <div class="big-note">選ぶのは「お客様の言語」だけ。翻訳先はいつも日本語です。</div>
+    <div class="page-no">5 / 13</div>
+  </section>
+
+  <section class="page" id="p6">
+    <div class="topline"><h2>④ お客様に話してもらう</h2><span class="version">マイク翻訳</span></div>
+    <div class="speech-scene">
+      <div class="person">🧑<p>お客様</p></div>
+      <div class="speech">“I would like to check in.”<br><span class="small">短く、はっきり話します。</span></div>
+      <span class="arrow">→</span>
+      <div class="person">🎤</div>
+    </div>
+    <div class="flow-row" style="margin:7mm 0"><span class="arrow">↓</span></div>
+    <div class="chat-card"><small>お客様 → 日本語</small><strong>チェックインをお願いします。</strong><span class="muted">I would like to check in.</span></div>
+    <div class="two-col" style="margin-top:7mm">
+      <div class="ok"><h3>✅ 画面に出るまで待つ</h3><p>原文が先に出て、そのあと日本語が出ます。</p></div>
+      <div class="warn"><h3>⏸ 話さない時は「一時停止」</h3><p>周りの音を拾う時に使います。</p></div>
+    </div>
+    <div class="page-no">6 / 13</div>
+  </section>
+
+  <section class="page compact" id="p7">
+    <div class="topline"><h2>⑤ スタッフの返事を作る</h2><span class="version">画面の右下</span></div>
+    <div class="steps">
+      <div class="step"><b>1</b><div><h3>日本語または英語を入力</h3><div class="input-demo"><div>少々お待ちください。</div><span class="button">翻訳</span></div></div></div>
+      <div class="step"><b>2</b><div><h3>「翻訳」を押す</h3><p class="small">Enterでも送れます。Shift + Enterは改行です。</p></div></div>
+      <div class="step"><b>3</b><div><h3>お客様の言語と読み方を見る</h3></div></div>
+    </div>
+    <div class="chat-card staff"><small>スタッフ → お客様</small><strong>Please wait a moment.</strong><span class="muted">日本語読み：プリーズ ウェイト ア モーメント<br>ローマ字読み：purīzu ueito a mōmento</span></div>
+    <div class="warn"><h3>⚠ 翻訳文の意味を見てから話す</h3><p>名前・日付・金額・部屋番号は、必ず目で確認します。</p></div>
+    <div class="page-no">7 / 13</div>
+  </section>
+
+  <section class="page" id="p8">
+    <div class="topline"><h2>⑥ よく使う文章を登録する</h2><span class="version">毎日の作業を速く</span></div>
+    <div class="two-col">
+      <div class="steps">
+        <div class="step"><b>1</b><div><h3>「文章を登録…」に書く</h3><p>例：少々お待ちください。</p></div></div>
+        <div class="step"><b>2</b><div><h3>「＋」を押す</h3><p>一覧に保存されます。</p></div></div>
+        <div class="step"><b>3</b><div><h3>使う文章を押す</h3><p>見つからない時は「文章を検索…」を使います。</p></div></div>
+      </div>
+      <div>
+        <div class="quick"><span class="qicon">🛎️</span><div><h3>少々お待ちください。</h3><p class="small">確認</p></div></div>
+        <div class="quick" style="margin-top:5mm"><span class="qicon">🧳</span><div><h3>ご予約番号をお願いします。</h3><p class="small">予約</p></div></div>
+        <div class="quick" style="margin-top:5mm"><span class="qicon">🙏</span><div><h3>ご不便をおかけして申し訳ございません。</h3><p class="small">お詫び</p></div></div>
+      </div>
+    </div>
+    <div class="big-note">「登録」・「＋」・「検索」は、左画面の同じ1列にあります。</div>
+    <div class="page-no">8 / 13</div>
+  </section>
+
+  <section class="page" id="p9">
+    <div class="topline"><h2>⑦ 通話ログからWAVを見つける</h2><span class="version">通話ログビューアー</span></div>
+    <div class="log-screen">
+      <img src="call-log-viewer.png" alt="通話ログビューアーの画面">
+      <span class="log-play-outline"></span>
+      <span class="log-callout">ここが「再生」</span>
+    </div>
+    <div class="log-cards">
+      <div class="log-card"><b>1</b><h3>翻訳したい通話の行を探す</h3></div>
+      <div class="log-card"><b>2</b><h3>その行の左にある「再生」を押す</h3></div>
+      <div class="log-card"><b>3</b><h3>デスクトップの「ログ」フォルダーを開く</h3></div>
+    </div>
+    <div class="big-note" style="margin-top:4mm">「再生」を押した通話のWAVファイルが「ログ」フォルダーにあります。</div>
+    <div class="page-no">9 / 13</div>
+  </section>
+
+  <section class="page" id="p10">
+    <div class="topline"><h2>⑧ RemotePlusでWAVを翻訳する</h2><span class="version">録音した会話</span></div>
+    <div class="wav-steps remote">
+      <div class="wav-step"><span class="icon">🔽</span><h3>1. 右上の「録音WAVを翻訳」を開く</h3></div>
+      <div class="wav-step"><span class="icon">🎵</span><h3>2. 「ログ」フォルダーのWAVを選ぶ</h3></div>
+      <div class="wav-step"><span class="icon">▶️</span><h3>3. 「WAV解析を開始」を押す</h3></div>
+    </div>
+    <div class="two-col" style="margin-top:7mm">
+      <div class="chat-card"><small>お客様（推定）</small><strong>予約を変更したいです。</strong><span class="muted">▶ この部分を再生</span></div>
+      <div class="chat-card staff"><small>スタッフ（推定）</small><strong>I will check your reservation.</strong><span class="muted">▶ この部分を再生</span></div>
+    </div>
+    <div class="warn" style="margin-top:5mm"><h3>⚠ 「推定」は100%ではありません</h3><p>話す人をまちがえることがあります。原文と音声をいっしょに確認します。</p></div>
+    <div class="ok" style="margin-top:4mm"><p>WAV分析中はマイクが一時停止します。終わったら「再開」を押します。</p></div>
+    <div class="page-no">10 / 13</div>
+  </section>
+
+  <section class="page" id="p11">
+    <div class="topline"><h2>⑨ うまく聞き取れない時</h2><span class="version">この順番で確認</span></div>
+    <div class="quick-grid">
+      <div class="quick"><span class="qicon">1️⃣</span><div><h3>お客様の言語</h3><p>English / Korean などが正しいか。</p></div></div>
+      <div class="quick"><span class="qicon">2️⃣</span><div><h3>マイク</h3><p>正しい入力デバイスか。</p></div></div>
+      <div class="quick"><span class="qicon">3️⃣</span><div><h3>話し方</h3><p>短く、はっきり、1人ずつ話す。</p></div></div>
+      <div class="quick"><span class="qicon">4️⃣</span><div><h3>周りの音</h3><p>テレビや音楽から離れる。</p></div></div>
+    </div>
+    <div class="two-col" style="margin-top:10mm">
+      <div class="no"><h3>🚫 何も話していないのに文字が出る</h3><p>「一時停止」を押し、マイクを見直します。</p></div>
+      <div class="ok"><h3>✅ もう一度話してもらう</h3><p>「短い文」でお願いすると成功しやすいです。</p></div>
+    </div>
+    <div class="page-no">11 / 13</div>
+  </section>
+
+  <section class="page" id="p12">
+    <div class="topline"><h2>⑩ 画面が出ない・止まった時</h2><span class="version">かんたん復旧</span></div>
+    <div class="cards">
+      <div class="card"><span class="num">1</span><span class="icon">🖱️</span><h3>アイコンを1回押す</h3><p>すでに起動中なら、画面が前に出ます。</p></div>
+      <div class="card"><span class="num">2</span><span class="icon">⏳</span><h3>30秒待つ</h3><p>モデルの準備中かもしれません。</p></div>
+      <div class="card"><span class="num">3</span><span class="icon">🔄</span><h3>アプリを開き直す</h3><p>黒い画面は自動で新しい画面に直します。</p></div>
+    </div>
+    <div class="two-col" style="margin-top:12mm">
+      <div class="warn"><h3>「システムを準備しています」のまま</h3><p>1分待ってから、アプリを閉じて開き直します。</p></div>
+      <div class="no"><h3>何度も続けて押さない</h3><p>1回だけ開き、画面が出るまで待ちます。</p></div>
+    </div>
+    <div class="big-note">同じ問題が続く時は、ホテルのIT担当者に連絡してください。</div>
+    <div class="page-no">12 / 13</div>
+  </section>
+
+  <section class="page" id="p13">
+    <div class="topline"><h2>⑪ 終わる時 ＋ 最終チェック</h2><span class="version">これで完了</span></div>
+    <div class="two-col">
+      <div>
+        <div class="icon-box" style="width:100%"><span class="icon">❌</span><h2 style="font-size:20pt">右上の × で閉じる</h2><p>バックエンドも自動で終了します。<br>約5秒待ってください。</p></div>
+        <div class="ok" style="margin-top:7mm"><h3>画面が消えたら終了です</h3><p>ほかの操作は必要ありません。</p></div>
+      </div>
+      <div class="checklist">
+        <div class="check">お客様の言語を選んだ</div>
+        <div class="check">マイクを選んだ</div>
+        <div class="check">1人ずつ話した</div>
+        <div class="check">話さない時は一時停止した</div>
+        <div class="check">翻訳文を確認した</div>
+        <div class="check">数字と名前を確認した</div>
+      </div>
+    </div>
+    <div class="big-note" style="margin-top:12mm;text-align:center">困った時は、このガイドの 11〜12ページを見てください。</div>
+    <p style="margin-top:12mm;text-align:center;font-size:19pt;font-weight:900" class="green">RemotePlus Translator 0.8.4</p>
+    <p style="text-align:center" class="small">ホテル内利用向け・ローカル翻訳システム</p>
+    <div class="page-no">13 / 13</div>
+  </section>
+</body>
+</html>

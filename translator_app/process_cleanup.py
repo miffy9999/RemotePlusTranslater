@@ -2,11 +2,50 @@ from __future__ import annotations
 
 import ctypes
 import os
+import subprocess
 from ctypes import wintypes
 
 
 _JOB_HANDLE = None
 _INSTANCE_HANDLE = None
+
+
+def hidden_subprocess_options() -> dict[str, object]:
+    """Return Windows process options that never allocate or show a console."""
+    if os.name != "nt":
+        return {}
+    startup_info = subprocess.STARTUPINFO()
+    startup_info.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+    startup_info.wShowWindow = subprocess.SW_HIDE
+    return {
+        "creationflags": subprocess.CREATE_NO_WINDOW,
+        "startupinfo": startup_info,
+    }
+
+
+def activate_existing_window(title: str = "RemotePlus Translator") -> bool:
+    """Restore the existing app window when the shortcut is clicked twice."""
+    if os.name != "nt":
+        return False
+    try:
+        user32 = ctypes.WinDLL("user32", use_last_error=True)
+        user32.FindWindowW.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR]
+        user32.FindWindowW.restype = wintypes.HWND
+        user32.IsIconic.argtypes = [wintypes.HWND]
+        user32.IsIconic.restype = wintypes.BOOL
+        user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+        user32.SetForegroundWindow.argtypes = [wintypes.HWND]
+        user32.SetForegroundWindow.restype = wintypes.BOOL
+        handle = user32.FindWindowW(None, title)
+        if not handle:
+            return False
+        if user32.IsIconic(handle):
+            user32.ShowWindow(handle, 9)  # SW_RESTORE
+        else:
+            user32.ShowWindow(handle, 5)  # SW_SHOW
+        return bool(user32.SetForegroundWindow(handle))
+    except Exception:
+        return False
 
 
 def acquire_single_instance(name: str = "Local\\RemotePlusTranslator") -> bool:
@@ -15,6 +54,10 @@ def acquire_single_instance(name: str = "Local\\RemotePlusTranslator") -> bool:
     if os.name != "nt" or _INSTANCE_HANDLE is not None:
         return True
     kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel32.CreateMutexW.argtypes = [ctypes.c_void_p, wintypes.BOOL, wintypes.LPCWSTR]
+    kernel32.CreateMutexW.restype = wintypes.HANDLE
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
     handle = kernel32.CreateMutexW(None, False, name)
     if not handle:
         return True
@@ -25,25 +68,6 @@ def acquire_single_instance(name: str = "Local\\RemotePlusTranslator") -> bool:
     return True
 
 
-def _configure_kernel32(kernel32) -> None:
-    """Declare 64-bit-safe Win32 signatures used by the cleanup job."""
-    kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
-    kernel32.CreateJobObjectW.restype = wintypes.HANDLE
-    kernel32.SetInformationJobObject.argtypes = [
-        wintypes.HANDLE,
-        ctypes.c_int,
-        ctypes.c_void_p,
-        wintypes.DWORD,
-    ]
-    kernel32.SetInformationJobObject.restype = wintypes.BOOL
-    kernel32.GetCurrentProcess.argtypes = []
-    kernel32.GetCurrentProcess.restype = wintypes.HANDLE
-    kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
-    kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
-    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
-    kernel32.CloseHandle.restype = wintypes.BOOL
-
-
 def enable_windows_process_cleanup() -> None:
     """Kill child processes when the launcher process exits on Windows."""
     global _JOB_HANDLE
@@ -51,7 +75,20 @@ def enable_windows_process_cleanup() -> None:
         return
     try:
         kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-        _configure_kernel32(kernel32)
+        kernel32.CreateJobObjectW.argtypes = [ctypes.c_void_p, wintypes.LPCWSTR]
+        kernel32.CreateJobObjectW.restype = wintypes.HANDLE
+        kernel32.SetInformationJobObject.argtypes = [
+            wintypes.HANDLE,
+            ctypes.c_int,
+            ctypes.c_void_p,
+            wintypes.DWORD,
+        ]
+        kernel32.SetInformationJobObject.restype = wintypes.BOOL
+        kernel32.GetCurrentProcess.restype = wintypes.HANDLE
+        kernel32.AssignProcessToJobObject.argtypes = [wintypes.HANDLE, wintypes.HANDLE]
+        kernel32.AssignProcessToJobObject.restype = wintypes.BOOL
+        kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+        kernel32.CloseHandle.restype = wintypes.BOOL
         job = kernel32.CreateJobObjectW(None, None)
         if not job:
             return
@@ -94,12 +131,12 @@ def enable_windows_process_cleanup() -> None:
         configured = kernel32.SetInformationJobObject(
             job, 9, ctypes.byref(info), ctypes.sizeof(info)
         )
-        assigned = configured and kernel32.AssignProcessToJobObject(
-            job, kernel32.GetCurrentProcess()
-        )
-        if assigned:
-            _JOB_HANDLE = job
-        else:
+        if not configured:
             kernel32.CloseHandle(job)
+            return
+        if not kernel32.AssignProcessToJobObject(job, kernel32.GetCurrentProcess()):
+            kernel32.CloseHandle(job)
+            return
+        _JOB_HANDLE = job
     except Exception:
         return

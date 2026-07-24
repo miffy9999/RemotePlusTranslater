@@ -1,123 +1,264 @@
-const $=s=>document.querySelector(s), feed=$('#feed'), empty=$('#empty'), phase=$('#phase strong');
-const names={
-  ja:'日本語',en:'English',ko:'한국어',zh:'中文',es:'Español',fr:'Français',de:'Deutsch',it:'Italiano',pt:'Português',ru:'Русский',
-  ar:'العربية',hi:'हिन्दी',vi:'Tiếng Việt',th:'ไทย',id:'Bahasa Indonesia',ms:'Bahasa Melayu',tr:'Türkçe',nl:'Nederlands',pl:'Polski',uk:'Українська',cs:'Čeština',he:'עברית'
-};
-const messages={
-  ko:{subtitle:'프런트 데스크 통역 콘솔',uiLanguage:'화면 언어',connecting:'연결 중',connected:'로컬 연결됨',reconnecting:'재연결 중',runtime:'실행 상태',starting:'시작 중',detectedLanguage:'현재 고객 언어',privacy:'동작 방식',processing:'최종 인식과 번역 우선 · 음성은 온라인',pause:'일시 정지',resume:'다시 시작',channelSettings:'현장 설정',allLanguages:'지원 언어 전체 사용 가능',inputLanguage:'고객 입력 언어',inputDevice:'음성 입력 장치',outputDevice:'음성 출력 장치',systemDefault:'시스템 기본 장치',customerSpeech:'고객 음성',japaneseText:'일본어 텍스트',japaneseReply:'일본어 답변',customerTts:'고객 언어 음성',speechMode:'인식 모드',staffSpeech:'직원 말하기 · Space 누르는 동안',staffSpeechActive:'직원 말하기 · 일본어 고정',ttsOn:'TTS 켜짐',ttsOff:'TTS 꺼짐',edgeNote:'큐가 밀리지 않도록 임시 자막 없이 최종 인식과 최신 발화를 우선 처리합니다.',output:'대화 기록',outputHint:'최신 발화 우선',loadingTitle:'시스템을 준비하고 있습니다',loadingBody:'준비가 끝나면 고객 음성을 듣기 시작합니다.',readyTitle:'시스템 준비 완료',readyBody:'음성을 기다리는 중입니다.',incoming:'고객 · 일본어 번역',reply:'직원 · 고객 언어 음성',replay:'다시 듣기',replayQueued:'다시 재생합니다',clearHistory:'기록 지우기',historyCleared:'화면 기록을 지웠습니다',correct:'교정 기록',correctSource:'인식된 원문을 수정하세요',correctTranslation:'번역문을 수정하세요',saved:'교정을 로컬에 저장했습니다',readingGuide:'읽기 보조',liveCaption:'실시간 인식 중',awaitingTranslation:'최종 인식 및 번역 준비 중',statusLoading:'모델 준비 중',statusListening:'시스템 준비 완료 · 듣는 중',statusRecognizing:'최종 음성 인식 중',statusTranslating:'번역 중',statusSpeaking:'번역 음성 재생 중',statusPaused:'일시 정지됨',statusWarning:'주의',statusError:'오류'},
-  ja:{subtitle:'フロントデスク通訳コンソール',uiLanguage:'表示言語',connecting:'接続中',connected:'ローカル接続済み',reconnecting:'再接続中',runtime:'実行状態',starting:'起動中',detectedLanguage:'現在のお客様言語',privacy:'動作方式',processing:'最終認識と翻訳を優先・音声はオンライン',pause:'一時停止',resume:'再開',channelSettings:'現場設定',allLanguages:'対応言語をすべて選択可能',inputLanguage:'お客様の入力言語',inputDevice:'音声入力デバイス',outputDevice:'音声出力デバイス',systemDefault:'システム既定',customerSpeech:'お客様の音声',japaneseText:'日本語テキスト',japaneseReply:'日本語の返答',customerTts:'お客様言語の音声',speechMode:'認識モード',staffSpeech:'スタッフ発話・Spaceを押している間',staffSpeechActive:'スタッフ発話・日本語固定',ttsOn:'TTS オン',ttsOff:'TTS オフ',edgeNote:'キューが詰まらないよう、仮字幕なしで最終認識と最新発話を優先します。',output:'会話ログ',outputHint:'最新発話優先',loadingTitle:'システムを準備しています',loadingBody:'準備が完了するとお客様の音声を聞き始めます。',readyTitle:'システム準備完了',readyBody:'音声を待機しています。',incoming:'お客様・日本語訳',reply:'スタッフ・お客様言語音声',clearHistory:'履歴を消去',historyCleared:'表示履歴を消去しました',correct:'訂正を記録',correctSource:'認識された原文を修正してください',correctTranslation:'翻訳文を修正してください',saved:'訂正をローカルに保存しました',readingGuide:'読み方ガイド',liveCaption:'リアルタイム認識中',awaitingTranslation:'最終認識・翻訳を準備中',statusLoading:'モデルを準備中',statusListening:'システム準備完了・聞き取り中',statusRecognizing:'最終音声認識中',statusTranslating:'翻訳中',statusSpeaking:'翻訳音声を再生中',statusPaused:'一時停止中',statusWarning:'注意',statusError:'エラー'},
-  en:{subtitle:'Front desk interpreting console',uiLanguage:'UI language',connecting:'Connecting',connected:'Local connection',reconnecting:'Reconnecting',runtime:'Runtime',starting:'Starting',detectedLanguage:'Customer language',privacy:'Mode',processing:'Final recognition first · voice online',pause:'Pause',resume:'Resume',channelSettings:'Field settings',allLanguages:'All supported languages are available',inputLanguage:'Customer input language',inputDevice:'Audio input device',outputDevice:'Audio output device',systemDefault:'System default',customerSpeech:'Customer speech',japaneseText:'Japanese text',japaneseReply:'Japanese reply',customerTts:'Customer-language audio',speechMode:'Recognition mode',staffSpeech:'Staff speaking · hold Space',staffSpeechActive:'Staff speaking · Japanese fixed',ttsOn:'TTS on',ttsOff:'TTS off',edgeNote:'No live captions: final recognition and the latest utterance are prioritized to prevent queues.',output:'Conversation log',outputHint:'Latest utterance first',loadingTitle:'Preparing the system',loadingBody:'Listening starts when the models are ready.',readyTitle:'System ready',readyBody:'Waiting for speech.',incoming:'Customer · Japanese translation',reply:'Staff · customer-language voice',clearHistory:'Clear history',historyCleared:'Display history cleared',correct:'Record correction',correctSource:'Correct the recognized text',correctTranslation:'Correct the translation',saved:'Correction saved locally',readingGuide:'Reading guide',liveCaption:'Live recognition',awaitingTranslation:'Preparing final recognition and translation',statusLoading:'Preparing models',statusListening:'System ready · Listening',statusRecognizing:'Final speech recognition',statusTranslating:'Translating',statusSpeaking:'Playing translated voice',statusPaused:'Paused',statusWarning:'Warning',statusError:'Error'},
-  zh:{subtitle:'前台口译控制台',uiLanguage:'界面语言',connecting:'连接中',connected:'本地已连接',reconnecting:'正在重连',runtime:'运行状态',starting:'启动中',detectedLanguage:'当前客人语言',privacy:'运行方式',processing:'优先最终识别与翻译 · 语音在线',pause:'暂停',resume:'继续',channelSettings:'现场设置',allLanguages:'可直接选择所有支持的语言',inputLanguage:'客人输入语言',inputDevice:'音频输入设备',outputDevice:'音频输出设备',systemDefault:'系统默认设备',customerSpeech:'客人语音',japaneseText:'日语文本',japaneseReply:'日语回复',customerTts:'客人语言语音',speechMode:'识别模式',staffSpeech:'员工发言 · 按住 Space',staffSpeechActive:'员工发言 · 固定日语',ttsOn:'TTS 开启',ttsOff:'TTS 关闭',edgeNote:'为避免排队，不显示临时字幕，优先处理最终识别和最新语音。',output:'对话记录',outputHint:'最新语音优先',loadingTitle:'正在准备系统',loadingBody:'准备完成后开始接收客人语音。',readyTitle:'系统准备完成',readyBody:'正在等待语音。',incoming:'客人 · 日语翻译',reply:'员工 · 客人语言语音',clearHistory:'清除记录',historyCleared:'显示记录已清除',correct:'保存更正',correctSource:'请更正识别的文本',correctTranslation:'请更正译文',saved:'更正已保存在本机',readingGuide:'读音辅助',liveCaption:'实时识别中',awaitingTranslation:'正在准备最终识别和翻译',statusLoading:'正在准备模型',statusListening:'系统准备完成 · 正在聆听',statusRecognizing:'最终语音识别中',statusTranslating:'正在翻译',statusSpeaking:'正在播放译文语音',statusPaused:'已暂停',statusWarning:'警告',statusError:'错误'},
-  es:{subtitle:'Consola de interpretación de recepción',uiLanguage:'Idioma de interfaz',connecting:'Conectando',connected:'Conexión local',reconnecting:'Reconectando',runtime:'Estado de ejecución',starting:'Iniciando',detectedLanguage:'Idioma del cliente',privacy:'Modo',processing:'Reconocimiento final primero · voz en línea',pause:'Pausar',resume:'Continuar',channelSettings:'Ajustes de campo',allLanguages:'Todos los idiomas compatibles están disponibles',inputLanguage:'Idioma del cliente',inputDevice:'Dispositivo de entrada',outputDevice:'Dispositivo de salida',systemDefault:'Dispositivo predeterminado',customerSpeech:'Voz del cliente',japaneseText:'Texto japonés',japaneseReply:'Respuesta en japonés',customerTts:'Voz en idioma del cliente',speechMode:'Modo de reconocimiento',staffSpeech:'Personal habla · mantenga Space',staffSpeechActive:'Personal habla · japonés fijo',ttsOn:'TTS activado',ttsOff:'TTS desactivado',edgeNote:'Sin subtítulos provisionales: se prioriza el reconocimiento final y la frase más reciente.',output:'Registro de conversación',outputHint:'Prioridad a la frase más reciente',loadingTitle:'Preparando el sistema',loadingBody:'La escucha comenzará cuando los modelos estén listos.',readyTitle:'Sistema listo',readyBody:'Esperando voz.',incoming:'Cliente · traducción japonesa',reply:'Personal · voz en idioma del cliente',clearHistory:'Borrar historial',historyCleared:'Historial borrado',correct:'Guardar corrección',correctSource:'Corrige el texto reconocido',correctTranslation:'Corrige la traducción',saved:'Corrección guardada localmente',readingGuide:'Guía de lectura',liveCaption:'Reconocimiento en vivo',awaitingTranslation:'Preparando reconocimiento y traducción finales',statusLoading:'Preparando modelos',statusListening:'Sistema listo · Escuchando',statusRecognizing:'Reconocimiento final',statusTranslating:'Traduciendo',statusSpeaking:'Reproduciendo voz traducida',statusPaused:'En pausa',statusWarning:'Aviso',statusError:'Error'}
-};
-const extraMessages={
-  ko:{replay:'다시 듣기',replayQueued:'다시 재생합니다'},
-  ja:{replay:'もう一度聞く',replayQueued:'もう一度再生します'},
-  en:{replay:'Replay',replayQueued:'Replaying audio'},
-  zh:{replay:'再次播放',replayQueued:'正在再次播放'},
-  es:{replay:'Repetir audio',replayQueued:'Reproduciendo de nuevo'}
-};
-let ui=localStorage.getItem('remoteplus-ui-language')||'ko',state={tts_enabled:true,paused:false,speech_mode:'customer'},retry=700,toastTimer,missingInput=0;
-const cards=new Map();
-const t=key=>messages[ui]?.[key]||extraMessages[ui]?.[key]||messages.en[key]||extraMessages.en[key]||key;
-const phaseKey={starting:'starting',loading:'statusLoading',ready:'statusListening',listening:'statusListening',recognizing:'statusRecognizing',translating:'statusTranslating',speaking:'statusSpeaking',paused:'statusPaused',warning:'statusWarning',error:'statusError'};
-function applyI18n(){document.documentElement.lang=ui;document.querySelectorAll('[data-i18n]').forEach(el=>el.textContent=t(el.dataset.i18n));$('#ui-language').value=ui;applyState(state);for(const card of cards.values()){const label=card.querySelector('.meta b');if(card.dataset.live==='1')label.textContent=t('liveCaption');else label.textContent=card.dataset.direction==='reply'?t('reply'):t('incoming');const replay=card.querySelector('.replay');if(replay)replay.textContent=t('replay');const correction=card.querySelector('.correction:not(.replay)');if(correction)correction.textContent=t('correct')}}
+const $ = selector => document.querySelector(selector);
+const cards = new Map();
+let ui = 'ja';
+try { ui = localStorage.getItem('remoteplus-ui-language') || 'ja'; } catch {}
+let state = {paused: false};
+let languages = [];
+let quickPhrases = [];
+let quickPhraseLimit = 40;
+let collapsedQuickPhraseCategories = new Set();
+let collapsedQuickPhraseSave = Promise.resolve();
+let quickPhraseCategorySaving = false;
+let reconnectDelay = 700;
+let toastTimer;
+let wavJobId = null;
+let wavPollTimer = null;
+let wavObjectUrl = null;
+let wavPlayEnd = null;
 
-function updateEmptyState(){
-  const card=$('#empty');
-  if(!card)return;
-  const ready=state.ready&&state.translator_ready&&!state.paused;
-  const title=card.querySelector('h3'),body=card.querySelector('p');
-  if(title)title.textContent=ready?t('readyTitle'):t('loadingTitle');
-  if(body)body.textContent=ready?t('readyBody'):t('loadingBody');
+const messages = {
+  ja: {subtitle:'フロントデスク翻訳チャット',uiLanguage:'表示言語',connecting:'接続中',connected:'ローカル接続済み',reconnecting:'再接続中',settings:'通話設定',starting:'起動中',customerLanguage:'お客様の言語',pause:'一時停止',resume:'再開',inputDevice:'音声入力デバイス',systemDefault:'システム既定',modeNote:'お客様の音声は日本語に翻訳されます。スタッフは右側に日本語を入力します。',conversation:'会話',latestFirst:'最新発話を優先',clear:'履歴を消去',loadingTitle:'システムを準備しています',loadingBody:'準備が完了するとお客様の音声を聞き始めます。',readyTitle:'システム準備完了',readyBody:'お客様の音声を待っています。',replyPlaceholder:'日本語で返答を入力…',translate:'翻訳',composerHint:'Enterで送信・Shift+Enterで改行。翻訳文の下にカタカナとローマ字の読み方が表示されます。',incoming:'お客様 → 日本語',reply:'スタッフ → お客様',katakana:'日本語読み',romanized:'ローマ字読み',translating:'翻訳中…',listening:'聞き取り中',recognizing:'音声認識中',paused:'一時停止中',warning:'注意',error:'エラー',emptyReply:'日本語の返答を入力してください。',sendFailed:'返答を送信できませんでした。'},
+  ko: {subtitle:'프런트 데스크 번역 채팅',uiLanguage:'화면 언어',connecting:'연결 중',connected:'로컬 연결됨',reconnecting:'재연결 중',settings:'통화 설정',starting:'시작 중',customerLanguage:'고객 언어',pause:'일시 정지',resume:'다시 시작',inputDevice:'음성 입력 장치',systemDefault:'시스템 기본',modeNote:'고객 음성은 일본어로 번역됩니다. 직원은 오른쪽에 일본어 답변을 입력합니다.',conversation:'대화',latestFirst:'최신 발화 우선',clear:'기록 지우기',loadingTitle:'시스템을 준비하고 있습니다',loadingBody:'준비가 끝나면 고객 음성을 듣기 시작합니다.',readyTitle:'시스템 준비 완료',readyBody:'고객 음성을 기다리는 중입니다.',replyPlaceholder:'일본어로 답변 입력…',translate:'번역',composerHint:'Enter 전송·Shift+Enter 줄바꿈. 번역문 아래에 일본어 읽기와 로마자 읽기가 표시됩니다.',incoming:'고객 → 일본어',reply:'직원 → 고객',katakana:'일본어 읽기',romanized:'로마자 읽기',translating:'번역 중…',listening:'듣는 중',recognizing:'음성 인식 중',paused:'일시 정지됨',warning:'주의',error:'오류',emptyReply:'일본어 답변을 입력하세요.',sendFailed:'답변을 전송하지 못했습니다.'},
+  en: {subtitle:'Front desk translation chat',uiLanguage:'UI language',connecting:'Connecting',connected:'Local connection',reconnecting:'Reconnecting',settings:'Call settings',starting:'Starting',customerLanguage:'Customer language',pause:'Pause',resume:'Resume',inputDevice:'Audio input device',systemDefault:'System default',modeNote:'Customer speech is translated into Japanese. Staff type Japanese replies on the right.',conversation:'Conversation',latestFirst:'Latest speech first',clear:'Clear history',loadingTitle:'Preparing the system',loadingBody:'Listening starts when the models are ready.',readyTitle:'System ready',readyBody:'Waiting for customer speech.',replyPlaceholder:'Type a reply in Japanese…',translate:'Translate',composerHint:'Enter to send, Shift+Enter for a new line. Katakana and romanized readings appear below replies.',incoming:'Customer → Japanese',reply:'Staff → Customer',katakana:'Japanese reading',romanized:'Romanized reading',translating:'Translating…',listening:'Listening',recognizing:'Recognizing speech',paused:'Paused',warning:'Warning',error:'Error',emptyReply:'Type a Japanese reply.',sendFailed:'Could not send the reply.'},
+  zh: {subtitle:'前台翻译聊天',uiLanguage:'界面语言',connecting:'连接中',connected:'本地已连接',reconnecting:'正在重连',settings:'通话设置',starting:'启动中',customerLanguage:'客人语言',pause:'暂停',resume:'继续',inputDevice:'音频输入设备',systemDefault:'系统默认',modeNote:'客人的语音会被翻译成日语。员工在右侧输入日语回复。',conversation:'对话',latestFirst:'最新语音优先',clear:'清除记录',loadingTitle:'正在准备系统',loadingBody:'准备完成后开始接收客人语音。',readyTitle:'系统准备完成',readyBody:'正在等待客人语音。',replyPlaceholder:'用日语输入回复…',translate:'翻译',composerHint:'Enter发送，Shift+Enter换行。回复下方显示片假名和罗马字读法。',incoming:'客人 → 日语',reply:'员工 → 客人',katakana:'日语读法',romanized:'罗马字读法',translating:'翻译中…',listening:'正在聆听',recognizing:'语音识别中',paused:'已暂停',warning:'警告',error:'错误',emptyReply:'请输入日语回复。',sendFailed:'无法发送回复。'},
+  es: {subtitle:'Chat de traducción de recepción',uiLanguage:'Idioma de interfaz',connecting:'Conectando',connected:'Conexión local',reconnecting:'Reconectando',settings:'Ajustes de llamada',starting:'Iniciando',customerLanguage:'Idioma del cliente',pause:'Pausar',resume:'Continuar',inputDevice:'Dispositivo de entrada',systemDefault:'Predeterminado',modeNote:'La voz del cliente se traduce al japonés. El personal escribe respuestas en japonés a la derecha.',conversation:'Conversación',latestFirst:'Última frase primero',clear:'Borrar historial',loadingTitle:'Preparando el sistema',loadingBody:'La escucha comienza cuando los modelos están listos.',readyTitle:'Sistema listo',readyBody:'Esperando la voz del cliente.',replyPlaceholder:'Escriba una respuesta en japonés…',translate:'Traducir',composerHint:'Enter para enviar, Shift+Enter para nueva línea. Las lecturas aparecen debajo.',incoming:'Cliente → Japonés',reply:'Personal → Cliente',katakana:'Lectura japonesa',romanized:'Lectura romanizada',translating:'Traduciendo…',listening:'Escuchando',recognizing:'Reconociendo voz',paused:'En pausa',warning:'Aviso',error:'Error',emptyReply:'Escriba una respuesta en japonés.',sendFailed:'No se pudo enviar la respuesta.'}
+};
+
+const phraseMessages = {
+  ja: {quickPhrases:'よく使う文章',quickPhrasePlaceholder:'文章を登録…',quickPhraseSearchPlaceholder:'文章を検索…',noQuickPhrases:'登録された文章はありません。',noPhraseMatches:'一致する文章はありません。',uncategorized:'未分類',phraseCategory:'カテゴリー',saveCategory:'保存',clearCategory:'分類解除',deletePhrase:'削除',phraseLoaded:'入力欄に移動しました。',phraseAdded:'文章を登録しました。',categorySaved:'カテゴリーを保存しました。'},
+  ko: {quickPhrases:'자주 쓰는 문장',quickPhrasePlaceholder:'문장 등록…',quickPhraseSearchPlaceholder:'문장 검색…',noQuickPhrases:'등록된 문장이 없습니다.',noPhraseMatches:'검색 결과가 없습니다.',uncategorized:'미분류',phraseCategory:'카테고리',saveCategory:'저장',clearCategory:'분류 해제',deletePhrase:'삭제',phraseLoaded:'번역 입력창으로 이동했습니다.',phraseAdded:'문장을 등록했습니다.',categorySaved:'카테고리를 저장했습니다.'},
+  en: {quickPhrases:'Quick phrases',quickPhrasePlaceholder:'Register phrase…',quickPhraseSearchPlaceholder:'Search phrases…',noQuickPhrases:'No phrases registered.',noPhraseMatches:'No matching phrases.',uncategorized:'Uncategorized',phraseCategory:'Category',saveCategory:'Save',clearCategory:'Remove category',deletePhrase:'Delete',phraseLoaded:'Moved to the translation box.',phraseAdded:'Phrase registered.',categorySaved:'Category saved.'},
+  zh: {quickPhrases:'常用语句',quickPhrasePlaceholder:'添加常用语…',quickPhraseSearchPlaceholder:'搜索常用语…',noQuickPhrases:'尚未添加句子。',noPhraseMatches:'没有匹配的句子。',uncategorized:'未分类',phraseCategory:'分类',saveCategory:'保存',clearCategory:'取消分类',deletePhrase:'删除',phraseLoaded:'已移至翻译输入框。',phraseAdded:'句子已添加。',categorySaved:'分类已保存。'},
+  es: {quickPhrases:'Frases frecuentes',quickPhrasePlaceholder:'Registrar frase…',quickPhraseSearchPlaceholder:'Buscar frases…',noQuickPhrases:'No hay frases registradas.',noPhraseMatches:'No hay frases coincidentes.',uncategorized:'Sin categoría',phraseCategory:'Categoría',saveCategory:'Guardar',clearCategory:'Quitar categoría',deletePhrase:'Eliminar',phraseLoaded:'Se movió al cuadro de traducción.',phraseAdded:'Frase registrada.',categorySaved:'Categoría guardada.'}
+};
+
+const wavMessages = {
+  ja: {wavImport:'録音WAVを翻訳',wavImportHint:'お客様とスタッフの会話を時間順に表示します。',wavStart:'WAV解析を開始',wavCancel:'中止',wavChoose:'WAVファイルを選択してください。',wavTooLarge:'WAVは512 MB以下を選択してください。',wavUploading:'WAVを読み込んでいます…',wavProcessing:'音声を解析中 {done}/{total}',wavCompleted:'解析が完了しました。マイクは一時停止中です。必要なら「再開」を押してください。',wavFailed:'WAV解析に失敗しました。',wavCancelled:'WAV解析を中止しました。',wavRoleCustomer:'お客様（推定）',wavRoleStaff:'スタッフ（推定）',wavRoleUnknown:'話者不明',wavPlay:'この部分を再生'},
+  ko: {wavImport:'녹음 WAV 번역',wavImportHint:'고객과 직원의 대화를 시간순으로 표시합니다.',wavStart:'WAV 분석 시작',wavCancel:'중지',wavChoose:'WAV 파일을 선택하세요.',wavTooLarge:'512 MB 이하의 WAV를 선택하세요.',wavUploading:'WAV를 불러오는 중…',wavProcessing:'음성 분석 중 {done}/{total}',wavCompleted:'분석을 완료했습니다. 마이크는 일시 정지 상태입니다. 필요하면 “다시 시작”을 누르세요.',wavFailed:'WAV 분석에 실패했습니다.',wavCancelled:'WAV 분석을 중지했습니다.',wavRoleCustomer:'고객(추정)',wavRoleStaff:'직원(추정)',wavRoleUnknown:'화자 미확인',wavPlay:'이 구간 재생'},
+  en: {wavImport:'Translate recorded WAV',wavImportHint:'Shows customer and staff speech in chronological order.',wavStart:'Analyze WAV',wavCancel:'Cancel',wavChoose:'Choose a WAV file.',wavTooLarge:'Choose a WAV no larger than 512 MB.',wavUploading:'Loading WAV…',wavProcessing:'Analyzing speech {done}/{total}',wavCompleted:'Analysis complete. The microphone remains paused; select Resume when needed.',wavFailed:'WAV analysis failed.',wavCancelled:'WAV analysis cancelled.',wavRoleCustomer:'Customer (estimated)',wavRoleStaff:'Staff (estimated)',wavRoleUnknown:'Unknown speaker',wavPlay:'Play this section'},
+  zh: {wavImport:'翻译录音WAV',wavImportHint:'按时间顺序显示客人与员工的对话。',wavStart:'开始分析WAV',wavCancel:'取消',wavChoose:'请选择WAV文件。',wavTooLarge:'请选择不超过512 MB的WAV。',wavUploading:'正在读取WAV…',wavProcessing:'正在分析语音 {done}/{total}',wavCompleted:'分析完成。麦克风仍处于暂停状态，需要时请点“继续”。',wavFailed:'WAV分析失败。',wavCancelled:'WAV分析已取消。',wavRoleCustomer:'客人（推测）',wavRoleStaff:'员工（推测）',wavRoleUnknown:'说话人不明',wavPlay:'播放此片段'},
+  es: {wavImport:'Traducir WAV grabado',wavImportHint:'Muestra la conversación en orden cronológico.',wavStart:'Analizar WAV',wavCancel:'Cancelar',wavChoose:'Seleccione un archivo WAV.',wavTooLarge:'Seleccione un WAV de 512 MB como máximo.',wavUploading:'Cargando WAV…',wavProcessing:'Analizando audio {done}/{total}',wavCompleted:'Análisis terminado. El micrófono sigue pausado; pulse Continuar cuando sea necesario.',wavFailed:'Error al analizar el WAV.',wavCancelled:'Análisis WAV cancelado.',wavRoleCustomer:'Cliente (estimado)',wavRoleStaff:'Personal (estimado)',wavRoleUnknown:'Hablante desconocido',wavPlay:'Reproducir este fragmento'}
+};
+
+function t(key) { return (wavMessages[ui]||wavMessages.ja)[key] || (phraseMessages[ui]||phraseMessages.ja)[key] || (messages[ui] || messages.ja)[key] || messages.ja[key] || key; }
+function toast(message) { const el=$('#toast'); el.textContent=message; el.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>el.classList.remove('show'),3500); }
+function setTranslations() {
+  document.documentElement.lang=ui;
+  document.querySelectorAll('[data-i18n]').forEach(el=>{el.textContent=t(el.dataset.i18n)});
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{el.placeholder=t(el.dataset.i18nPlaceholder)});
+  $('#ui-language').value=ui;
+  renderState();
+  cards.forEach(card=>updateCardLabels(card));
+  renderQuickPhrases();
 }
-function toast(message){if(!message)return;const el=$('#toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),4200)}
-function status(data){const phaseName=(data?.ready&&data?.translator_ready&&['starting','loading','ready'].includes(data.phase))?'listening':data.phase;phase.textContent=t(phaseKey[phaseName]||'starting');$('.pulse').style.background=phaseName==='error'?'var(--red)':phaseName==='warning'?'#db9b3b':'var(--green)';updateEmptyState()}
-function setPartner(code){$('#partner').textContent=names[code]||code?.toUpperCase()||'-'}
-function selectValue(id,value){const el=$(id),wanted=String(value);if([...el.options].some(x=>x.value===wanted)){el.value=wanted;return true}return false}
-function markUnavailable(select,value,label){if(value===undefined||value===null||String(value)==='default')return;const op=document.createElement('option');op.value=String(value);op.textContent=`${label} (${String(value)})`;op.disabled=true;select.appendChild(op);select.value=String(value)}
-function scrollFeedBottom(){feed.scrollTop=feed.scrollHeight}
-function makeCard(id,direction='incoming'){empty?.remove();const el=document.createElement('article');el.className='entry '+(direction==='reply'?'reply':'incoming');el.dataset.id=String(id);el.dataset.direction=direction;const meta=document.createElement('div');meta.className='meta';const label=document.createElement('b');const tools=document.createElement('span');const timing=document.createElement('span');timing.className='timing';const replay=document.createElement('button');replay.className='correction replay';replay.textContent=t('replay');replay.hidden=true;const correction=document.createElement('button');correction.className='correction';correction.textContent=t('correct');correction.hidden=true;tools.append(timing,replay,correction);meta.append(label,tools);const main=document.createElement('div');main.className='main';const source=document.createElement('div');source.className='source';const reading=document.createElement('div');reading.className='reading-guide';reading.hidden=true;el.append(meta,main,reading,source);feed.appendChild(el);cards.set(String(id),el);while(feed.children.length>20){const first=feed.firstChild;if(first?.dataset?.id)cards.delete(first.dataset.id);feed.removeChild(first)}return el}
-function setCardTiming(el,value){el.querySelector('.timing').textContent=value||''}
+function languageName(code) { const item=languages.find(x=>x.code===code); return item ? `${item.native_name} · ${item.name}` : code || '-'; }
+function updateCardLabels(card) {
+  if(card.dataset.wavRole){card.querySelector('.meta b').textContent=t(`wavRole${card.dataset.wavRole[0].toUpperCase()}${card.dataset.wavRole.slice(1)}`)}
+  else {
+  const direction=card.dataset.direction;
+  card.querySelector('.meta b').textContent=direction==='reply'?t('reply'):t('incoming');
+  }
+  const kana=card.querySelector('.kana-label'); if(kana) kana.textContent=t('katakana');
+  const roman=card.querySelector('.roman-label'); if(roman) roman.textContent=t('romanized');
+  const play=card.querySelector('.wav-play');if(play)play.textContent=t('wavPlay');
+}
+function makeCard(id, direction) {
+  $('#empty').hidden=true;
+  const article=document.createElement('article');
+  article.className=`entry ${direction}`; article.dataset.direction=direction; article.dataset.id=id;
+  article.innerHTML=`<div class="meta"><b></b><span class="lang"></span></div><div class="main"></div><div class="source"></div><div class="reading-guide" hidden><div><span class="reading-label kana-label"></span><strong class="reading-kana"></strong></div><div><span class="reading-label roman-label"></span><strong class="reading-roman"></strong></div></div>`;
+  updateCardLabels(article); cards.set(String(id),article); $('#feed').appendChild(article); scrollFeed(); return article;
+}
+function scrollFeed(){const feed=$('#feed'); feed.scrollTop=feed.scrollHeight;}
+function showTranscript(data) {
+  const direction=data.speech_mode==='staff'?'reply':'incoming';
+  const id=String(data.utterance_id); const card=cards.get(id)||makeCard(id,direction);
+  card.querySelector('.source').textContent=data.text; card.querySelector('.main').textContent=t('translating');
+}
+function showTranslation(data) {
+  const id=String(data.utterance_id); const direction=data.direction==='reply'?'reply':'incoming';
+  const card=cards.get(id)||makeCard(id,direction); card.dataset.direction=direction; card.className=`entry ${direction}`;
+  card.querySelector('.main').textContent=data.translated||''; card.querySelector('.source').textContent=data.source||'';
+  card.querySelector('.lang').textContent=`${languageName(data.source_language)} → ${languageName(data.target_language)}`;
+  updateCardLabels(card); if(data.reading||data.romanized_reading) showReading(data); scrollFeed();
+}
+function showReading(data) {
+  const card=cards.get(String(data.utterance_id)); if(!card) return;
+  const box=card.querySelector('.reading-guide');
+  card.querySelector('.reading-kana').textContent=data.reading||'—';
+  card.querySelector('.reading-roman').textContent=data.romanized_reading||'—';
+  box.hidden=!(data.reading||data.romanized_reading); scrollFeed();
+}
+function phaseText(phase){return ({listening:t('listening'),recognizing:t('recognizing'),translating:t('translating'),paused:t('paused'),warning:t('warning'),error:t('error'),loading:t('starting'),starting:t('starting')})[phase]||phase;}
+function renderState(){
+  $('#pause').textContent=state.paused?t('resume'):t('pause');
+  const phase=state.paused?'paused':state.phase||'starting'; $('#phase strong').textContent=phaseText(phase);
+  $('#phase').className=`phase ${phase}`; $('#partner').textContent=languageName(state.input_language);
+  const empty=$('#empty'); if(!cards.size){empty.hidden=false; const ready=state.ready&&state.translator_ready; empty.querySelector('h3').textContent=ready?t('readyTitle'):t('loadingTitle'); empty.querySelector('p').textContent=ready?t('readyBody'):t('loadingBody');}
+}
+function applyState(next){state={...state,...next}; renderState(); if(state.input_language&&$('#language').options.length) $('#language').value=state.input_language; if(state.input_device!==undefined&&$('#input-device').options.length) $('#input-device').value=String(state.input_device);}
+async function api(path, options={}){const response=await fetch(path,{headers:{'Content-Type':'application/json',...(options.headers||{})},...options}); if(!response.ok){let detail='';try{detail=(await response.json()).detail}catch{}throw Error(detail||`${response.status}`)}return response.status===204?{}:response.json();}
+function wavText(key, values={}){return Object.entries(values).reduce((text,[name,value])=>text.replace(`{${name}}`,String(value)),t(key))}
+function wavTime(seconds){const value=Math.max(0,Number(seconds)||0);const minutes=Math.floor(value/60);return `${String(minutes).padStart(2,'0')}:${String(Math.floor(value%60)).padStart(2,'0')}`}
+function setWavBusy(busy){$('#start-wav').disabled=busy;$('#cancel-wav').hidden=!busy;$('#language').disabled=busy;$('#input-device').disabled=busy;$('#pause').disabled=busy;$('#reply-text').disabled=busy;$('#send-reply').disabled=busy}
+function resetWavControls(){wavJobId=null;clearTimeout(wavPollTimer);wavPollTimer=null;setWavBusy(false)}
+function playWavSection(start,end){const player=$('#wav-player');wavPlayEnd=Number(end);player.currentTime=Math.max(0,Number(start)||0);player.play().catch(err=>toast(err.message))}
+function renderWavEntries(job){
+  (job.entries||[]).forEach(entry=>{
+    const id=`wav-${job.id}-${entry.index}`;
+    const direction=entry.role==='staff'?'reply':entry.role==='customer'?'incoming':'unknown';
+    const card=cards.get(id)||makeCard(id,direction);
+    card.dataset.wavRole=entry.role;card.dataset.direction=direction;card.className=`entry ${direction}`;
+    card.querySelector('.main').textContent=entry.translated||'';
+    card.querySelector('.source').textContent=entry.source||'';
+    const meta=card.querySelector('.lang');meta.replaceChildren();
+    const label=document.createElement('span');label.textContent=`${wavTime(entry.start_seconds)}–${wavTime(entry.end_seconds)} · ${languageName(entry.source_language)} → ${languageName(entry.target_language)}`;
+    const play=document.createElement('button');play.type='button';play.className='wav-play';play.textContent=t('wavPlay');play.onclick=()=>playWavSection(entry.start_seconds,entry.end_seconds);
+    meta.append(label,play);updateCardLabels(card)
+  });
+  scrollFeed()
+}
+async function pollWavImport(){
+  if(!wavJobId)return;
+  try{
+    const job=await api(`/api/wav-import/${encodeURIComponent(wavJobId)}`);
+    $('#wav-progress').value=job.progress||0;
+    if(job.status==='queued'||job.status==='processing'||job.status==='cancelling'){
+      $('#wav-status').textContent=wavText('wavProcessing',{done:job.processed_segments||0,total:job.total_segments||0});
+      wavPollTimer=setTimeout(pollWavImport,700);return
+    }
+    if(job.status==='completed'){renderWavEntries(job);$('#wav-status').textContent=t('wavCompleted');$('#wav-player').hidden=false}
+    else if(job.status==='cancelled'){$('#wav-status').textContent=t('wavCancelled')}
+    else {$('#wav-status').textContent=`${t('wavFailed')} ${job.error||''}`.trim()}
+    resetWavControls()
+  }catch(err){$('#wav-status').textContent=`${t('wavFailed')} ${err.message}`;resetWavControls()}
+}
+async function startWavImport(){
+  const file=$('#wav-file').files[0];if(!file){toast(t('wavChoose'));return}if(file.size>512*1024*1024){toast(t('wavTooLarge'));return}
+  if(wavObjectUrl)URL.revokeObjectURL(wavObjectUrl);wavObjectUrl=URL.createObjectURL(file);$('#wav-player').src=wavObjectUrl;$('#wav-player').hidden=true;
+  setWavBusy(true);$('#wav-progress').hidden=false;$('#wav-progress').value=0;$('#wav-status').textContent=t('wavUploading');
+  try{
+    const response=await fetch(`/api/wav-import?customer_language=${encodeURIComponent($('#language').value)}`,{method:'POST',headers:{'Content-Type':'audio/wav'},body:file});
+    if(!response.ok){let detail='';try{detail=(await response.json()).detail}catch{}throw Error(detail||String(response.status))}
+    const job=await response.json();[...cards.entries()].filter(([id])=>id.startsWith('wav-')).forEach(([id,card])=>{card.remove();cards.delete(id)});wavJobId=job.id;pollWavImport()
+  }catch(err){$('#wav-status').textContent=`${t('wavFailed')} ${err.message}`;resetWavControls()}
+}
+async function cancelWavImport(){if(!wavJobId)return;clearTimeout(wavPollTimer);wavPollTimer=null;$('#cancel-wav').disabled=true;try{await api(`/api/wav-import/${encodeURIComponent(wavJobId)}`,{method:'DELETE'});$('#wav-status').textContent=t('wavCancelled')}catch(err){toast(err.message)}finally{$('#cancel-wav').disabled=false;pollWavImport()}}
+async function control(payload){applyState(await api('/api/control',{method:'POST',body:JSON.stringify(payload)}));}
+function useQuickPhrase(text){const field=$('#reply-text');field.value=text;field.focus();field.setSelectionRange(text.length,text.length);field.scrollIntoView({block:'nearest'});toast(t('phraseLoaded'));}
+function normalizePhraseSearch(value){return value.normalize('NFKC').toLocaleLowerCase('ja-JP');}
+function storeLocalSetting(key,value){try{localStorage.setItem(key,value)}catch{}}
+function persistCollapsedQuickPhraseCategories(){const collapsed_categories=[...collapsedQuickPhraseCategories];collapsedQuickPhraseSave=collapsedQuickPhraseSave.then(()=>api('/api/quick-phrases/ui-state',{method:'PATCH',body:JSON.stringify({collapsed_categories})})).catch(err=>toast(err.message));}
+function toggleQuickPhraseCategory(category){if(collapsedQuickPhraseCategories.has(category))collapsedQuickPhraseCategories.delete(category);else collapsedQuickPhraseCategories.add(category);persistCollapsedQuickPhraseCategories();renderQuickPhrases();}
+function closeQuickPhraseMenu(){const menu=$('#quick-phrase-menu');menu.hidden=true;delete menu.dataset.phraseId;}
+function openQuickPhraseMenu(item,event){event.preventDefault();const menu=$('#quick-phrase-menu');menu.dataset.phraseId=item.id;const input=$('#quick-phrase-category');input.value=item.category||'';const categories=[...new Set(quickPhrases.map(x=>x.category).filter(Boolean))].sort((a,b)=>a.localeCompare(b,ui));const options=$('#quick-phrase-categories');options.replaceChildren();categories.forEach(category=>{const option=document.createElement('option');option.value=category;options.appendChild(option)});menu.hidden=false;const left=Math.min(event.clientX,window.innerWidth-menu.offsetWidth-8);const top=Math.min(event.clientY,window.innerHeight-menu.offsetHeight-8);menu.style.left=`${Math.max(8,left)}px`;menu.style.top=`${Math.max(8,top)}px`;input.focus();input.select();}
+async function updateQuickPhraseCategory(category){const menu=$('#quick-phrase-menu');const phraseId=menu.dataset.phraseId;if(!phraseId||quickPhraseCategorySaving)return;quickPhraseCategorySaving=true;$('#save-quick-phrase-category').disabled=true;$('#clear-quick-phrase-category').disabled=true;try{const data=await api(`/api/quick-phrases/${encodeURIComponent(phraseId)}/category`,{method:'PATCH',body:JSON.stringify({category})});const index=quickPhrases.findIndex(item=>item.id===phraseId);if(index>=0)quickPhrases[index]=data.phrase;collapsedQuickPhraseCategories.delete(data.phrase.category||'');persistCollapsedQuickPhraseCategories();closeQuickPhraseMenu();renderQuickPhrases();toast(t('categorySaved'))}catch(err){toast(err.message)}finally{quickPhraseCategorySaving=false;$('#save-quick-phrase-category').disabled=false;$('#clear-quick-phrase-category').disabled=false;}}
+function createQuickPhraseRow(item){
+  const row=document.createElement('div');
+  row.className='quick-phrase-row';
+  row.oncontextmenu=event=>openQuickPhraseMenu(item,event);
+  const use=document.createElement('button');
+  use.type='button';
+  use.className='quick-phrase-use';
+  use.textContent=item.text;
+  use.onclick=()=>useQuickPhrase(item.text);
+  const remove=document.createElement('button');
+  remove.type='button';
+  remove.className='quick-phrase-delete';
+  remove.textContent='×';
+  remove.title=t('deletePhrase');
+  remove.setAttribute('aria-label',t('deletePhrase'));
+  remove.onclick=async()=>{try{await api(`/api/quick-phrases/${encodeURIComponent(item.id)}`,{method:'DELETE'});quickPhrases=quickPhrases.filter(x=>x.id!==item.id);closeQuickPhraseMenu();renderQuickPhrases()}catch(err){toast(err.message)}};
+  row.append(use,remove);
+  return row;
+}
+function renderQuickPhrases(){
+  const list=$('#quick-phrase-list');
+  if(!list)return;
+  list.replaceChildren();
+  $('#quick-phrase-count').textContent=`${quickPhrases.length} / ${quickPhraseLimit}`;
+  const query=normalizePhraseSearch(($('#quick-phrase-search').value||'').trim());
+  const filtered=quickPhrases.filter(item=>!query||normalizePhraseSearch(item.text).includes(query)||normalizePhraseSearch(item.category||'').includes(query));
+  const empty=$('#quick-phrase-empty');
+  empty.hidden=filtered.length>0;
+  empty.textContent=quickPhrases.length&&query?t('noPhraseMatches'):t('noQuickPhrases');
+  const groups=new Map();
+  filtered.forEach(item=>{const category=item.category||'';if(!groups.has(category))groups.set(category,[]);groups.get(category).push(item)});
+  const categories=[...groups.keys()].sort((a,b)=>!a?1:!b?-1:a.localeCompare(b,ui));
+  categories.forEach(category=>{
+    const items=groups.get(category);
+    const collapsed=!query&&collapsedQuickPhraseCategories.has(category);
+    const group=document.createElement('section');
+    group.className=`quick-phrase-group${collapsed?' collapsed':''}`;
+    const toggle=document.createElement('button');
+    toggle.type='button';
+    toggle.className='quick-phrase-group-toggle';
+    toggle.setAttribute('aria-expanded',String(!collapsed));
+    toggle.disabled=Boolean(query);
+    const label=document.createElement('span');
+    label.textContent=category||t('uncategorized');
+    const count=document.createElement('small');
+    count.textContent=String(items.length);
+    toggle.append(label,count);
+    if(!query)toggle.onclick=()=>toggleQuickPhraseCategory(category);
+    group.appendChild(toggle);
+    const body=document.createElement('div');
+    body.className='quick-phrase-group-body';
+    items.forEach(item=>body.appendChild(createQuickPhraseRow(item)));
+    group.appendChild(body);
+    list.appendChild(group);
+  });
+}
+async function loadInitial(){
+  const data=await api('/api/state');
+  languages=data.languages||[];
+  const select=$('#language');
+  select.replaceChildren();
+  languages.forEach(item=>{const option=document.createElement('option');option.value=item.code;option.textContent=`${item.native_name} · ${item.name}`;select.appendChild(option)});
+  (data.history||[]).forEach(event=>handleEvent(event));
+  applyState(data.state||{});
+  try{
+    const phraseData=await api('/api/quick-phrases');
+    quickPhrases=phraseData.phrases||[];
+    quickPhraseLimit=phraseData.max_items||40;
+    collapsedQuickPhraseCategories=new Set(phraseData.collapsed_categories||[]);
+    renderQuickPhrases();
+  }catch(err){toast(err.message)}
+  try{
+    const devices=await api('/api/devices');
+    const input=$('#input-device');
+    input.replaceChildren();
+    const def=document.createElement('option');
+    def.value='default';
+    def.textContent=t('systemDefault');
+    input.appendChild(def);
+    (devices.inputs||[]).filter(x=>x.id!=='default').forEach(item=>{const option=document.createElement('option');option.value=item.id;option.textContent=item.name;input.appendChild(option)});
+    input.value=String(state.input_device||'default');
+    if(devices.warnings?.length)toast(devices.warnings[0]);
+  }catch(err){toast(err.message)}
+}
+function handleEvent(event){const data=event.data||event; if(event.type==='translation')showTranslation(data); else if(event.type==='reading')showReading(data); else if(event.type==='transcript')showTranscript(data); else if(event.type==='status')applyState(data); else if(event.type==='state')applyState(data); else if(event.type==='history_cleared'){cards.forEach(x=>x.remove());cards.clear();renderState();} else if(event.type==='warning'||event.type==='error')toast(data.message||event.type);}
+function connect(){const scheme=location.protocol==='https:'?'wss':'ws';const ws=new WebSocket(`${scheme}://${location.host}/ws`); $('#connection span').textContent=t('connecting');ws.onopen=()=>{reconnectDelay=700;$('#connection').classList.add('online');$('#connection span').textContent=t('connected')};ws.onmessage=e=>{try{const event=JSON.parse(e.data);if(event.type==='snapshot'){const payload=event.data||{};(payload.history||[]).forEach(handleEvent);applyState(payload.state||{})}else handleEvent(event)}catch{}};ws.onclose=()=>{$('#connection').classList.remove('online');$('#connection span').textContent=t('reconnecting');setTimeout(connect,reconnectDelay);reconnectDelay=Math.min(8000,reconnectDelay*1.6)};}
 
-const pronunciationCache=new Map();
-const enWordKanaCache=new Map();
-const koPhraseKana=new Map([
-  ['감사합니다','カムサハムニダ'],['고맙습니다','コマプスムニダ'],['안녕하세요','アンニョンハセヨ'],['안녕히 가세요','アンニョンヒ ガセヨ'],['안녕히 계세요','アンニョンヒ ケセヨ'],
-  ['죄송합니다','チェソンハムニダ'],['실례합니다','シルレハムニダ'],['잠시만 기다려 주세요','チャムシマン キダリョ ジュセヨ'],['기다려 주세요','キダリョ ジュセヨ'],
-  ['확인해 보겠습니다','ファギネ ボゲッスムニダ'],['알겠습니다','アルゲッスムニダ'],['네','ネ'],['아니요','アニヨ'],['괜찮습니다','ケンチャンスムニダ'],
-  ['여기입니다','ヨギイムニダ'],['이쪽입니다','イッチョギムニダ'],['예약 확인 도와드리겠습니다','イェヤク ファギン トワドゥリゲッスムニダ']
-]);
-const enPhraseKana=new Map([
-  ['thank you','サンキュー'],['thank you very much','サンキュー ベリー マッチ'],['please wait','プリーズ ウェイト'],['please wait a moment','プリーズ ウェイト ア モーメント'],
-  ['one moment please','ワン モーメント プリーズ'],['just a moment please','ジャスト ア モーメント プリーズ'],['i will check','アイ ウィル チェック'],
-  ['i will check your reservation','アイ ウィル チェック ユア レザベーション'],['please show me your passport','プリーズ ショウ ミー ユア パスポート'],
-  ['welcome','ウェルカム'],['you are welcome','ユー アー ウェルカム'],['sorry','ソーリー'],['excuse me','エクスキューズ ミー'],['yes','イエス'],['no','ノー']
-]);
-const enWordKana={
-  i:'アイ',we:'ウィー',you:'ユー',your:'ユア',me:'ミー',my:'マイ',our:'アワー',the:'ザ',a:'ア',an:'アン',to:'トゥ',for:'フォー',of:'オブ',in:'イン',on:'オン',at:'アット',
-  is:'イズ',are:'アー',am:'アム',be:'ビー',can:'キャン',could:'クッド',will:'ウィル',would:'ウッド',may:'メイ',please:'プリーズ',wait:'ウェイト',moment:'モーメント',just:'ジャスト',
-  thank:'サンク',thanks:'サンクス',welcome:'ウェルカム',sorry:'ソーリー',excuse:'エクスキューズ',yes:'イエス',no:'ノー',ok:'オーケー',okay:'オーケー',
-  check:'チェック',reservation:'レザベーション',booking:'ブッキング',passport:'パスポート',name:'ネーム',room:'ルーム',key:'キー',card:'カード',breakfast:'ブレックファスト',
-  lobby:'ロビー',front:'フロント',desk:'デスク',elevator:'エレベーター',towel:'タオル',water:'ウォーター',receipt:'レシート',payment:'ペイメント',cash:'キャッシュ',credit:'クレジット',
-  here:'ヒア',there:'ゼア',this:'ディス',that:'ザット',today:'トゥデイ',tomorrow:'トゥモロー',tonight:'トゥナイト',morning:'モーニング',evening:'イブニング',
-  available:'アベイラブル',minutes:'ミニッツ',minute:'ミニット',hour:'アワー',hours:'アワーズ',taxi:'タクシー',shuttle:'シャトル',airport:'エアポート',restaurant:'レストラン'
-};
-function kataForHangulSyllable(ch){const code=ch.charCodeAt(0)-0xAC00;if(code<0||code>11171)return '';const L=Math.floor(code/588),V=Math.floor((code%588)/28),T=code%28;const vowel=['a','ae','ya','yae','eo','e','yeo','ye','o','wa','wae','oe','yo','u','wo','we','wi','yu','eu','ui','i'][V];const cons=['g','kk','n','d','tt','r','m','b','pp','s','ss','','j','jj','ch','k','t','p','h'][L];const final=['','k','k','ks','n','nj','nh','t','l','lk','lm','lb','ls','lt','lp','lh','m','p','ps','t','t','ng','t','t','k','t','p','t'][T];const rows={
-  '':{a:'ア',ae:'エ',ya:'ヤ',yae:'イェ',eo:'オ',e:'エ',yeo:'ヨ',ye:'イェ',o:'オ',wa:'ワ',wae:'ウェ',oe:'ウェ',yo:'ヨ',u:'ウ',wo:'ウォ',we:'ウェ',wi:'ウィ',yu:'ユ',eu:'ウ',ui:'ウィ',i:'イ'},
-  g:{a:'ガ',ae:'ゲ',ya:'ギャ',yae:'ギェ',eo:'ゴ',e:'ゲ',yeo:'ギョ',ye:'ギェ',o:'ゴ',wa:'グァ',wae:'グェ',oe:'グェ',yo:'ギョ',u:'グ',wo:'グォ',we:'グェ',wi:'グィ',yu:'ギュ',eu:'グ',ui:'グィ',i:'ギ'},
-  kk:{a:'カ',ae:'ケ',ya:'キャ',yae:'キェ',eo:'コ',e:'ケ',yeo:'キョ',ye:'キェ',o:'コ',u:'ク',yo:'キョ',yu:'キュ',eu:'ク',i:'キ'},
-  n:{a:'ナ',ae:'ネ',ya:'ニャ',eo:'ノ',e:'ネ',yeo:'ニョ',o:'ノ',yo:'ニョ',u:'ヌ',yu:'ニュ',eu:'ヌ',i:'ニ'},
-  d:{a:'ダ',ae:'デ',ya:'ディャ',eo:'ド',e:'デ',yeo:'ディョ',o:'ド',yo:'ディョ',u:'ドゥ',yu:'デュ',eu:'ドゥ',i:'ディ'},
-  tt:{a:'タ',ae:'テ',ya:'ティャ',eo:'ト',e:'テ',o:'ト',u:'トゥ',eu:'トゥ',i:'ティ'},
-  r:{a:'ラ',ae:'レ',ya:'リャ',eo:'ロ',e:'レ',yeo:'リョ',o:'ロ',yo:'リョ',u:'ル',yu:'リュ',eu:'ル',i:'リ'},
-  m:{a:'マ',ae:'メ',ya:'ミャ',eo:'モ',e:'メ',yeo:'ミョ',o:'モ',yo:'ミョ',u:'ム',yu:'ミュ',eu:'ム',i:'ミ'},
-  b:{a:'バ',ae:'ベ',ya:'ビャ',eo:'ボ',e:'ベ',yeo:'ビョ',o:'ボ',yo:'ビョ',u:'ブ',yu:'ビュ',eu:'ブ',i:'ビ'},
-  pp:{a:'パ',ae:'ペ',eo:'ポ',e:'ペ',o:'ポ',u:'プ',eu:'プ',i:'ピ'},
-  s:{a:'サ',ae:'セ',ya:'シャ',eo:'ソ',e:'セ',yeo:'ショ',o:'ソ',yo:'ショ',u:'ス',yu:'シュ',eu:'ス',i:'シ'},
-  ss:{a:'サ',ae:'セ',eo:'ソ',e:'セ',o:'ソ',u:'ス',eu:'ス',i:'シ'},
-  j:{a:'ジャ',ae:'ジェ',ya:'ジャ',eo:'ジョ',e:'ジェ',yeo:'ジョ',o:'ジョ',yo:'ジョ',u:'ジュ',yu:'ジュ',eu:'ジュ',i:'ジ'},
-  jj:{a:'チャ',ae:'チェ',eo:'チョ',e:'チェ',o:'チョ',u:'チュ',eu:'チュ',i:'チ'},
-  ch:{a:'チャ',ae:'チェ',ya:'チャ',eo:'チョ',e:'チェ',yeo:'チョ',o:'チョ',yo:'チョ',u:'チュ',yu:'チュ',eu:'チュ',i:'チ'},
-  k:{a:'カ',ae:'ケ',ya:'キャ',eo:'コ',e:'ケ',yeo:'キョ',o:'コ',yo:'キョ',u:'ク',yu:'キュ',eu:'ク',i:'キ'},
-  t:{a:'タ',ae:'テ',eo:'ト',e:'テ',o:'ト',u:'トゥ',eu:'トゥ',i:'ティ'},
-  p:{a:'パ',ae:'ペ',eo:'ポ',e:'ペ',o:'ポ',u:'プ',yu:'ピュ',eu:'プ',i:'ピ'},
-  h:{a:'ハ',ae:'ヘ',ya:'ヒャ',eo:'ホ',e:'ヘ',yeo:'ヒョ',o:'ホ',yo:'ヒョ',u:'フ',yu:'ヒュ',eu:'フ',i:'ヒ'}
-};const end={k:'ク',ks:'ク',n:'ン',nj:'ン',nh:'ン',t:'ッ',l:'ル',lk:'ルク',lm:'ルム',lb:'ルプ',ls:'ル',lt:'ル',lp:'ルプ',lh:'ル',m:'ム',p:'プ',ps:'プ',ng:'ン'};return (rows[cons]?.[vowel]||rows[cons]?.a||'')+(end[final]||'')}
-function koKanaWord(word){if(koPhraseKana.has(word))return koPhraseKana.get(word);let out='';for(const ch of word)out+=kataForHangulSyllable(ch)||ch;return out!==word?out:''}
-const enFallbackKanaChunks=[
-  ['under','アンダー'],['stand','スタンド'],['tion','ション'],['sion','ジョン'],['ture','チャー'],['sure','シャー'],['ough','オー'],['augh','オー'],['eigh','エイ'],['igh','アイ'],['air','エア'],['ear','イア'],['our','アワー'],['ow','アウ'],['ou','アウ'],['oo','ウー'],['ee','イー'],['ea','イー'],['ai','エイ'],['ay','エイ'],['oa','オウ'],['oi','オイ'],['oy','オイ'],['ch','チ'],['sh','シ'],['th','ス'],['ph','フ'],['wh','ウ'],['ck','ック'],['ng','ング'],['qu','ク'],['st','スト'],['str','ストゥル'],['tr','トゥル'],['dr','ドゥル'],['cl','クル'],['cr','クル'],['gr','グル'],['pr','プル'],['br','ブル'],['fr','フル'],['pl','プル'],['bl','ブル'],['fl','フル'],['sl','スル'],['sm','スム'],['sn','スン'],['sp','スプ'],['sk','スク'],['sw','スウ'],['er','アー'],['or','オー'],['ar','アー'],['ir','アー'],['ur','アー'],['al','アル'],['le','ル'],['ce','ス'],['ci','シ'],['cy','シ'],['ge','ジ'],['gi','ジ'],['gy','ジ'],['kn','ナ'],['wr','ラ'],['mb','ム']
-];
-const enFallbackKanaLetters={a:'ア',b:'ブ',c:'ク',d:'ド',e:'エ',f:'フ',g:'グ',h:'ハ',i:'イ',j:'ジ',k:'ク',l:'ル',m:'ム',n:'ン',o:'オ',p:'プ',q:'ク',r:'ル',s:'ス',t:'ト',u:'ア',v:'ヴ',w:'ウ',x:'クス',y:'イ',z:'ズ'};
-const enFallbackKanaByFirst=enFallbackKanaChunks.reduce((acc,item)=>{const first=item[0][0];(acc[first]||=[]).push(item);return acc},{});
-for(const items of Object.values(enFallbackKanaByFirst))items.sort((a,b)=>b[0].length-a[0].length);
-function enFallbackKanaWord(key){let out='',i=0;while(i<key.length){let hit=null;for(const item of enFallbackKanaByFirst[key[i]]||[]){if(key.startsWith(item[0],i)){hit=item;break}}if(hit){out+=hit[1];i+=hit[0].length}else{out+=enFallbackKanaLetters[key[i]]||key[i].toUpperCase();i++}}return out}
-function enKanaWord(word){const key=word.toLowerCase().replace(/^'+|'+$/g,'');if(!key)return '';const cached=enWordKanaCache.get(key);if(cached)return cached;let kana=enWordKana[key]||'';if(!kana){if(key.endsWith('tion'))kana=word.slice(0,-4).toUpperCase()+'ション';else if(key.endsWith('sion'))kana=word.slice(0,-4).toUpperCase()+'ジョン';else kana=enFallbackKanaWord(key)}enWordKanaCache.set(key,kana);return kana}
-function makeReadingToken(text,kind='plain'){const span=document.createElement('span');span.className='reading-token reading-'+kind;span.textContent=text;return span}
-function makeRuby(original,kana){const ruby=document.createElement('ruby');ruby.className='reading-ruby';const base=document.createElement('rb');base.className='reading-base';base.textContent=original;const rt=document.createElement('rt');rt.className='reading-kana';rt.textContent=kana;ruby.append(base,rt);return ruby}
-function readingTokenKind(token){if(!token.trim())return 'space';return /[A-Za-z가-힣]/.test(token)?'plain':'punctuation'}
-function renderReadingGuide(el,text,lang){const box=el.querySelector('.reading-guide');if(!box)return;box.hidden=true;box.replaceChildren();if(el.dataset.direction!=='reply'||!['ko','en'].includes(lang)||!text||text.length>180)return;const key=lang+'|'+text;let cached=pronunciationCache.get(key);if(!cached){const exact=(lang==='ko'?koPhraseKana:enPhraseKana).get(text.trim().toLowerCase())||(lang==='ko'?koPhraseKana:enPhraseKana).get(text.trim());cached={exact,parts:null};if(!exact){const tokenRe=lang==='ko'?/[가-힣]+|[^가-힣]+/g:/[A-Za-z']+|[^A-Za-z']+/g;cached.parts=[...text.matchAll(tokenRe)].map(m=>{const tok=m[0],kana=lang==='ko'&&/[가-힣]/.test(tok)?koKanaWord(tok):lang==='en'&&/[A-Za-z]/.test(tok)?enKanaWord(tok):'';return [tok,kana]})}pronunciationCache.set(key,cached)}const label=document.createElement('span');label.className='reading-label';label.textContent=t('readingGuide')+': ';box.appendChild(label);if(cached.exact){box.appendChild(makeRuby(text,cached.exact))}else{let useful=false;for(const [tok,kana] of cached.parts){if(kana){useful=true;box.appendChild(makeRuby(tok,kana))}else box.appendChild(makeReadingToken(tok,readingTokenKind(tok)))}if(!useful){box.replaceChildren();box.hidden=true;return}}box.hidden=false}
-function scheduleReadingGuide(el,d){const lang=d.target_language||state.input_language;if(d.direction!=='reply'||!['ko','en'].includes(lang))return;const run=()=>{if(el.dataset.final==='1')renderReadingGuide(el,d.translated||'',lang)};if(window.requestIdleCallback)window.requestIdleCallback(run,{timeout:800});else window.setTimeout(run,50)}
-function preview(item){const d=item.data||item;if(!d.text)return;const id=String(d.utterance_id);let el=cards.get(id);if(!el)el=makeCard(id,d.speech_mode==='staff'?'reply':'incoming');if(el.dataset.final==='1')return;el.classList.add('live');el.dataset.live='1';el.querySelector('.meta b').textContent=t('liveCaption');el.querySelector('.main').textContent=t('awaitingTranslation');el.querySelector('.source').textContent=d.text;setCardTiming(el,'LIVE');if(d.language)setPartner(d.language);scrollFeedBottom()}
-function discardPreview(item){const d=item.data||item,id=String(d.utterance_id),el=cards.get(id);if(el&&el.dataset.final!=='1'){cards.delete(id);el.remove()}}
-function add(item){const d=item.data||item;if(d.direction===undefined)return;const id=String(d.utterance_id||`final-${Date.now()}-${Math.random()}`);let el=cards.get(id);if(!el)el=makeCard(id,d.direction);el.className='entry '+(d.direction==='reply'?'reply':'incoming');el.dataset.direction=d.direction;el.dataset.final='1';el.dataset.live='0';el.querySelector('.meta b').textContent=d.direction==='reply'?t('reply'):t('incoming');setCardTiming(el,d.latency_seconds?`${d.latency_seconds}s`:'');el.querySelector('.main').textContent=d.translated;el.querySelector('.source').textContent=d.source;const reading=el.querySelector('.reading-guide');if(reading){reading.hidden=true;reading.replaceChildren()}scheduleReadingGuide(el,d);const replay=el.querySelector('.replay');replay.hidden=d.direction!=='reply';replay.onclick=()=>replayTts(d).catch(e=>toast(e.message));const correction=el.querySelector('.correction:not(.replay)');correction.hidden=false;correction.onclick=()=>saveCorrection(d).catch(e=>toast(e.message));if(d.source_language)setPartner(d.source_language);scrollFeedBottom()}
-async function replayTts(d){const r=await fetch('/api/replay',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({text:d.translated,language:d.target_language})});if(!r.ok)throw Error((await r.json()).detail||'Could not replay audio');toast(t('replayQueued'))}
-async function saveCorrection(d){const correctedSource=prompt(t('correctSource'),d.source);if(correctedSource===null)return;const correctedTranslation=prompt(t('correctTranslation'),d.translated);if(correctedTranslation===null)return;if(correctedSource===d.source&&correctedTranslation===d.translated)return;const r=await fetch('/api/feedback',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({direction:d.direction,source_language:d.source_language,source:d.source,translation:d.translated,corrected_source:correctedSource===d.source?'':correctedSource,corrected_translation:correctedTranslation===d.translated?'':correctedTranslation})});if(!r.ok)throw Error((await r.json()).detail||'Unable to save correction');toast(t('saved'))}
-function applyState(next){state={...state,...next};if(state.ready&&state.translator_ready&&['starting','loading','ready'].includes(state.phase))state.phase='listening';$('#tts').classList.toggle('on',!!state.tts_enabled);$('#tts').setAttribute('aria-pressed',!!state.tts_enabled);$('#tts em').textContent=state.tts_enabled?t('ttsOn'):t('ttsOff');$('#pause').textContent=state.paused?t('resume'):t('pause');if(state.input_language&&$('#language').options.length)selectValue('#language',state.input_language);if(state.input_device!==undefined&&$('#input-device').options.length)selectValue('#input-device',state.input_device);if(state.output_device!==undefined&&$('#output-device').options.length)selectValue('#output-device',state.output_device);const staff=state.speech_mode==='staff',mode=$('#speech-mode');mode.classList.toggle('staff',staff);mode.setAttribute('aria-pressed',String(staff));mode.querySelector('em').textContent=staff?t('staffSpeechActive'):t('staffSpeech');if(state.input_language)setPartner(state.input_language);updateEmptyState()}
-function renderLanguages(languages){const input=$('#language'),chosen=state.input_language;input.replaceChildren();for(const lang of languages){const op=document.createElement('option');op.value=lang.code;op.textContent=`${lang.native_name} (${lang.name})`;input.appendChild(op)}selectValue('#language',chosen)}
-async function loadDevices(){const r=await fetch('/api/devices');if(!r.ok)throw Error((await r.json()).detail||'Could not load devices');const d=await r.json(),input=$('#input-device'),output=$('#output-device'),chosenInput=state.input_device,chosenOutput=state.output_device;for(const [select,items,chosen] of [[input,d.inputs||[],chosenInput],[output,d.outputs||[],chosenOutput]]){select.replaceChildren();const def=document.createElement('option');def.value='default';def.textContent=t('systemDefault');select.appendChild(def);for(const item of items){const op=document.createElement('option');op.value=item.id;op.textContent=item.name;select.appendChild(op)}if(!selectValue('#'+select.id,chosen))markUnavailable(select,chosen,'Unavailable')}if(d.warnings?.length&&!missingInput++){toast(d.warnings[0])}}
-async function control(payload){const r=await fetch('/api/control',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});if(!r.ok)throw Error((await r.json()).detail||'Control update failed');applyState(await r.json())}
-function clearFeed(){cards.clear();feed.replaceChildren(empty)}
-function snapshot(data){clearFeed();applyState(data.state);status(data.state);renderLanguages(data.languages);for(const ev of data.history||[])if(ev.type==='translation')add(ev)}
-$('#language').onchange=e=>control({active_language:e.target.value}).catch(err=>toast(err.message));$('#input-device').onchange=e=>control({input_device:e.target.value}).catch(err=>toast(err.message));$('#output-device').onchange=e=>control({output_device:e.target.value}).catch(err=>toast(err.message));$('#tts').onclick=()=>control({tts_enabled:!state.tts_enabled}).catch(err=>toast(err.message));$('#pause').onclick=()=>control({paused:!state.paused}).catch(err=>toast(err.message));
-// A quick Space tap can release before the "staff" HTTP response arrives.
-// Keep the desired state separately and make the serialized request loop catch
-// up, otherwise the release would be ignored and staff mode could stay stuck.
-let desiredStaff=false,staffControlBusy=false;
-async function syncStaffMode(){if(staffControlBusy)return;staffControlBusy=true;try{while((state.speech_mode==='staff')!==desiredStaff){const target=desiredStaff;await control({speech_mode:target?'staff':'customer'})}}catch(err){toast(err.message)}finally{staffControlBusy=false;if((state.speech_mode==='staff')!==desiredStaff)queueMicrotask(syncStaffMode)}}
-function setStaff(active){desiredStaff=!!active;syncStaffMode()}
-function textInputFocused(){const el=document.activeElement,tag=el?.tagName;return !!el&&(el.isContentEditable||['INPUT','TEXTAREA','SELECT','BUTTON'].includes(tag))}
-const mode=$('#speech-mode');mode.addEventListener('pointerdown',e=>{e.preventDefault();setStaff(true)});for(const event of ['pointerup','pointercancel','pointerleave'])mode.addEventListener(event,()=>setStaff(false));window.addEventListener('keydown',e=>{if(e.code==='Space'&&!e.repeat&&!textInputFocused()){e.preventDefault();setStaff(true)}});window.addEventListener('keyup',e=>{if(e.code==='Space'){e.preventDefault();setStaff(false)}});window.addEventListener('blur',()=>setStaff(false));
-$('#clear-history').onclick=()=>{if(confirm(t('clearHistory')+'?'))fetch('/api/history',{method:'DELETE'}).then(r=>{if(!r.ok)throw Error('Unable to clear history')}).catch(e=>toast(e.message))};$('#ui-language').onchange=e=>{ui=e.target.value;localStorage.setItem('remoteplus-ui-language',ui);applyI18n()};
-function connect(){const protocol=location.protocol==='https:'?'wss':'ws',ws=new WebSocket(`${protocol}://${location.host}/ws`);ws.onopen=()=>{$('#connection').classList.add('on');$('#connection span').textContent=t('connected');retry=700};ws.onclose=()=>{$('#connection').classList.remove('on');$('#connection span').textContent=t('reconnecting');setTimeout(connect,retry);retry=Math.min(retry*1.7,8000)};ws.onmessage=e=>{const event=JSON.parse(e.data);if(event.type==='snapshot')snapshot(event.data);else if(event.type==='preview')preview(event);else if(event.type==='preview_discard')discardPreview(event);else if(event.type==='translation')add(event);else if(event.type==='status')status(event.data);else if(event.type==='state')applyState(event.data);else if(event.type==='history_cleared')clearFeed();else if(event.type==='error'||event.type==='warning')toast(event.data.message)}}
-applyI18n();loadDevices().catch(error=>toast(error.message));connect();
+$('#ui-language').onchange=e=>{ui=e.target.value;storeLocalSetting('remoteplus-ui-language',ui);setTranslations()};
+$('#language').onchange=e=>control({active_language:e.target.value,reply_language:'auto'}).catch(err=>toast(err.message));
+$('#input-device').onchange=e=>control({input_device:e.target.value}).catch(err=>toast(err.message));
+$('#pause').onclick=()=>control({paused:!state.paused}).catch(err=>toast(err.message));
+$('#start-wav').onclick=startWavImport;
+$('#cancel-wav').onclick=cancelWavImport;
+$('#wav-player').ontimeupdate=event=>{if(wavPlayEnd!==null&&event.target.currentTime>=wavPlayEnd){event.target.pause();wavPlayEnd=null}};
+$('#clear-history').onclick=async()=>{try{await api('/api/history',{method:'DELETE'});cards.forEach(x=>x.remove());cards.clear();renderState()}catch(err){toast(err.message)}};
+$('#reply-form').onsubmit=async event=>{event.preventDefault();const field=$('#reply-text');const text=field.value.trim();if(!text){toast(t('emptyReply'));return}const button=$('#send-reply');button.disabled=true;try{await api('/api/reply',{method:'POST',body:JSON.stringify({text})});field.value=''}catch(err){toast(`${t('sendFailed')} ${err.message}`)}finally{button.disabled=false;field.focus()}};
+$('#reply-text').onkeydown=event=>{if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();$('#reply-form').requestSubmit()}};
+$('#quick-phrase-form').onsubmit=async event=>{event.preventDefault();const field=$('#quick-phrase-text');const text=field.value.trim();if(!text)return;const button=$('#add-quick-phrase');button.disabled=true;try{const data=await api('/api/quick-phrases',{method:'POST',body:JSON.stringify({text})});quickPhrases.push(data.phrase);field.value='';$('#quick-phrase-search').value='';collapsedQuickPhraseCategories.delete('');persistCollapsedQuickPhraseCategories();renderQuickPhrases();toast(t('phraseAdded'))}catch(err){toast(err.message)}finally{button.disabled=false;field.focus()}};
+$('#quick-phrase-search').oninput=renderQuickPhrases;
+$('#save-quick-phrase-category').onclick=()=>updateQuickPhraseCategory($('#quick-phrase-category').value);
+$('#clear-quick-phrase-category').onclick=()=>updateQuickPhraseCategory('');
+$('#quick-phrase-category').onkeydown=event=>{if(event.key==='Enter'){event.preventDefault();updateQuickPhraseCategory(event.target.value)}else if(event.key==='Escape')closeQuickPhraseMenu()};
+document.addEventListener('click',event=>{const menu=$('#quick-phrase-menu');if(!menu.hidden&&!menu.contains(event.target))closeQuickPhraseMenu()});
+window.addEventListener('blur',closeQuickPhraseMenu);
+window.addEventListener('beforeunload',()=>{if(wavObjectUrl)URL.revokeObjectURL(wavObjectUrl)});
+
+setTranslations();
+fetch('/api/ui-ready',{method:'POST'}).catch(()=>{});
+loadInitial().then(connect).catch(err=>{toast(err.message);connect()});

@@ -22,7 +22,7 @@ else:
     DATA_ROOT = ROOT
 
 T = TypeVar("T")
-CONFIG_SECTIONS = {"audio", "stt", "translation", "tts", "conversation", "server"}
+CONFIG_SECTIONS = {"audio", "stt", "translation", "conversation", "server", "updates"}
 
 
 @dataclass(slots=True)
@@ -30,22 +30,14 @@ class AudioConfig:
     sample_rate: int = 16000
     block_ms: int = 20
     input_device: str | int = "default"
-    # Retained for old config compatibility. Edge TTS uses Windows' default output.
-    output_device: str | int = "default"
     start_rms: float = 0.012
     continue_rms: float = 0.007
     pre_roll_ms: int = 100
+    speech_start_confirm_ms: int = 60
     end_silence_ms: int = 360
     tail_keep_ms: int = 180
     min_speech_ms: int = 180
     max_utterance_ms: int = 12000
-    # Staff often speaks longer replies while holding Space. Keep the same
-    # silence cutoff as customer mode, but allow longer captured utterances and
-    # preserve a slightly longer ending tail.
-    staff_end_silence_ms: int = 360
-    staff_tail_keep_ms: int = 360
-    staff_max_utterance_ms: int = 20000
-    post_tts_mute_ms: int = 180
     # A base live model receives a longer snapshot after speech is
     # established. The small final model remains independent and authoritative.
     live_preview_enabled: bool = False
@@ -79,6 +71,7 @@ class SttConfig:
     quality_retry_enabled: bool = True
     quality_retry_beam_size: int = 2
     quality_retry_log_prob_threshold: float = -0.9
+    no_speech_probability_threshold: float = 0.85
     cpu_threads: int = 6
     num_workers: int = 1
     # Dedicated accuracy-balanced live model. It never blocks the final model.
@@ -121,19 +114,6 @@ class TranslationConfig:
 
 
 @dataclass(slots=True)
-class TtsConfig:
-    enabled: bool = True
-    volume: float = 0.9
-    backend: str = "edge"
-    edge_rate: str = "+0%"
-    edge_timeout_seconds: int = 15
-    edge_retry_count: int = 1
-    latest_only: bool = True
-    edge_voice_overrides: dict[str, str] = field(default_factory=dict)
-    fallback_to_sapi: bool = False
-
-
-@dataclass(slots=True)
 class ConversationConfig:
     japanese_code: str = "ja"
     language_lock: str = "auto"
@@ -147,11 +127,20 @@ class ConversationConfig:
 class ServerConfig:
     host: str = "127.0.0.1"
     port: int = 8765
-    open_browser: bool = True
+    open_browser: bool = False
     # Legacy config kept for compatibility with existing config.toml files.
-    # Desktop launch now keeps the server in the visible launcher console.
+    # The desktop window owns the background server lifetime.
     shutdown_when_idle: bool = True
     auto_shutdown_no_clients_seconds: int = 10
+
+
+@dataclass(slots=True)
+class UpdateConfig:
+    enabled: bool = False
+    channel: str = "stable"
+    manifest_url: str = ""
+    timeout_seconds: int = 8
+    trusted_publisher_thumbprints: list[str] = field(default_factory=list)
 
 
 @dataclass(slots=True)
@@ -159,9 +148,9 @@ class AppConfig:
     audio: AudioConfig
     stt: SttConfig
     translation: TranslationConfig
-    tts: TtsConfig
     conversation: ConversationConfig
     server: ServerConfig
+    updates: UpdateConfig
     root: Path = ROOT
     data_root: Path = DATA_ROOT
 
@@ -210,9 +199,9 @@ def load_config(path: Path | None = None) -> AppConfig:
             audio=_make(AudioConfig, values.get("audio", {})),
             stt=_make(SttConfig, values.get("stt", {})),
             translation=_make(TranslationConfig, values.get("translation", {})),
-            tts=_make(TtsConfig, values.get("tts", {})),
             conversation=_make(ConversationConfig, values.get("conversation", {})),
             server=_make(ServerConfig, values.get("server", {})),
+            updates=_make(UpdateConfig, values.get("updates", {})),
             root=primary.resolve().parent,
             data_root=DATA_ROOT,
         )
@@ -245,14 +234,10 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("min_speech_ms must be at least one block and less than max_utterance_ms")
     if audio.pre_roll_ms < 0 or audio.end_silence_ms < audio.block_ms:
         raise ValueError("audio pre-roll must be nonnegative and end silence at least one block")
+    if not audio.block_ms <= audio.speech_start_confirm_ms <= 500:
+        raise ValueError("audio.speech_start_confirm_ms must be between one block and 500")
     if audio.tail_keep_ms < 0 or audio.tail_keep_ms > audio.end_silence_ms:
         raise ValueError("audio.tail_keep_ms must be between 0 and end_silence_ms")
-    if audio.staff_end_silence_ms < audio.end_silence_ms:
-        raise ValueError("audio.staff_end_silence_ms must be greater than or equal to end_silence_ms")
-    if audio.staff_tail_keep_ms < 0 or audio.staff_tail_keep_ms > audio.staff_end_silence_ms:
-        raise ValueError("audio.staff_tail_keep_ms must be between 0 and staff_end_silence_ms")
-    if audio.staff_max_utterance_ms < audio.max_utterance_ms:
-        raise ValueError("audio.staff_max_utterance_ms must be greater than or equal to max_utterance_ms")
     if audio.live_preview_interval_ms < 250 or audio.live_preview_min_speech_ms < 300:
         raise ValueError("live preview intervals are too small")
     if audio.live_preview_max_audio_ms < 800:
@@ -261,14 +246,6 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("live_preview_max_revisions must be zero or greater")
     if not 0 <= audio.live_preview_final_grace_ms <= 500:
         raise ValueError("live_preview_final_grace_ms must be between 0 and 500")
-    if not 0 <= cfg.tts.volume <= 1:
-        raise ValueError("tts.volume must be between 0 and 1")
-    if cfg.tts.backend != "edge":
-        raise ValueError("tts.backend must be 'edge'. Windows language-pack TTS has been removed.")
-    if cfg.tts.edge_timeout_seconds < 3:
-        raise ValueError("tts.edge_timeout_seconds must be at least 3")
-    if not 0 <= cfg.tts.edge_retry_count <= 3:
-        raise ValueError("tts.edge_retry_count must be between 0 and 3")
     if cfg.translation.backend != "hymt2":
         raise ValueError("translation.backend must be hymt2")
     if not 1 <= cfg.server.port <= 65535:
@@ -277,6 +254,34 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("server.auto_shutdown_no_clients_seconds must be at least 3")
     if cfg.server.host not in {"127.0.0.1", "localhost", "::1"}:
         raise ValueError("server.host must be a loopback address")
+    if cfg.updates.channel not in {"stable", "beta"}:
+        raise ValueError("updates.channel must be stable or beta")
+    if not 2 <= cfg.updates.timeout_seconds <= 60:
+        raise ValueError("updates.timeout_seconds must be between 2 and 60")
+    if cfg.updates.enabled:
+        from urllib.parse import urlparse
+
+        parsed_manifest = urlparse(cfg.updates.manifest_url)
+        try:
+            parsed_manifest.port
+        except ValueError as exc:
+            raise ValueError("updates.manifest_url has an invalid port") from exc
+        if (
+            parsed_manifest.scheme.casefold() != "https"
+            or not parsed_manifest.hostname
+            or parsed_manifest.username is not None
+            or parsed_manifest.password is not None
+            or parsed_manifest.fragment
+        ):
+            raise ValueError(
+                "updates.manifest_url must be an absolute HTTPS URL without credentials or a fragment"
+            )
+        if not cfg.updates.trusted_publisher_thumbprints:
+            raise ValueError("updates.trusted_publisher_thumbprints must not be empty")
+        for thumbprint in cfg.updates.trusted_publisher_thumbprints:
+            normalized = thumbprint.replace(" ", "")
+            if len(normalized) != 40 or any(char not in "0123456789abcdefABCDEF" for char in normalized):
+                raise ValueError("update publisher thumbprints must be 40 hexadecimal characters")
     if min(cfg.stt.cpu_threads, cfg.stt.num_workers, cfg.stt.live_cpu_threads) < 1:
         raise ValueError("stt thread counts must be at least 1")
     if cfg.stt.repetition_penalty < 1:
@@ -287,6 +292,8 @@ def validate_config(cfg: AppConfig) -> None:
         raise ValueError("stt.quality_retry_beam_size must be between 1 and 5")
     if not -5 <= cfg.stt.quality_retry_log_prob_threshold <= 0:
         raise ValueError("stt.quality_retry_log_prob_threshold must be between -5 and 0")
+    if not 0 < cfg.stt.no_speech_probability_threshold < 1:
+        raise ValueError("stt.no_speech_probability_threshold must be between 0 and 1")
     if cfg.translation.hymt2_threads < 1:
         raise ValueError("translation.hymt2_threads must be at least 1")
     if not 1 <= cfg.translation.max_new_tokens <= 256:
