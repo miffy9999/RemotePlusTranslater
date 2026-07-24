@@ -27,6 +27,7 @@ from .process_cleanup import hidden_subprocess_options
 from .reading import SUPPORTED_READING_LANGUAGES
 from .quick_phrases import QuickPhraseStore
 from .settings import UserSettings
+from .translation_memory import TranslationMemory, TranslationMemoryTranslator
 from .wav_import import MAX_WAV_BYTES, WavImportManager, WavImportProcessor
 
 
@@ -154,6 +155,7 @@ class QuickPhraseUIStateRequest(StrictRequest):
 class FeedbackRequest(StrictRequest):
     direction: str
     source_language: str
+    target_language: str = ""
     source: str
     translation: str
     corrected_source: str = ""
@@ -175,7 +177,12 @@ def create_app(
             except OSError:
                 pass
     bus = EventBus()
+    translation_memory = TranslationMemory(config.data_root)
     controller = ConversationController(config, bus, recognizer=recognizer)
+    controller.translator = TranslationMemoryTranslator(
+        controller.translator,
+        translation_memory,
+    )
     wav_imports = wav_import_manager or WavImportManager(
         WavImportProcessor(
             controller.recognizer,
@@ -185,7 +192,7 @@ def create_app(
             controller.translator_lock,
         )
     )
-    feedback = FeedbackStore(config.data_root)
+    feedback = FeedbackStore(config.data_root, translation_memory)
     quick_phrases = QuickPhraseStore(config.data_root)
     user_settings = UserSettings(config.data_root)
     devices_cache: dict[str, object] = {"expires_at": 0.0, "payload": None}
@@ -230,6 +237,7 @@ def create_app(
     app.state.controller = controller
     app.state.auth_token = auth_token
     app.state.wav_imports = wav_imports
+    app.state.translation_memory = translation_memory
     app.state.desktop_client_count = 0
     app.state.desktop_client_seen = False
     app.state.desktop_last_disconnect = 0.0

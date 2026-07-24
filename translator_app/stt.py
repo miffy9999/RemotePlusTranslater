@@ -118,7 +118,9 @@ class WhisperRecognizer:
         language = self.context_language or self._effective_language(language)
         limit = self.hotwords_max_items
         if limit is None:
-            limit = len(self.cfg.hotwords) + len(self.cfg.language_hotwords.get(language, []))
+            limit = len(self.cfg.hotwords) + len(
+                self.cfg.language_hotwords.get(language, [])
+            )
         limit = max(0, int(limit))
         key = (self.context_language, language, limit)
         if key == self._hotwords_cache_key:
@@ -129,8 +131,6 @@ class WhisperRecognizer:
             return None
         words = list(self.cfg.hotwords)
         words.extend(self.cfg.language_hotwords.get(language, []))
-        if self.context_language and self.context_language != language:
-            words.extend(self.cfg.language_hotwords.get(self.context_language, []))
         self._hotwords_cache_key = key
         self._hotwords_cache = ", ".join(list(dict.fromkeys(word for word in words if word.strip()))[:limit]) or None
         return self._hotwords_cache

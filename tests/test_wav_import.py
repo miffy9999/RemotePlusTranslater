@@ -11,6 +11,8 @@ from translator_app.wav_import import (
     WavImportManager,
     WavImportProcessor,
     WavSegment,
+    _recorded_audio_config,
+    _usable_recorded_recognition,
     load_wav,
     segment_wav,
     segment_wav_file,
@@ -56,6 +58,40 @@ def test_segment_wav_returns_chronological_speech_regions():
     assert len(segments) == 2
     assert segments[0].start_seconds < segments[1].start_seconds
     assert all(segment.end_seconds > segment.start_seconds for segment in segments)
+
+
+def test_recorded_audio_config_keeps_natural_phone_pauses_in_one_turn():
+    rate = 16000
+    speech = np.full(rate // 2, 0.05, dtype=np.float32)
+    natural_pause = np.zeros(rate // 2, dtype=np.float32)
+    samples = np.concatenate((speech, natural_pause, speech, np.zeros(rate)))
+    live = AudioConfig(
+        speech_start_confirm_ms=40,
+        end_silence_ms=360,
+        min_speech_ms=100,
+    )
+
+    assert len(segment_wav(samples, live)) == 2
+    assert len(segment_wav(samples, _recorded_audio_config(live))) == 1
+
+
+@pytest.mark.parametrize(
+    ("recognition", "expected"),
+    [
+        (Recognition("Please send my baggage.", "en", 0.9, confidence=-0.6), True),
+        (Recognition("uh...", "en", 0.9, confidence=-0.2), False),
+        (Recognition("and found", "en", 0.3, confidence=-2.0), False),
+        (Recognition("hip-hop", "en", 0.2, confidence=-0.95), False),
+        (Recognition("チューン", "ja", 0.8, confidence=-1.2), False),
+        (Recognition("automática", "pt", 0.7, confidence=-1.21), False),
+        (Recognition("I, uh...", "en", 0.8, confidence=-0.2), False),
+        (Recognition("カード", "ja", 0.8, confidence=-0.5), True),
+    ],
+)
+def test_recorded_recognition_rejects_noise_hallucinations(
+    recognition, expected
+):
+    assert _usable_recorded_recognition(recognition) is expected
 
 
 def test_processor_labels_customer_staff_and_translates_in_order(tmp_path, monkeypatch):
@@ -218,6 +254,94 @@ def test_processor_falls_back_to_selected_language_for_unsupported_detection(
     assert entries[0].role == "customer"
     assert entries[0].source_language == "en"
     assert translator.call == ("hello", "en", "ja")
+
+
+def test_wav_auto_language_is_not_replaced_by_forced_hallucination(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(
+        "translator_app.wav_import.segment_wav_file",
+        lambda *_args, **_kwargs: [
+            WavSegment(np.array([1], dtype=np.float32), 0.0, 1.0)
+        ],
+    )
+
+    class JapaneseRecognizer:
+        def load(self):
+            return None
+
+        def transcribe(self, _audio, *, language=None):
+            assert language == "auto"
+            return Recognition(
+                "少々お待ちください。",
+                "ja",
+                0.48,
+                confidence=-0.4,
+            )
+
+    class RecordingTranslator:
+        def load(self):
+            return None
+
+        def translate(self, text, source_code, target_code):
+            assert (text, source_code, target_code) == (
+                "少々お待ちください。",
+                "ja",
+                "en",
+            )
+            return "Please wait a moment."
+
+    processor = WavImportProcessor(
+        JapaneseRecognizer(),
+        RecordingTranslator(),
+        AudioConfig(),
+    )
+    entries = processor.process(
+        tmp_path / "field-call.wav",
+        "en",
+        threading.Event(),
+        lambda *_: None,
+    )
+
+    assert entries[0].role == "staff"
+    assert entries[0].source_language == "ja"
+    assert entries[0].translated == "Please wait a moment."
+
+
+def test_wav_uses_visible_latin_script_for_short_english_hotel_terms(
+    tmp_path, monkeypatch
+):
+    monkeypatch.setattr(
+        "translator_app.wav_import.segment_wav_file",
+        lambda *_args, **_kwargs: [
+            WavSegment(np.array([1], dtype=np.float32), 0.0, 1.0)
+        ],
+    )
+
+    class MisidentifiedRecognizer:
+        def load(self):
+            return None
+
+        def transcribe(self, _audio, *, language=None):
+            assert language == "auto"
+            return Recognition("credit card", "ja", 0.51, confidence=-0.2)
+
+    class RecordingTranslator:
+        def load(self):
+            return None
+
+        def translate(self, text, source_code, target_code):
+            assert (text, source_code, target_code) == ("credit card", "en", "ja")
+            return "クレジットカード"
+
+    entries = WavImportProcessor(
+        MisidentifiedRecognizer(),
+        RecordingTranslator(),
+        AudioConfig(),
+    ).process(tmp_path / "call.wav", "en", threading.Event(), lambda *_: None)
+
+    assert entries[0].role == "customer"
+    assert entries[0].source_language == "en"
 
 
 def test_wav_ambiguous_turn_uses_previous_and_next_recognized_context(

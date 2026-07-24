@@ -18,7 +18,7 @@ def test_windows_build_embeds_release_version_metadata():
     spec = (ROOT / "build/local_bridge.spec").read_text(encoding="utf-8")
     version = (ROOT / "build/version_info.txt").read_text(encoding="utf-8")
     assert 'version=os.path.join(project_root, "build", "version_info.txt")' in spec
-    assert "StringStruct('ProductVersion', '0.8.4')" in version
+    assert "StringStruct('ProductVersion', '0.8.5')" in version
 
 
 def test_backend_subprocesses_are_created_without_a_visible_console():

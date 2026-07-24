@@ -4,14 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>RemotePlus Translator</title>
-  <link rel="stylesheet" href="/assets/app.css?v=quick-phrase-toolbar-20260723">
+  <link rel="stylesheet" href="/assets/app.css?v=translation-memory-20260724">
   <link rel="stylesheet" href="/assets/device.css?v=text-chat-20260713">
 </head>
 <body>
   <header>
     <div class="brand"><span class="mark">RP</span><div><h1>RemotePlus</h1><p data-i18n="subtitle">フロントデスク翻訳チャット</p></div></div>
     <div class="header-actions">
-      <label class="ui-language"><span data-i18n="uiLanguage">表示言語</span><select id="ui-language"><option value="ja">日本語</option><option value="ko">한국어</option><option value="en">English</option><option value="zh">中文</option><option value="es">Español</option></select></label>
       <div id="connection" class="connection"><i></i><span data-i18n="connecting">接続中</span></div>
     </div>
   </header>
@@ -44,7 +43,12 @@
       <details class="wav-import">
         <summary class="wav-import-heading"><strong id="wav-import-title" data-i18n="wavImport">録音WAVを翻訳</strong><small data-i18n="wavImportHint">お客様とスタッフの会話を時間順に表示します。</small></summary>
         <div class="wav-import-body" aria-labelledby="wav-import-title">
-          <input id="wav-file" type="file" accept=".wav,audio/wav,audio/x-wav">
+          <label id="wav-drop-zone" class="wav-drop-zone" for="wav-file" tabindex="0" role="button">
+            <span class="wav-drop-icon" aria-hidden="true">WAV</span>
+            <span class="wav-drop-copy"><strong data-i18n="wavDropTitle">ここにWAVをドロップ</strong><small data-i18n="wavDropHint">またはクリックして選択</small></span>
+            <span id="wav-file-name" class="wav-file-name" data-i18n="wavNoFile">ファイル未選択</span>
+          </label>
+          <input id="wav-file" type="file" accept=".wav,audio/wav,audio/x-wav" hidden>
           <div class="wav-import-actions"><button id="start-wav" class="primary" type="button" data-i18n="wavStart">WAV解析を開始</button><button id="cancel-wav" type="button" data-i18n="wavCancel" hidden>中止</button></div>
           <progress id="wav-progress" max="1" value="0" hidden></progress>
           <p id="wav-status" class="wav-status" aria-live="polite"></p>
@@ -62,12 +66,27 @@
     </section>
   </main>
 
+  <dialog id="translation-correction-dialog" class="translation-correction-dialog">
+    <form id="translation-correction-form">
+      <div class="translation-correction-heading">
+        <strong data-i18n="correctionTitle">翻訳文を修正</strong>
+        <p data-i18n="correctionHint">正しい翻訳文に直してください。次回から同じ原文にはこの翻訳を優先します。</p>
+      </div>
+      <div id="translation-correction-source" class="translation-correction-source"></div>
+      <textarea id="translation-correction-text" rows="4" maxlength="4000" required></textarea>
+      <p class="translation-correction-privacy" data-i18n="correctionPrivacy">氏名・電話番号・予約番号・カード番号などの個人情報は登録しないでください。</p>
+      <div class="translation-correction-actions">
+        <button id="translation-correction-cancel" type="button" data-i18n="correctionCancel">キャンセル</button>
+        <button id="translation-correction-save" class="primary" type="submit" data-i18n="correctionSave">保存</button>
+      </div>
+    </form>
+  </dialog>
   <div id="toast" class="toast"></div>
   <div id="quick-phrase-menu" class="quick-phrase-menu" hidden>
     <label><span data-i18n="phraseCategory">カテゴリー</span><input id="quick-phrase-category" maxlength="40" list="quick-phrase-categories"></label>
     <datalist id="quick-phrase-categories"></datalist>
     <div><button id="save-quick-phrase-category" class="primary" type="button" data-i18n="saveCategory">保存</button><button id="clear-quick-phrase-category" type="button" data-i18n="clearCategory">分類解除</button></div>
   </div>
-  <script src="/assets/app.js?v=quick-phrase-toolbar-20260723"></script>
+  <script src="/assets/app.js?v=translation-memory-20260724"></script>
 </body>
 </html>

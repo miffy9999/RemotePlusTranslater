@@ -1,4 +1,4 @@
-# RemotePlus Translator 0.8.4
+# RemotePlus Translator 0.8.5
 
 일본 호텔 프런트·콜센터를 위한 로컬 번역 채팅 프로그램입니다.
 

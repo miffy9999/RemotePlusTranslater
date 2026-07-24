@@ -42,10 +42,28 @@ HYMT2_SHA256 = "dc5f44fcf1fa496ee7ad725982c0c8c553a4de00259b53af84c4b89fb0c06699
 MAX_SOURCE_CHARACTERS = 800
 MAX_CONTEXT_CHARACTERS = 120
 _CONTEXT_CUES = {
-    "ja": re.compile(r"(?:これ|それ|あれ|こちら|そちら|大丈夫|そうです|違います|今夜|今日|明日|お願いします)"),
-    "ko": re.compile(r"(?:이거|그거|저거|이것|그것|저것|여기|거기|괜찮|그렇|오늘|내일|저녁)"),
-    "en": re.compile(r"\b(?:it|this|that|these|those|there|he|she|they|tonight|tomorrow)\b", re.IGNORECASE),
+    "ja": re.compile(
+        r"(?:これ|それ|あれ|こちら|そちら|そこ|同じ|もう一度|その時間|"
+        r"大丈夫|そうです|違います|はい|いいえ|後で|今夜|今日|明日|お願いします)"
+    ),
+    "ko": re.compile(
+        r"(?:이거|그거|저거|이것|그것|저것|여기|거기|그쪽|그때|같은|다시|"
+        r"괜찮|그렇|맞아요|아니요|나중에|오늘|내일|저녁)"
+    ),
+    "en": re.compile(
+        r"\b(?:it|this|that|these|those|there|same|again|one|okay|yes|no|"
+        r"later|earlier|then|he|she|they|tonight|tomorrow)\b",
+        re.IGNORECASE,
+    ),
 }
+_TARGET_SCRIPT = {
+    "ja": re.compile(r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff]"),
+    "ko": re.compile(r"[\uac00-\ud7a3]"),
+    "zh": re.compile(r"[\u3400-\u4dbf\u4e00-\u9fff]"),
+    "en": re.compile(r"[A-Za-z]"),
+    "es": re.compile(r"[A-Za-zÁÉÍÓÚÜÑáéíóúüñ]"),
+}
+_SOURCE_NUMBER = re.compile(r"\d+(?:[.,:/-]\d+)*")
 
 
 def needs_conversation_context(text: str, source_code: str) -> bool:
@@ -53,6 +71,41 @@ def needs_conversation_context(text: str, source_code: str) -> bool:
     clean = text.strip()
     pattern = _CONTEXT_CUES.get(source_code)
     return bool(clean and len(clean) <= 120 and pattern is not None and pattern.search(clean))
+
+
+def translation_output_is_valid(
+    source: str,
+    translated: str,
+    target_code: str,
+) -> bool:
+    """Reject obvious wrong-language output and lost numeric facts."""
+    clean = translated.strip()
+    if not clean:
+        return False
+    source_numbers = [
+        re.sub(r"\D", "", token) for token in _SOURCE_NUMBER.findall(source)
+    ]
+    translated_digits = re.sub(r"\D", "", clean)
+    if any(number and number not in translated_digits for number in source_numbers):
+        return False
+    script = _TARGET_SCRIPT.get(target_code)
+    if script is None:
+        return True
+    # Room numbers, phone numbers, punctuation and symbols do not need a
+    # language script. Any actual letters must use the requested script.
+    if not any(character.isalpha() for character in clean):
+        return True
+    return script.search(clean) is not None
+
+
+def _strict_retry_prompt(prompt: str, source: str, target_code: str) -> str:
+    target_name = LANGUAGE_NAMES.get(target_code, target_code)
+    numbers = ", ".join(_SOURCE_NUMBER.findall(source)) or "none"
+    return (
+        f"{prompt}\n\nCRITICAL OUTPUT CHECK: Answer only in {target_name}. "
+        f"Preserve these numeric strings exactly in meaning: {numbers}. "
+        "Do not explain, transliterate into another language, or add facts."
+    )
 
 
 def _app_path(root: Path, value: str) -> Path:
@@ -365,6 +418,11 @@ class HyMT2Translator:
             return clean
         if get_language(source_code) is None or get_language(target_code) is None:
             raise ValueError(f"Unsupported translation direction: {source_code} -> {target_code}")
+        if not any(character.isalpha() for character in clean):
+            # Room numbers, phone numbers, dates written only with digits, and
+            # punctuation are language-neutral. Sending them through a model
+            # can invent acknowledgements that were never spoken.
+            return clean
         if source_code == "ja":
             phrase = translate_hotel_phrase(clean, target_code)
             if phrase is not None:
@@ -408,6 +466,15 @@ class HyMT2Translator:
                 if not self.ready:
                     raise RuntimeError("Translation engine restart failed") from exc
                 translated = self._request_with_optional_limit(prompt, max_tokens)
+            if not translation_output_is_valid(clean, translated, target_code):
+                translated = self._request_with_optional_limit(
+                    _strict_retry_prompt(prompt, clean, target_code),
+                    max_tokens,
+                )
+                if not translation_output_is_valid(clean, translated, target_code):
+                    raise TranslationResponseError(
+                        "Translation failed target-language or numeric-fact validation"
+                    )
         if target_code == "ja":
             translated = protect_japanese_terms(clean, translated, self.cfg.glossary)
         return protect_multilingual_terms(clean, translated, source_code, target_code, self.cfg.protected_terms)

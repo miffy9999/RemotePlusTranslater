@@ -72,6 +72,93 @@ def test_common_hotel_call_center_phrases_use_natural_english_and_korean():
         assert translate_hotel_phrase(source, "ko") == expected_ko
 
 
+def test_front_desk_phone_greeting_is_functional_not_literal():
+    assert translate_hotel_phrase("フロントでございます", "en") == "Front desk speaking."
+    assert translate_hotel_phrase("はい、フロントでございます。", "ko") == "프런트 데스크입니다."
+    assert (
+        translate_hotel_phrase(
+            "お電話ありがとうございます。ホテルフェスタ葉山でございます",
+            "en",
+        )
+        == "Thank you for calling. Hotel Festa Hayama speaking."
+    )
+
+
+def test_repeat_request_keeps_optional_room_number_and_intent():
+    assert (
+        translate_hotel_phrase("もう一度よろしいですか?", "en")
+        == "Could you please say that again?"
+    )
+
+
+def test_field_call_room_and_callback_requests_keep_operational_intent():
+    assert (
+        translate_customer_hotel_phrase(
+            "good morning, this is room 204 could you please open the door?",
+            "en",
+        )
+        == "おはようございます。204号室です。ドアを開けていただけますか？"
+    )
+    assert (
+        translate_customer_hotel_phrase(
+            "we have a dedicated phone number, so could you please call us back?",
+            "en",
+        )
+        == "専用の電話番号がありますので、折り返しお電話いただけますか？"
+    )
+
+
+@pytest.mark.parametrize(
+    ("source", "language", "expected"),
+    (
+        ("What time can I check in?", "en", "チェックインは何時からできますか。"),
+        ("The room next door is too noisy.", "en", "隣の部屋がうるさすぎます。"),
+        (
+            "사용하지 않은 미니바 요금이 청구되었습니다.",
+            "ko",
+            "利用していないミニバーの料金が請求されています。",
+        ),
+        (
+            "아이가 열이 나는데 의사를 불러 주실 수 있나요?",
+            "ko",
+            "子どもが熱を出しています。医師を呼んでいただけますか。",
+        ),
+    ),
+)
+def test_curated_english_and_korean_customer_phrases_skip_model_errors(
+    source, language, expected
+):
+    assert translate_customer_hotel_phrase(source, language) == expected
+
+
+def test_field_fragments_use_contextually_complete_japanese():
+    assert (
+        translate_customer_hotel_phrase(
+            "Wait, I have a question. If I need send my baggage",
+            "en",
+        )
+        == "すみません、質問があります。荷物を送りたいのですが。"
+    )
+    assert (
+        translate_customer_hotel_phrase(
+            "I have a reservation. I'll be arriving past 23:30.",
+            "en",
+        )
+        == "予約しています。23時30分を過ぎて到着する予定です。"
+    )
+    assert (
+        translate_customer_hotel_phrase(
+            "one more time, I didn't get it",
+            "en",
+        )
+        == "もう一度お願いします。聞き取れませんでした。"
+    )
+    assert (
+        translate_hotel_phrase("もう一度よろしいでしょうか?401", "ko")
+        == "다시 한번 말씀해 주시겠어요? 401호실이 맞으신가요?"
+    )
+
+
 def test_call_center_rules_do_not_invent_details_for_unmatched_requests():
     assert translate_hotel_phrase("予約について友人と相談します。", "en") is None
     assert translate_hotel_phrase("担当者の名前を教えてください。", "ko") is None

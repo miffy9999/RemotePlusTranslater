@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import copy
+import re
 import threading
 import uuid
 import wave
 from collections.abc import Callable
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from pathlib import Path
 from typing import Protocol
 
@@ -15,12 +16,24 @@ from .audio import SpeechSegmenter, _resample_mono
 from .config import AudioConfig
 from .hymt2 import needs_conversation_context
 from .languages import get_language
-from .stt import Recognition
+from .stt import Recognition, contains_japanese_kana
 
 MAX_WAV_BYTES = 512 * 1024 * 1024
 MAX_WAV_SECONDS = 60 * 60
 MAX_RETAINED_JOBS = 5
 MAX_SOURCE_SAMPLES = 120_000_000
+RECORDED_END_SILENCE_MS = 600
+RECORDED_MAX_UTTERANCE_MS = 15_000
+RECORDED_MIN_SPEECH_MS = 240
+RECORDED_PRE_ROLL_MS = 160
+RECORDED_TAIL_KEEP_MS = 300
+RECORDED_MIN_CONFIDENCE = -1.2
+RECORDED_LOW_LANGUAGE_PROBABILITY = 0.45
+RECORDED_LOW_LANGUAGE_MIN_CONFIDENCE = -0.8
+_FILLER_ONLY = re.compile(
+    r"(?iu)^\s*(?:i[\s,]+)?"
+    r"(?:u+h+|u+m+|e+rm+|h+m+|a+h+|えー+と?|あー+|うー+)\s*[.,!?…ー-]*\s*$"
+)
 
 
 class RecognizerLike(Protocol):
@@ -264,6 +277,43 @@ def segment_wav_file(
     return segments
 
 
+def _recorded_audio_config(cfg: AudioConfig) -> AudioConfig:
+    """Use sentence-sized turns for call recordings without changing live capture."""
+    end_silence_ms = max(cfg.end_silence_ms, RECORDED_END_SILENCE_MS)
+    return replace(
+        cfg,
+        pre_roll_ms=max(cfg.pre_roll_ms, RECORDED_PRE_ROLL_MS),
+        end_silence_ms=end_silence_ms,
+        tail_keep_ms=min(
+            end_silence_ms,
+            max(cfg.tail_keep_ms, RECORDED_TAIL_KEEP_MS),
+        ),
+        min_speech_ms=max(cfg.min_speech_ms, RECORDED_MIN_SPEECH_MS),
+        max_utterance_ms=max(
+            cfg.max_utterance_ms,
+            RECORDED_MAX_UTTERANCE_MS,
+        ),
+    )
+
+
+def _usable_recorded_recognition(result: Recognition) -> bool:
+    text = result.text.strip()
+    if not text or _FILLER_ONLY.fullmatch(text):
+        return False
+    confidence = result.confidence
+    if confidence is None:
+        return True
+    if confidence < RECORDED_MIN_CONFIDENCE:
+        return False
+    compact = re.sub(r"[\W_]+", "", text, flags=re.UNICODE)
+    if len(compact) <= 4 and confidence < -1.0:
+        return False
+    return not (
+        result.probability < RECORDED_LOW_LANGUAGE_PROBABILITY
+        and confidence < RECORDED_LOW_LANGUAGE_MIN_CONFIDENCE
+    )
+
+
 class WavImportProcessor:
     def __init__(
         self,
@@ -279,11 +329,6 @@ class WavImportProcessor:
         self.recognizer_lock = recognizer_lock or threading.Lock()
         self.translator_lock = translator_lock or threading.Lock()
 
-    @staticmethod
-    def _score(result: Recognition) -> float:
-        confidence = result.confidence if result.confidence is not None else -2.0
-        return confidence - 2.0 * result.no_speech_probability
-
     def _recognize(self, audio: np.ndarray, language: str) -> Recognition:
         with self.recognizer_lock:
             self.recognizer.load()
@@ -294,21 +339,25 @@ class WavImportProcessor:
     ) -> tuple[Recognition, str]:
         automatic = self._recognize(audio, "auto")
         detected = automatic.language.casefold()
-        accepted = {customer_language, "ja"}
-        if automatic.text.strip() and detected in accepted and automatic.probability >= 0.6:
+        text = automatic.text
+        has_latin = bool(re.search(r"[A-Za-z]", text))
+        has_japanese = contains_japanese_kana(text) or bool(
+            re.search(r"[\u3400-\u4dbf\u4e00-\u9fff]", text)
+        )
+        # Auto language ID can label short English hotel terms as Japanese
+        # (for example "check-out" and "credit card"). Trust the visible
+        # script for these turns without running a second, slower decode.
+        if detected == "ja" and has_latin and not has_japanese:
+            return automatic, customer_language
+        if detected != "ja" and contains_japanese_kana(text):
+            return automatic, "ja"
+        if get_language(detected) is not None:
             return automatic, detected
-
-        candidates: list[tuple[Recognition, str]] = []
-        if automatic.text.strip() and get_language(detected) is not None:
-            candidates.append((automatic, detected))
-        for language in (customer_language, "ja"):
-            forced = self._recognize(audio, language)
-            if forced.text.strip():
-                candidates.append((forced, language))
-        if not candidates:
-            fallback = detected if get_language(detected) is not None else customer_language
-            return automatic, fallback
-        return max(candidates, key=lambda item: self._score(item[0]))
+        if contains_japanese_kana(text):
+            return automatic, "ja"
+        # Whisper occasionally returns an unknown language code for a short
+        # telephone turn while still producing usable Latin-script text.
+        return automatic, customer_language
 
     def process(
         self,
@@ -317,7 +366,11 @@ class WavImportProcessor:
         cancelled: threading.Event,
         progress: Callable[[int, int], None],
     ) -> list[WavEntry]:
-        segments = segment_wav_file(path, self.audio_config, cancelled)
+        segments = segment_wav_file(
+            path,
+            _recorded_audio_config(self.audio_config),
+            cancelled,
+        )
         if not segments:
             raise ValueError(
                 "No speech was found in the WAV file. Check the recording level or noise threshold."
@@ -332,7 +385,7 @@ class WavImportProcessor:
                 segment.audio, customer_language
             )
             text = recognition.text.strip()
-            if not text:
+            if not _usable_recorded_recognition(recognition):
                 progress(segment_index, total_steps)
                 continue
             if source_language == "ja":

@@ -7,8 +7,9 @@ WEB = Path(__file__).resolve().parents[1] / "translator_app" / "web"
 def test_first_run_ui_defaults_to_japanese():
     script = (WEB / "app.js").read_text(encoding="utf-8")
     html = (WEB / "index.html").read_text(encoding="utf-8")
-    assert "let ui = 'ja'" in script
-    assert "localStorage.getItem('remoteplus-ui-language')" in script
+    assert "const ui = 'ja'" in script
+    assert "remoteplus-ui-language" not in script
+    assert 'id="ui-language"' not in html
     assert '<html lang="ja">' in html
 
 
@@ -46,6 +47,7 @@ def test_ui_renders_both_reading_guides_from_server_events():
 
 
 def test_quick_phrase_panel_uses_remaining_space_and_wav_is_collapsible():
+    script = (WEB / "app.js").read_text(encoding="utf-8")
     styles = (WEB / "app.css").read_text(encoding="utf-8")
     html = (WEB / "index.html").read_text(encoding="utf-8")
 
@@ -57,8 +59,27 @@ def test_quick_phrase_panel_uses_remaining_space_and_wav_is_collapsible():
     ) in styles
     assert ".wav-status:empty {\n  display: none" in styles
     assert '<details class="wav-import">' in html
+    assert 'id="wav-drop-zone"' in html
+    assert "wavDropZone.ondrop" in script
+    assert "chooseWavFile(files[0])" in script
+    assert "file.name.toLocaleLowerCase().endsWith('.wav')" in script
     assert html.index('<section class="quick-phrases"') < html.index('<section class="panel output">')
     assert html.index('<details class="wav-import">') > html.index('<section class="panel output">')
-    assert "app.css?v=quick-phrase-toolbar-20260723" in html
-    assert "app.js?v=quick-phrase-toolbar-20260723" in html
+    assert "app.css?v=translation-memory-20260724" in html
+    assert "app.js?v=translation-memory-20260724" in html
     assert "grid-template-rows: repeat(6, auto) 1fr" not in styles
+
+
+def test_translation_cards_can_save_approved_target_text():
+    script = (WEB / "app.js").read_text(encoding="utf-8")
+    styles = (WEB / "app.css").read_text(encoding="utf-8")
+    html = (WEB / "index.html").read_text(encoding="utf-8")
+
+    assert 'id="translation-correction-dialog"' in html
+    assert 'id="translation-correction-text"' in html
+    assert "configureTranslationCorrection(card,data)" in script
+    assert "configureTranslationCorrection(card,entry)" in script
+    assert "target_language:correction.target_language" in script
+    assert "corrected_translation:corrected" in script
+    assert "await api('/api/feedback'" in script
+    assert ".translation-correction-dialog" in styles

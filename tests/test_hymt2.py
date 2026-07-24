@@ -9,6 +9,7 @@ from translator_app.hymt2 import (
     _verify_sha256,
     build_hymt2_prompt,
     needs_conversation_context,
+    translation_output_is_valid,
     TranslationResponseError,
 )
 from translator_app.languages import public_languages
@@ -36,6 +37,42 @@ def test_prompt_without_terms_is_still_strict():
     assert "Korean sentence order" in prompt
     assert "Never add or remove facts" in prompt
     assert prompt.endswith("Hello")
+
+
+def test_translation_output_guard_rejects_wrong_script_and_lost_numbers():
+    assert translation_output_is_valid("room 204", "204号室です。", "ja")
+    assert translation_output_is_valid("046-1234-5678", "04612345678", "ja")
+    assert not translation_output_is_valid("room 204", "This is room 204.", "ja")
+    assert not translation_output_is_valid("room 204", "こちらのお部屋です。", "ja")
+    assert not translation_output_is_valid("確認します", "確認します", "en")
+
+
+def test_numeric_only_turn_is_returned_without_model_hallucination():
+    cfg = SimpleNamespace(protected_terms=[], glossary={})
+    translator = HyMT2Translator(cfg, lambda *_: None)
+    translator._request = lambda *_args, **_kwargs: (_ for _ in ()).throw(
+        AssertionError("numeric-only text must skip the model")
+    )
+    assert translator.translate("204.", "fr", "ja") == "204."
+    assert translator.translate("046-878-6433", "en", "ja") == "046-878-6433"
+
+
+def test_invalid_model_output_gets_one_strict_retry():
+    cfg = SimpleNamespace(protected_terms=[], glossary={})
+    translator = HyMT2Translator(cfg, lambda *_: None)
+    translator.ready = True
+    translator.process = SimpleNamespace(poll=lambda: None)
+    answers = iter(["This is room 204.", "204号室です。"])
+    prompts = []
+
+    def request(prompt):
+        prompts.append(prompt)
+        return next(answers)
+
+    translator._request = request
+    assert translator.translate("room 204", "en", "ja") == "204号室です。"
+    assert len(prompts) == 2
+    assert "CRITICAL OUTPUT CHECK" in prompts[1]
 
 
 def test_engine_request_failure_restarts_once():
@@ -245,4 +282,7 @@ def test_context_prompt_translates_current_only_with_bounded_input_budget():
     assert "PREVIOUS:" in contextual and "NEXT:" in contextual
     assert len(contextual) <= len(regular)
     assert needs_conversation_context("それでお願いします。", "ja") is True
+    assert needs_conversation_context("もう一度お願いします。", "ja") is True
+    assert needs_conversation_context("Yes, that is fine.", "en") is True
+    assert needs_conversation_context("다시 말씀해 주세요.", "ko") is True
     assert needs_conversation_context("予約番号は1234です。", "ja") is False

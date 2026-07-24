@@ -26,6 +26,18 @@ def test_feedback_requires_an_actual_correction(tmp_path):
         FeedbackStore(tmp_path).append({"corrected_source": "", "corrected_translation": ""})
 
 
+def test_translation_correction_requires_source_and_language_direction(tmp_path):
+    with pytest.raises(ValueError, match="Source, language direction"):
+        FeedbackStore(tmp_path).append(
+            {
+                "source": "hello",
+                "source_language": "en",
+                "target_language": "",
+                "corrected_translation": "こんにちは",
+            }
+        )
+
+
 def test_feedback_file_can_be_deleted(tmp_path):
     store = FeedbackStore(tmp_path)
     store.append({"corrected_source": "fixed", "corrected_translation": ""})

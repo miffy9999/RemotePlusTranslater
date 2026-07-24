@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass
 
 
@@ -15,6 +16,20 @@ def _phrase(pattern: str, en: str, ko: str, zh: str, es: str) -> Phrase:
 
 
 PHRASES = (
+    _phrase(
+        r"^(?:はい、?)?フロント(?:デスク)?でございます[。.!！]?$",
+        "Front desk speaking.",
+        "프런트 데스크입니다.",
+        "这里是前台。",
+        "Le atiende recepción.",
+    ),
+    _phrase(
+        r"^(?:お電話ありがとうございます[。.!！]?)?ホテルフェスタ葉山でございます[。.!！]?$",
+        "Thank you for calling. Hotel Festa Hayama speaking.",
+        "전화 주셔서 감사합니다. 호텔 페스타 하야마입니다.",
+        "感谢您的来电。这里是叶山费斯塔酒店。",
+        "Gracias por llamar. Le atiende el Hotel Festa Hayama.",
+    ),
     _phrase(
         r"^おはよう(?:ございます)?[。.!！]?$",
         "Good morning.",
@@ -550,9 +565,80 @@ CUSTOMER_EXCLUSION = {
     "ko": re.compile(r"^(?:그건|그것은|그거는)(?:빼|제외해|추가하지말아)주세요[。.!！]?$"),
 }
 
+CURATED_CUSTOMER_TRANSLATIONS = {
+    ("en", "good evening"): "こんばんは。",
+    ("en", "what time can i check in"): "チェックインは何時からできますか。",
+    ("en", "the room next door is too noisy"): "隣の部屋がうるさすぎます。",
+    ("en", "where and when is breakfast served"): "朝食会場はどこで、何時からですか。",
+    (
+        "en",
+        "i was charged for a minibar item i did not use",
+    ): "利用していないミニバーの商品が請求されています。",
+    (
+        "en",
+        "my child has a fever. could you call a doctor",
+    ): "子どもが熱を出しています。医師を呼んでいただけますか。",
+    ("en", "could you hold on a moment please"): "少々お待ちいただけますか。",
+    ("en", "what's the phone number"): "電話番号を教えていただけますか。",
+    (
+        "en",
+        "wait, i have a question. if i need send my baggage",
+    ): "すみません、質問があります。荷物を送りたいのですが。",
+    (
+        "en",
+        "i have a reservation. i'll be arriving past 23:30",
+    ): "予約しています。23時30分を過ぎて到着する予定です。",
+    (
+        "en",
+        "one more time, i didn't get it",
+    ): "もう一度お願いします。聞き取れませんでした。",
+    ("ko", "안녕하세요"): "こんにちは。",
+    ("ko", "체크인은 몇 시부터 가능한가요"): "チェックインは何時からできますか。",
+    ("ko", "옆방 소음이 너무 심합니다"): "隣の部屋の騒音がひどいです。",
+    (
+        "ko",
+        "조식은 어디에서 몇 시부터 먹을 수 있나요",
+    ): "朝食はどこで何時から食べられますか。",
+    (
+        "ko",
+        "사용하지 않은 미니바 요금이 청구되었습니다",
+    ): "利用していないミニバーの料金が請求されています。",
+    (
+        "ko",
+        "아이가 열이 나는데 의사를 불러 주실 수 있나요",
+    ): "子どもが熱を出しています。医師を呼んでいただけますか。",
+}
+
+
+def _normalized_customer_phrase(text: str) -> str:
+    normalized = unicodedata.normalize("NFKC", text)
+    normalized = re.sub(r"\s+", " ", normalized.strip()).casefold()
+    return re.sub(r"[。.!！?？]+$", "", normalized).strip()
+
 
 def translate_hotel_phrase(text: str, target_code: str) -> str | None:
     compact = re.sub(r"\s+", "", text.strip())
+    repeat = re.fullmatch(
+        r"もう一度よろしい(?:ですか|でしょうか)[?？]?(\d{1,4})?[。.!！]?",
+        compact,
+    )
+    if repeat:
+        room = repeat.group(1)
+        base = {
+            "en": "Could you please say that again?",
+            "ko": "다시 한번 말씀해 주시겠어요?",
+            "zh": "可以请您再说一遍吗？",
+            "es": "¿Podría repetirlo, por favor?",
+        }.get(target_code)
+        if not base or not room:
+            return base
+        room_followup = {
+            "en": f" Is that room {room}?",
+            "ko": f" {room}호실이 맞으신가요?",
+            "zh": f" 是{room}号房吗？",
+            "es": f" ¿Es la habitación {room}?",
+        }
+        return base + room_followup[target_code]
     for phrase in PHRASES:
         if phrase.pattern.search(compact):
             return phrase.translations.get(target_code)
@@ -561,8 +647,33 @@ def translate_hotel_phrase(text: str, target_code: str) -> str | None:
 
 def translate_customer_hotel_phrase(text: str, source_code: str) -> str | None:
     """Protect a small set of exact, high-risk customer requests into Japanese."""
+    clean = re.sub(r"\s+", " ", text.strip())
+    curated = CURATED_CUSTOMER_TRANSLATIONS.get(
+        (source_code, _normalized_customer_phrase(clean))
+    )
+    if curated is not None:
+        return curated
+    if source_code == "en":
+        room_door = re.fullmatch(
+            r"(?:good morning,\s*)?this is room\s+(\d{1,4})[,.]?\s*"
+            r"could you please open the door\??",
+            clean,
+            re.IGNORECASE,
+        )
+        if room_door:
+            return (
+                f"おはようございます。{room_door.group(1)}号室です。"
+                "ドアを開けていただけますか？"
+            )
+        if re.fullmatch(
+            r"we have a dedicated phone number,\s*"
+            r"so could you please call us back\??",
+            clean,
+            re.IGNORECASE,
+        ):
+            return "専用の電話番号がありますので、折り返しお電話いただけますか？"
     pattern = CUSTOMER_NO_CLEANING.get(source_code)
-    compact = re.sub(r"\s+", "", text.strip())
+    compact = re.sub(r"\s+", "", clean)
     if pattern is not None and pattern.fullmatch(compact):
         return "今日は客室を清掃しないでください。"
     exclusion = CUSTOMER_EXCLUSION.get(source_code)

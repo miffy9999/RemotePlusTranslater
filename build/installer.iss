@@ -1,6 +1,6 @@
 #define MyAppName "RemotePlus Translator"
 #ifndef MyAppVersion
-#define MyAppVersion "0.8.4"
+#define MyAppVersion "0.8.5"
 #endif
 #define MyAppExeName "RemotePlusTranslator.exe"
 #define WebView2InstallerName "MicrosoftEdgeWebView2RuntimeInstallerX64.exe"

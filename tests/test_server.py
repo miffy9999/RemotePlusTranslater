@@ -56,6 +56,27 @@ def test_staff_reply_endpoint_accepts_text_and_rejects_stale_tts_fields(tmp_path
         assert client.post("/api/reply", json={"text": ""}).status_code == 400
 
 
+def test_approved_translation_is_saved_for_the_same_language_direction(tmp_path):
+    with make_client(tmp_path) as client:
+        authenticate(client)
+        payload = {
+            "direction": "incoming",
+            "source_language": "en",
+            "target_language": "ja",
+            "source": "Could you hold on a moment, please?",
+            "translation": "少し持ってください。",
+            "corrected_translation": "少々お待ちいただけますか。",
+        }
+        response = client.post("/api/feedback", json=payload)
+        assert response.status_code == 200
+        memory = client.app.state.translation_memory
+        assert (
+            memory.lookup(payload["source"], "en", "ja")
+            == payload["corrected_translation"]
+        )
+        assert memory.lookup(payload["source"], "en", "ko") is None
+
+
 def test_wav_import_upload_pauses_live_capture_and_exposes_status(tmp_path):
     class FakeWavManager:
         def __init__(self):

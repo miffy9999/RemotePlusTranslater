@@ -24,6 +24,18 @@ def test_longer_correction_runs_first():
     assert apply_corrections("진저일", corrections) == "진저에일"
 
 
+def test_field_call_corrections_keep_the_intended_hotel_terms():
+    corrections = {
+        "uh, taus": "towels",
+        "frontでございます": "フロントでございます",
+    }
+    assert apply_corrections("uh, taus", corrections) == "towels"
+    assert (
+        apply_corrections("frontでございます", corrections)
+        == "フロントでございます"
+    )
+
+
 def test_obvious_stt_repetition_is_collapsed_without_removing_normal_emphasis():
     assert collapse_repetitions("check check check check") == "check"
     assert collapse_repetitions("please check in please check in please check in") == "please check in"

@@ -60,13 +60,30 @@ hotwords = ["콜라 주세요", "콜라", "진저에일", "cola", "ginger ale"]
 "콜을 주세요" = "콜라 주세요"
 "콜라주세요" = "콜라 주세요"
 "진저일" = "진저에일"
+"baguettes" = "baggage"
+"baguette" = "baggage"
+"a cartel" = "a card"
+"cartels" = "cards"
+"a tauf" = "check-out"
+"uh, taus" = "towels"
+"クロントでございます" = "フロントでございます"
+"frontでございます" = "フロントでございます"
+"front ではたいます" = "フロントでございます"
+"おなかでございまーす" = "フロントでございます"
+"おなかでございまし" = "フロントでございます"
+"コテルフェスタはやまでございます" = "ホテルフェスタ葉山でございます"
+"コテルフェストはやまでございます" = "ホテルフェスタ葉山でございます"
+"はい、おだまさまございます" = "はい、お待ちください"
+"he's an eight-time on it okay, thank you" = "アーリーチェックアウト"
+"I have a reservation passed at, I'll be arriving past 233" = "I have a reservation. I'll be arriving past 23:30."
+"one more time, I didn't kill it" = "one more time, I didn't get it"
 
 [stt.language_hotwords]
 ko = ["호텔 예약", "예약 확인", "예약 변경", "예약 취소", "체크인", "체크아웃", "얼리 체크인", "레이트 체크아웃", "룸서비스", "하우스키핑", "프런트 데스크", "컨시어지", "벨 데스크", "모닝콜", "미니바", "어메니티", "추가 수건", "생수", "세탁 서비스", "드라이클리닝", "조식 뷔페", "음식 알레르기", "채식", "비건", "할랄", "글루텐 프리", "콜라", "진저에일", "탄산수", "공항 셔틀", "택시 호출", "분실물"]
-en = ["hotel reservation", "booking confirmation", "change my reservation", "cancel my reservation", "check-in", "check-out", "early check-in", "late check-out", "room service", "housekeeping", "front desk", "concierge", "bell desk", "wake-up call", "minibar", "amenities", "extra towels", "bottled water", "laundry service", "dry cleaning", "breakfast buffet", "food allergy", "vegetarian", "vegan", "halal", "gluten-free", "cola", "ginger ale", "sparkling water", "airport shuttle", "call a taxi", "lost and found"]
+en = ["hotel reservation", "booking confirmation", "change my reservation", "cancel my reservation", "check-in", "check-out", "early check-in", "late check-out", "room service", "housekeeping", "front desk", "concierge", "bell desk", "wake-up call", "minibar", "amenities", "extra towels", "bottled water", "laundry service", "dry cleaning", "breakfast buffet", "food allergy", "vegetarian", "vegan", "halal", "gluten-free", "cola", "ginger ale", "sparkling water", "airport shuttle", "call a taxi", "lost and found", "room number", "room 204", "room 205", "room 401", "room 603", "luggage", "baggage", "send my baggage", "luggage delivery", "open the door", "unlock the door", "credit card"]
 zh = ["酒店预订", "确认预订", "更改预订", "取消预订", "入住", "退房", "提前入住", "延迟退房", "客房服务", "客房清洁", "前台", "礼宾部", "行李服务", "叫醒服务", "迷你吧", "洗漱用品", "额外毛巾", "矿泉水", "洗衣服务", "干洗服务", "早餐自助餐", "食物过敏", "素食", "纯素", "清真", "无麸质", "可乐", "姜汁汽水", "苏打水", "机场接送", "叫出租车", "失物招领"]
 es = ["reserva de hotel", "confirmar la reserva", "cambiar la reserva", "cancelar la reserva", "entrada", "salida", "entrada anticipada", "salida tardía", "servicio de habitaciones", "limpieza de habitaciones", "recepción", "conserjería", "servicio de equipaje", "llamada despertador", "minibar", "artículos de aseo", "toallas adicionales", "agua embotellada", "servicio de lavandería", "limpieza en seco", "desayuno buffet", "alergia alimentaria", "vegetariano", "vegano", "halal", "sin gluten", "cola", "ginger ale", "agua con gas", "traslado al aeropuerto", "pedir un taxi", "objetos perdidos"]
-ja = ["少々お待ちください", "確認いたしますので少々お待ちください", "ホテル予約", "予約確認", "予約変更", "予約キャンセル", "チェックイン", "チェックアウト", "アーリーチェックイン", "レイトチェックアウト", "ルームサービス", "ハウスキーピング", "フロントデスク", "コンシェルジュ", "ベルデスク", "モーニングコール", "ミニバー", "アメニティ", "追加のタオル", "ミネラルウォーター", "ランドリーサービス", "ドライクリーニング", "朝食ビュッフェ", "食物アレルギー", "ベジタリアン", "ヴィーガン", "ハラール", "グルテンフリー", "コーラ", "ジンジャーエール", "炭酸水", "空港シャトル", "タクシー手配", "忘れ物"]
+ja = ["少々お待ちください", "確認いたしますので少々お待ちください", "ホテル予約", "予約確認", "予約変更", "予約キャンセル", "チェックイン", "チェックアウト", "アーリーチェックイン", "レイトチェックアウト", "ルームサービス", "ハウスキーピング", "フロントデスク", "コンシェルジュ", "ベルデスク", "モーニングコール", "ミニバー", "アメニティ", "追加のタオル", "ミネラルウォーター", "ランドリーサービス", "ドライクリーニング", "朝食ビュッフェ", "食物アレルギー", "ベジタリアン", "ヴィーガン", "ハラール", "グルテンフリー", "コーラ", "ジンジャーエール", "炭酸水", "空港シャトル", "タクシー手配", "忘れ物", "フロントでございます", "お電話ありがとうございます", "もう一度よろしいでしょうか", "客室番号", "204号室", "205号室", "401号室", "603号室", "ホテルフェスタ葉山", "ホテルフェスタ横須賀", "ファンタジア", "チャーミーズ", "クレジットカード"]
 
 [translation]
 backend = "hymt2"
@@ -314,6 +331,34 @@ en = ["late check-out", "late checkout"]
 ko = ["레이트 체크아웃", "늦은 체크아웃"]
 zh = ["延迟退房", "延遲退房", "晚退房"]
 es = ["salida tardía", "salir más tarde"]
+
+[[translation.protected_terms]]
+ja = ["荷物", "手荷物"]
+en = ["luggage", "baggage"]
+ko = ["짐", "수하물"]
+zh = ["行李"]
+es = ["equipaje"]
+
+[[translation.protected_terms]]
+ja = ["クレジットカード", "カード"]
+en = ["credit card", "card"]
+ko = ["신용카드", "카드"]
+zh = ["信用卡"]
+es = ["tarjeta de crédito", "tarjeta"]
+
+[[translation.protected_terms]]
+ja = ["ドア", "扉"]
+en = ["door"]
+ko = ["문"]
+zh = ["门", "門"]
+es = ["puerta"]
+
+[[translation.protected_terms]]
+ja = ["客室番号", "部屋番号"]
+en = ["room number"]
+ko = ["객실 번호", "방 번호"]
+zh = ["房间号", "房號"]
+es = ["número de habitación"]
 
 [conversation]
 japanese_code = "ja"

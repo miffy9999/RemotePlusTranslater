@@ -1,4 +1,4 @@
-# Third-party notices — RemotePlus Translator 0.8.4
+# Third-party notices — RemotePlus Translator 0.8.5
 
 RemotePlus Translator source code is distributed under the MIT License. Commercial use is
 permitted subject to each bundled component and model license. Distributors must ship this
