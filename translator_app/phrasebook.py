@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from dataclasses import dataclass
 
 
@@ -12,6 +13,52 @@ class Phrase:
 
 def _phrase(pattern: str, en: str, ko: str, zh: str, es: str) -> Phrase:
     return Phrase(re.compile(pattern), {"en": en, "ko": ko, "zh": zh, "es": es})
+
+
+def _translations(en: str, ko: str, zh: str, es: str) -> dict[str, str]:
+    return {"en": en, "ko": ko, "zh": zh, "es": es}
+
+
+_CULTURAL_PHRASE_GROUPS = (
+    (("おはよう", "おはよ", "おはようございます"), "Good morning.", "안녕하세요.", "早上好。", "Buenos días."),
+    (("こんにちは", "こんにちわ"), "Hello.", "안녕하세요.", "您好。", "Hola."),
+    (("こんばんは", "こんばんわ"), "Good evening.", "안녕하세요.", "晚上好。", "Buenas tardes."),
+    (("ありがとう", "ありがと", "ありがとうございます"), "Thank you.", "감사합니다.", "谢谢。", "Gracias."),
+    (("どうもありがとうございます",), "Thank you very much.", "정말 감사합니다.", "非常感谢。", "Muchas gracias."),
+    (("お疲れ様です",), "Thank you for your hard work.", "수고 많으십니다.", "辛苦了。", "Gracias por su esfuerzo."),
+    (("お疲れ様でした",), "Thank you for your hard work today.", "수고 많으셨습니다.", "您辛苦了。", "Gracias por su trabajo de hoy."),
+    (("よろしくお願いします", "よろしくお願いいたします"), "I appreciate your help.", "잘 부탁드립니다.", "请多关照。", "Agradezco de antemano su ayuda."),
+    (("いただきます",), "Thank you for the meal.", "잘 먹겠습니다.", "我开动了。", "Gracias por la comida."),
+    (("ごちそうさまでした", "ご馳走様でした"), "Thank you for the meal.", "잘 먹었습니다.", "多谢款待。", "Gracias por la comida."),
+    (("お邪魔します",), "Excuse me for intruding.", "실례하겠습니다.", "打扰了。", "Con permiso."),
+    (("お邪魔しました",), "Thank you for having me.", "실례 많았습니다.", "打扰了。", "Gracias por recibirme."),
+    (("失礼します", "失礼いたします"), "Excuse me.", "실례하겠습니다.", "失礼了。", "Con permiso."),
+    (("もったいない", "勿体ない"), "What a waste.", "아깝네요.", "太浪费了。", "Qué desperdicio."),
+    (("しょうがない", "仕方がない", "仕方ない"), "It can't be helped.", "어쩔 수 없어요.", "没办法。", "No se puede evitar."),
+    (("お大事に", "お大事になさってください"), "Take care and get well soon.", "몸조리 잘하세요.", "请多保重，早日康复。", "Cuídese y que se mejore pronto."),
+    (("お気をつけて", "お気を付けて"), "Take care.", "조심히 가세요.", "请慢走。", "Cuídese."),
+    (("行ってらっしゃい", "いってらっしゃい"), "Have a good day.", "다녀오세요.", "路上小心。", "Que le vaya bien."),
+    (("初めまして", "はじめまして"), "Nice to meet you.", "처음 뵙겠습니다.", "初次见面。", "Mucho gusto."),
+    (("お久しぶりです", "ご無沙汰しております"), "It's been a while.", "오랜만입니다.", "好久不见。", "Cuánto tiempo."),
+    (("頑張ってください", "がんばってください"), "Good luck.", "힘내세요.", "加油。", "Mucho ánimo."),
+    (("お世話になっております",), "Thank you for your continued support.", "항상 도움 주셔서 감사합니다.", "感谢您一直以来的关照。", "Gracias por su continuo apoyo."),
+    (("お越しいただきありがとうございます", "お越しくださいましてありがとうございます"), "Thank you for visiting us.", "방문해 주셔서 감사합니다.", "感谢您的光临。", "Gracias por visitarnos."),
+    (("ごゆっくりお過ごしください",), "Enjoy your stay.", "편안히 머무르세요.", "祝您入住愉快。", "Disfrute de su estancia."),
+)
+
+CULTURAL_PHRASES = {
+    alias: _translations(en, ko, zh, es)
+    for aliases, en, ko, zh, es in _CULTURAL_PHRASE_GROUPS
+    for alias in aliases
+}
+
+_TRAILING_EXPRESSION_MARKS = re.compile(r"[。.!！?？、,ー〜～~－-]+$")
+
+
+def _cultural_phrase_key(text: str) -> str:
+    normalized = unicodedata.normalize("NFKC", text.strip())
+    compact = re.sub(r"\s+", "", normalized)
+    return _TRAILING_EXPRESSION_MARKS.sub("", compact)
 
 
 PHRASES = (
@@ -556,6 +603,9 @@ def translate_hotel_phrase(text: str, target_code: str) -> str | None:
     for phrase in PHRASES:
         if phrase.pattern.search(compact):
             return phrase.translations.get(target_code)
+    cultural = CULTURAL_PHRASES.get(_cultural_phrase_key(text))
+    if cultural is not None:
+        return cultural.get(target_code)
     return None
 
 

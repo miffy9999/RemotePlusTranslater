@@ -52,7 +52,7 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    console=False,
+    console=True,
     version=os.path.join(project_root, "build", "version_info.txt"),
 )
 coll = COLLECT(

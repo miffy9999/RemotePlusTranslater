@@ -11,7 +11,7 @@ import threading
 import webbrowser
 from pathlib import Path
 
-from .config import load_config
+from .config import DATA_ROOT, load_config
 from .diagnostics import configure_runtime_logging, runtime_logger
 from .process_cleanup import enable_windows_process_cleanup
 
@@ -70,9 +70,11 @@ def doctor() -> int:
     report = "\n".join(f"[{'OK' if ok else 'FAIL'}] {name:<{width}}  {detail}" for name, ok, detail in checks)
     _emit(report)
     if getattr(sys, "frozen", False):
-        cfg_root = Path(os.environ.get("LOCALAPPDATA", tempfile.gettempdir())) / "RemotePlusTranslator"
-        cfg_root.mkdir(parents=True, exist_ok=True)
-        (cfg_root / "doctor-report.txt").write_text(report + "\n", encoding="utf-8")
+        try:
+            DATA_ROOT.mkdir(parents=True, exist_ok=True)
+            (DATA_ROOT / "doctor-report.txt").write_text(report + "\n", encoding="utf-8")
+        except OSError as exc:
+            _emit(f"[WARN] doctor report could not be saved: {exc}")
     return 0 if all(ok for _, ok, _ in checks) else 1
 
 

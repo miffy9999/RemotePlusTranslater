@@ -36,6 +36,41 @@ def test_common_acknowledgement_uses_natural_service_language():
     assert translate_hotel_phrase("わかりました。", "ko") == "네, 알겠습니다."
 
 
+@pytest.mark.parametrize(
+    ("source", "expected_en", "expected_ko", "expected_zh"),
+    (
+        ("こんばんわー", "Good evening.", "안녕하세요.", "晚上好。"),
+        ("お疲れ様です。", "Thank you for your hard work.", "수고 많으십니다.", "辛苦了。"),
+        ("よろしくお願いします。", "I appreciate your help.", "잘 부탁드립니다.", "请多关照。"),
+        ("いただきます。", "Thank you for the meal.", "잘 먹겠습니다.", "我开动了。"),
+        ("ごちそうさまでした。", "Thank you for the meal.", "잘 먹었습니다.", "多谢款待。"),
+        ("お邪魔します。", "Excuse me for intruding.", "실례하겠습니다.", "打扰了。"),
+        ("もったいない。", "What a waste.", "아깝네요.", "太浪费了。"),
+        ("しょうがない。", "It can't be helped.", "어쩔 수 없어요.", "没办法。"),
+        ("お大事に。", "Take care and get well soon.", "몸조리 잘하세요.", "请多保重，早日康复。"),
+        ("ごゆっくりお過ごしください。", "Enjoy your stay.", "편안히 머무르세요.", "祝您入住愉快。"),
+    ),
+)
+def test_japanese_cultural_phrases_use_natural_equivalents(
+    source, expected_en, expected_ko, expected_zh
+):
+    assert translate_hotel_phrase(source, "en") == expected_en
+    assert translate_hotel_phrase(source, "ko") == expected_ko
+    assert translate_hotel_phrase(source, "zh") == expected_zh
+
+
+def test_cultural_phrase_matching_tolerates_width_spacing_and_drawn_out_endings():
+    assert translate_hotel_phrase("　こんばんわ～～！　", "ko") == "안녕하세요."
+    assert translate_hotel_phrase("ありがとー", "zh") == "谢谢。"
+
+
+@pytest.mark.parametrize("source", ("結構です。", "すみません。", "恐れ入ります。"))
+def test_context_dependent_japanese_phrases_are_not_forced_to_one_meaning(source):
+    assert translate_hotel_phrase(source, "en") is None
+    assert translate_hotel_phrase(source, "ko") is None
+    assert translate_hotel_phrase(source, "zh") is None
+
+
 def test_common_service_phrases_are_not_translated_word_for_word():
     assert translate_hotel_phrase("お待たせしました。", "en") == "Thank you for waiting."
     assert translate_hotel_phrase("確認いたします。", "ko") == "확인해 보겠습니다."

@@ -1,3 +1,2 @@
-2026/07/23-12:32:10.985 8b68 Reusing MANIFEST C:\Users\user\Desktop\바탕 화면\RemotePlus\realtime-translator\webview2-v2\profile-a\EBWebView\Default\Sync Data\LevelDB/MANIFEST-000001
-2026/07/23-12:32:11.002 8b68 Recovering log #3
-2026/07/23-12:32:11.004 8b68 Reusing old log C:\Users\user\Desktop\바탕 화면\RemotePlus\realtime-translator\webview2-v2\profile-a\EBWebView\Default\Sync Data\LevelDB/000003.log 
+2026/07/24-11:45:13.476 8f98 Creating DB C:\Users\전성현\Desktop\00_2026_Summer_Internship\Remote_plus\trance_app_v2\RemotePlusTranslater\webview2-v2\profile-a\EBWebView\Default\Sync Data\LevelDB since it was missing.
+2026/07/24-11:45:13.492 8f98 Reusing MANIFEST C:\Users\전성현\Desktop\00_2026_Summer_Internship\Remote_plus\trance_app_v2\RemotePlusTranslater\webview2-v2\profile-a\EBWebView\Default\Sync Data\LevelDB/MANIFEST-000001
