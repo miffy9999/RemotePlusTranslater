@@ -1,0 +1,3062 @@
+{
+  "summary": {
+    "samples": 128,
+    "score": 0.848,
+    "average_seconds": 0.986,
+    "corpora": {
+      "hotel_translation_extended": {
+        "score": 0.886,
+        "average_seconds": 0.932,
+        "failed": [
+          "f-en-09",
+          "f-ko-01",
+          "f-ko-05",
+          "f-ko-07",
+          "f-zh-01",
+          "f-zh-04",
+          "f-zh-08",
+          "f-zh-09",
+          "f-es-01",
+          "f-es-03",
+          "f-es-07",
+          "f-es-08",
+          "f-es-09",
+          "r-ko-05",
+          "r-es-05"
+        ]
+      },
+      "hotel_translation_holdout": {
+        "score": 0.783,
+        "average_seconds": 0.889,
+        "failed": [
+          "f-en-h1",
+          "f-ko-h1",
+          "f-ko-h4",
+          "f-zh-h1",
+          "f-es-h1",
+          "f-es-h3",
+          "r-en-h1",
+          "r-en-h2",
+          "r-en-h5",
+          "r-ko-h4",
+          "r-ko-h5",
+          "r-zh-h3",
+          "r-zh-h5",
+          "r-es-h1",
+          "r-es-h2",
+          "r-es-h5"
+        ]
+      },
+      "hotel_translation_validation": {
+        "score": 0.857,
+        "average_seconds": 1.241,
+        "failed": [
+          "f-en-v3",
+          "f-zh-v1",
+          "f-zh-v3",
+          "f-es-v1",
+          "f-es-v3",
+          "r-ko-v2",
+          "r-zh-v1",
+          "r-zh-v2",
+          "r-es-v1",
+          "r-es-v3"
+        ]
+      }
+    }
+  },
+  "rows": [
+    {
+      "id": "f-en-01",
+      "source": "en",
+      "target": "ja",
+      "text": "I need to cancel my reservation for tomorrow.",
+      "expected_any": [
+        [
+          "予約"
+        ],
+        [
+          "キャンセル",
+          "取り消し"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "明日の予約をキャンセルする必要があります。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.533
+    },
+    {
+      "id": "f-en-02",
+      "source": "en",
+      "target": "ja",
+      "text": "My passport is missing from the room safe.",
+      "expected_any": [
+        [
+          "パスポート"
+        ],
+        [
+          "金庫",
+          "セーフ"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "私のパスポートが部屋の金庫からなくなっています。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.678
+    },
+    {
+      "id": "f-en-03",
+      "source": "en",
+      "target": "ja",
+      "text": "The air conditioner is making a loud noise.",
+      "expected_any": [
+        [
+          "エアコン",
+          "空調"
+        ],
+        [
+          "音",
+          "騒音"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "エアコンが大きな音を立てている。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.527
+    },
+    {
+      "id": "f-en-04",
+      "source": "en",
+      "target": "ja",
+      "text": "Is the airport shuttle wheelchair accessible?",
+      "expected_any": [
+        [
+          "空港"
+        ],
+        [
+          "シャトル",
+          "送迎"
+        ],
+        [
+          "車椅子"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "空港シャトルバスは車椅子利用可能ですか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.566
+    },
+    {
+      "id": "f-en-05",
+      "source": "en",
+      "target": "ja",
+      "text": "Please prepare a vegetarian breakfast without eggs.",
+      "expected_any": [
+        [
+          "ベジタリアン",
+          "菜食"
+        ],
+        [
+          "朝食"
+        ],
+        [
+          "卵"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "卵を使わないベジタリアン朝食を用意してください。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.769
+    },
+    {
+      "id": "f-en-06",
+      "source": "en",
+      "target": "ja",
+      "text": "I was charged for a minibar item I did not use.",
+      "expected_any": [
+        [
+          "ミニバー"
+        ],
+        [
+          "請求"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "私は使用しなかったミニバーの品物のために請求されました。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.669
+    },
+    {
+      "id": "f-en-07",
+      "source": "en",
+      "target": "ja",
+      "text": "There has been no hot water since this morning.",
+      "expected_any": [
+        [
+          "お湯",
+          "温水"
+        ],
+        [
+          "朝"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "今朝からお湯が出なくなっています。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.5
+    },
+    {
+      "id": "f-en-08",
+      "source": "en",
+      "target": "ja",
+      "text": "I lost my key card near the swimming pool.",
+      "expected_any": [
+        [
+          "キーカード",
+          "カードキー"
+        ],
+        [
+          "プール"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "プールの近くでキーカードを失いました。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.597
+    },
+    {
+      "id": "f-en-09",
+      "source": "en",
+      "target": "ja",
+      "text": "Please arrange a wake-up call for six thirty.",
+      "expected_any": [
+        [
+          "モーニングコール",
+          "目覚まし"
+        ],
+        [
+          "6時30分",
+          "六時半"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "6時30分に起こしのサービスを手配してください。",
+      "score": 0.5,
+      "missed": [
+        [
+          "モーニングコール",
+          "目覚まし"
+        ]
+      ],
+      "seconds": 0.636
+    },
+    {
+      "id": "f-en-10",
+      "source": "en",
+      "target": "ja",
+      "text": "Please do not clean the room today.",
+      "expected_any": [
+        [
+          "清掃",
+          "掃除"
+        ],
+        [
+          "しない",
+          "不要"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "今日は部屋を掃除しないでください。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.464
+    },
+    {
+      "id": "f-ko-01",
+      "source": "ko",
+      "target": "ja",
+      "text": "내일 예약을 취소하고 싶습니다.",
+      "expected_any": [
+        [
+          "予約"
+        ],
+        [
+          "キャンセル",
+          "取り消し"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "明日の予約をキャンセンできますか。",
+      "score": 0.5,
+      "missed": [
+        [
+          "キャンセル",
+          "取り消し"
+        ]
+      ],
+      "seconds": 0.507
+    },
+    {
+      "id": "f-ko-02",
+      "source": "ko",
+      "target": "ja",
+      "text": "객실 금고에 넣어 둔 여권이 없어졌습니다.",
+      "expected_any": [
+        [
+          "パスポート"
+        ],
+        [
+          "金庫",
+          "セーフ"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "客室の金庫に入れていたパスポートがなくなってしまいました。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.812
+    },
+    {
+      "id": "f-ko-03",
+      "source": "ko",
+      "target": "ja",
+      "text": "에어컨에서 시끄러운 소리가 납니다.",
+      "expected_any": [
+        [
+          "エアコン",
+          "空調"
+        ],
+        [
+          "音",
+          "騒音"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "エアコンから騒音が出ています。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.518
+    },
+    {
+      "id": "f-ko-04",
+      "source": "ko",
+      "target": "ja",
+      "text": "공항 셔틀에 휠체어를 실을 수 있나요?",
+      "expected_any": [
+        [
+          "空港"
+        ],
+        [
+          "シャトル",
+          "送迎"
+        ],
+        [
+          "車椅子"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "空港のシャトルに車椅子を乗せることができますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.795
+    },
+    {
+      "id": "f-ko-05",
+      "source": "ko",
+      "target": "ja",
+      "text": "달걀을 빼고 채식 조식을 준비해 주세요.",
+      "expected_any": [
+        [
+          "ベジタリアン",
+          "菜食"
+        ],
+        [
+          "朝食"
+        ],
+        [
+          "卵"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "卵を除いて、植物性の朝食を用意してください。",
+      "score": 0.667,
+      "missed": [
+        [
+          "ベジタリアン",
+          "菜食"
+        ]
+      ],
+      "seconds": 0.618
+    },
+    {
+      "id": "f-ko-06",
+      "source": "ko",
+      "target": "ja",
+      "text": "사용하지 않은 미니바 물품이 청구됐습니다.",
+      "expected_any": [
+        [
+          "ミニバー"
+        ],
+        [
+          "請求"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "使用されていないミニバーの品物が請求されました。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.631
+    },
+    {
+      "id": "f-ko-07",
+      "source": "ko",
+      "target": "ja",
+      "text": "오늘 아침부터 뜨거운 물이 나오지 않습니다.",
+      "expected_any": [
+        [
+          "お湯",
+          "温水"
+        ],
+        [
+          "朝"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "今日の朝から、熱い水が出なくなっています。",
+      "score": 0.5,
+      "missed": [
+        [
+          "お湯",
+          "温水"
+        ]
+      ],
+      "seconds": 0.602
+    },
+    {
+      "id": "f-ko-08",
+      "source": "ko",
+      "target": "ja",
+      "text": "수영장 근처에서 객실 키 카드를 잃어버렸습니다.",
+      "expected_any": [
+        [
+          "キーカード",
+          "カードキー"
+        ],
+        [
+          "プール"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "プールの近くで、客室キーカードを失くしました。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.753
+    },
+    {
+      "id": "f-ko-09",
+      "source": "ko",
+      "target": "ja",
+      "text": "아침 여섯 시 반에 모닝콜을 부탁드립니다.",
+      "expected_any": [
+        [
+          "モーニングコール",
+          "目覚まし"
+        ],
+        [
+          "6時30分",
+          "6時半",
+          "六時半"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "朝6時半にモーニングコールをお願いします。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.739
+    },
+    {
+      "id": "f-ko-10",
+      "source": "ko",
+      "target": "ja",
+      "text": "오늘은 객실 청소를 하지 말아 주세요.",
+      "expected_any": [
+        [
+          "清掃",
+          "掃除"
+        ],
+        [
+          "しない",
+          "不要"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "今日は客室の清掃をお願いしないでください。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.712
+    },
+    {
+      "id": "f-zh-01",
+      "source": "zh",
+      "target": "ja",
+      "text": "我想取消明天的预订。",
+      "expected_any": [
+        [
+          "予約"
+        ],
+        [
+          "キャンセル",
+          "取り消し"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "明日の予約をキャンセンできます。",
+      "score": 0.5,
+      "missed": [
+        [
+          "キャンセル",
+          "取り消し"
+        ]
+      ],
+      "seconds": 0.609
+    },
+    {
+      "id": "f-zh-02",
+      "source": "zh",
+      "target": "ja",
+      "text": "我放在客房保险箱里的护照不见了。",
+      "expected_any": [
+        [
+          "パスポート"
+        ],
+        [
+          "金庫",
+          "セーフ"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "私がルームルームの金庫に入れていたパスポートがなくなってしまった。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.421
+    },
+    {
+      "id": "f-zh-03",
+      "source": "zh",
+      "target": "ja",
+      "text": "空调发出很大的噪音。",
+      "expected_any": [
+        [
+          "エアコン",
+          "空調"
+        ],
+        [
+          "音",
+          "騒音"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "エアコンが大きな音を立てている。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.796
+    },
+    {
+      "id": "f-zh-04",
+      "source": "zh",
+      "target": "ja",
+      "text": "机场班车可以放轮椅吗？",
+      "expected_any": [
+        [
+          "空港"
+        ],
+        [
+          "シャトル",
+          "送迎"
+        ],
+        [
+          "車椅子"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "空港のバスは車椅子を置けますか？",
+      "score": 0.667,
+      "missed": [
+        [
+          "シャトル",
+          "送迎"
+        ]
+      ],
+      "seconds": 0.851
+    },
+    {
+      "id": "f-zh-05",
+      "source": "zh",
+      "target": "ja",
+      "text": "请准备一份不加鸡蛋的素食早餐。",
+      "expected_any": [
+        [
+          "ベジタリアン",
+          "菜食"
+        ],
+        [
+          "朝食"
+        ],
+        [
+          "卵"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "卵を使わないベジタリアンの朝食を用意してください。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.035
+    },
+    {
+      "id": "f-zh-06",
+      "source": "zh",
+      "target": "ja",
+      "text": "迷你吧收取了我没有使用的物品费用。",
+      "expected_any": [
+        [
+          "ミニバー"
+        ],
+        [
+          "請求"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "ミニバーで、私が使っていない品物の料金を請求されました。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.292
+    },
+    {
+      "id": "f-zh-07",
+      "source": "zh",
+      "target": "ja",
+      "text": "从今天早上开始就没有热水。",
+      "expected_any": [
+        [
+          "お湯",
+          "温水"
+        ],
+        [
+          "朝"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "今日の朝から、お湯が出なくなっています。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.874
+    },
+    {
+      "id": "f-zh-08",
+      "source": "zh",
+      "target": "ja",
+      "text": "我在游泳池附近丢了房卡。",
+      "expected_any": [
+        [
+          "キーカード",
+          "カードキー"
+        ],
+        [
+          "プール"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "プールの近くでキーを失くしました。",
+      "score": 0.5,
+      "missed": [
+        [
+          "キーカード",
+          "カードキー"
+        ]
+      ],
+      "seconds": 0.82
+    },
+    {
+      "id": "f-zh-09",
+      "source": "zh",
+      "target": "ja",
+      "text": "请在早上六点半叫醒我。",
+      "expected_any": [
+        [
+          "モーニングコール",
+          "目覚まし"
+        ],
+        [
+          "6時30分",
+          "6時半",
+          "六時半"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "朝6時半に私を起こしてください。",
+      "score": 0.5,
+      "missed": [
+        [
+          "モーニングコール",
+          "目覚まし"
+        ]
+      ],
+      "seconds": 0.733
+    },
+    {
+      "id": "f-zh-10",
+      "source": "zh",
+      "target": "ja",
+      "text": "今天请不要打扫房间。",
+      "expected_any": [
+        [
+          "清掃",
+          "掃除"
+        ],
+        [
+          "しない",
+          "不要"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "今日は部屋の掃除をしないでください。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.784
+    },
+    {
+      "id": "f-es-01",
+      "source": "es",
+      "target": "ja",
+      "text": "Quiero cancelar mi reserva para mañana.",
+      "expected_any": [
+        [
+          "予約"
+        ],
+        [
+          "キャンセル",
+          "取り消し"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "明日の予約をキャンセンターしたいです。",
+      "score": 0.5,
+      "missed": [
+        [
+          "キャンセル",
+          "取り消し"
+        ]
+      ],
+      "seconds": 0.972
+    },
+    {
+      "id": "f-es-02",
+      "source": "es",
+      "target": "ja",
+      "text": "Mi pasaporte ha desaparecido de la caja fuerte de la habitación.",
+      "expected_any": [
+        [
+          "パスポート"
+        ],
+        [
+          "金庫",
+          "セーフ"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "私のパスポートが部屋の金庫からなくなってしまった。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.461
+    },
+    {
+      "id": "f-es-03",
+      "source": "es",
+      "target": "ja",
+      "text": "El aire acondicionado hace mucho ruido.",
+      "expected_any": [
+        [
+          "エアコン",
+          "空調"
+        ],
+        [
+          "音",
+          "騒音"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "エアコンがひどくうるさい。",
+      "score": 0.5,
+      "missed": [
+        [
+          "音",
+          "騒音"
+        ]
+      ],
+      "seconds": 0.881
+    },
+    {
+      "id": "f-es-04",
+      "source": "es",
+      "target": "ja",
+      "text": "¿El transporte al aeropuerto admite sillas de ruedas?",
+      "expected_any": [
+        [
+          "空港"
+        ],
+        [
+          "シャトル",
+          "送迎"
+        ],
+        [
+          "車椅子"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "空港への送迎は車椅子を利用できますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.075
+    },
+    {
+      "id": "f-es-05",
+      "source": "es",
+      "target": "ja",
+      "text": "Prepare un desayuno vegetariano sin huevos.",
+      "expected_any": [
+        [
+          "ベジタリアン",
+          "菜食"
+        ],
+        [
+          "朝食"
+        ],
+        [
+          "卵"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "卵を使わないベジタリアン朝食を用意しなさい。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.293
+    },
+    {
+      "id": "f-es-06",
+      "source": "es",
+      "target": "ja",
+      "text": "Me cobraron un artículo del minibar que no usé.",
+      "expected_any": [
+        [
+          "ミニバー"
+        ],
+        [
+          "請求"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "私が使っていないミニバーの品物の料金が請求されました。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.406
+    },
+    {
+      "id": "f-es-07",
+      "source": "es",
+      "target": "ja",
+      "text": "No hay agua caliente desde esta mañana.",
+      "expected_any": [
+        [
+          "お湯",
+          "温水"
+        ],
+        [
+          "朝"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "今朝から熱い水はありません。",
+      "score": 0.5,
+      "missed": [
+        [
+          "お湯",
+          "温水"
+        ]
+      ],
+      "seconds": 0.827
+    },
+    {
+      "id": "f-es-08",
+      "source": "es",
+      "target": "ja",
+      "text": "Perdí la tarjeta de la habitación cerca de la piscina.",
+      "expected_any": [
+        [
+          "キーカード",
+          "カードキー"
+        ],
+        [
+          "プール"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "プールの近くで部屋のカードを失ってしまった。",
+      "score": 0.5,
+      "missed": [
+        [
+          "キーカード",
+          "カードキー"
+        ]
+      ],
+      "seconds": 1.324
+    },
+    {
+      "id": "f-es-09",
+      "source": "es",
+      "target": "ja",
+      "text": "Programe una llamada despertador para las seis y media.",
+      "expected_any": [
+        [
+          "モーニングコール",
+          "目覚まし"
+        ],
+        [
+          "6時30分",
+          "6時半",
+          "六時半"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "6時半にアラーム通話を設定しましょう。",
+      "score": 0.5,
+      "missed": [
+        [
+          "モーニングコール",
+          "目覚まし"
+        ]
+      ],
+      "seconds": 1.198
+    },
+    {
+      "id": "f-es-10",
+      "source": "es",
+      "target": "ja",
+      "text": "Por favor, no limpie la habitación hoy.",
+      "expected_any": [
+        [
+          "清掃",
+          "掃除"
+        ],
+        [
+          "しない",
+          "不要"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "今日は部屋を掃除しないでください。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.981
+    },
+    {
+      "id": "r-en-01",
+      "source": "ja",
+      "target": "en",
+      "text": "ご予約番号を教えてください。",
+      "expected_any": [
+        [
+          "reservation",
+          "booking"
+        ],
+        [
+          "number"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "Please provide the reservation number.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.906
+    },
+    {
+      "id": "r-en-02",
+      "source": "ja",
+      "target": "en",
+      "text": "追加のタオルを3枚お部屋へお届けします。",
+      "expected_any": [
+        [
+          "towel"
+        ],
+        [
+          "three",
+          "3"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "3 extra towels will be delivered to your room.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.902
+    },
+    {
+      "id": "r-en-03",
+      "source": "ja",
+      "target": "en",
+      "text": "空港シャトルは午前8時に出発します。",
+      "expected_any": [
+        [
+          "airport"
+        ],
+        [
+          "shuttle"
+        ],
+        [
+          "8"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "The airport shuttle departs at 8 a.m.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.935
+    },
+    {
+      "id": "r-en-04",
+      "source": "ja",
+      "target": "en",
+      "text": "ピーナッツアレルギーとして厨房に伝えます。",
+      "expected_any": [
+        [
+          "peanut"
+        ],
+        [
+          "allerg"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "I will report this as a peanut allergy to the kitchen.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.009
+    },
+    {
+      "id": "r-en-05",
+      "source": "ja",
+      "target": "en",
+      "text": "レイトチェックアウトは午後2時まで可能です。",
+      "expected_any": [
+        [
+          "late"
+        ],
+        [
+          "check-out",
+          "checkout"
+        ],
+        [
+          "2"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "Late check-out is available until 2 PM.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.904
+    },
+    {
+      "id": "r-ko-01",
+      "source": "ja",
+      "target": "ko",
+      "text": "ご予約番号を教えてください。",
+      "expected_any": [
+        [
+          "예약"
+        ],
+        [
+          "번호"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "예약 번호를 알려주세요.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.088
+    },
+    {
+      "id": "r-ko-02",
+      "source": "ja",
+      "target": "ko",
+      "text": "追加のタオルを3枚お部屋へお届けします。",
+      "expected_any": [
+        [
+          "수건"
+        ],
+        [
+          "3",
+          "세"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "추가로 3장의 수건을 객실에 배송해 드립니다.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.55
+    },
+    {
+      "id": "r-ko-03",
+      "source": "ja",
+      "target": "ko",
+      "text": "空港シャトルは午前8時に出発します。",
+      "expected_any": [
+        [
+          "공항"
+        ],
+        [
+          "셔틀"
+        ],
+        [
+          "8"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "공항 셔틀은 오전 8시에 출발합니다.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.289
+    },
+    {
+      "id": "r-ko-04",
+      "source": "ja",
+      "target": "ko",
+      "text": "ピーナッツアレルギーとして厨房に伝えます。",
+      "expected_any": [
+        [
+          "땅콩",
+          "피넛"
+        ],
+        [
+          "알레르기"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "땅콩 알레르기로 요리실에 알려주세요.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.391
+    },
+    {
+      "id": "r-ko-05",
+      "source": "ja",
+      "target": "ko",
+      "text": "レイトチェックアウトは午後2時まで可能です。",
+      "expected_any": [
+        [
+          "레이트",
+          "늦은"
+        ],
+        [
+          "체크아웃"
+        ],
+        [
+          "2"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "리트 체크아웃은 오후 2시까지 가능합니다.",
+      "score": 0.667,
+      "missed": [
+        [
+          "레이트",
+          "늦은"
+        ]
+      ],
+      "seconds": 1.294
+    },
+    {
+      "id": "r-zh-01",
+      "source": "ja",
+      "target": "zh",
+      "text": "ご予約番号を教えてください。",
+      "expected_any": [
+        [
+          "预订",
+          "预约"
+        ],
+        [
+          "号码"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "请告诉我您的预订号码。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.956
+    },
+    {
+      "id": "r-zh-02",
+      "source": "ja",
+      "target": "zh",
+      "text": "追加のタオルを3枚お部屋へお届けします。",
+      "expected_any": [
+        [
+          "毛巾"
+        ],
+        [
+          "3",
+          "三"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "我们将再送3块毛巾到您的房间。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.956
+    },
+    {
+      "id": "r-zh-03",
+      "source": "ja",
+      "target": "zh",
+      "text": "空港シャトルは午前8時に出発します。",
+      "expected_any": [
+        [
+          "机场"
+        ],
+        [
+          "班车",
+          "接送"
+        ],
+        [
+          "8",
+          "八"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "机场班车在上午8点出发。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.807
+    },
+    {
+      "id": "r-zh-04",
+      "source": "ja",
+      "target": "zh",
+      "text": "ピーナッツアレルギーとして厨房に伝えます。",
+      "expected_any": [
+        [
+          "花生"
+        ],
+        [
+          "过敏"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "作为花生过敏，我会告知厨房方面。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.009
+    },
+    {
+      "id": "r-zh-05",
+      "source": "ja",
+      "target": "zh",
+      "text": "レイトチェックアウトは午後2時まで可能です。",
+      "expected_any": [
+        [
+          "延迟",
+          "晚"
+        ],
+        [
+          "退房"
+        ],
+        [
+          "2",
+          "两"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "延迟退房至下午2点为止。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.928
+    },
+    {
+      "id": "r-es-01",
+      "source": "ja",
+      "target": "es",
+      "text": "ご予約番号を教えてください。",
+      "expected_any": [
+        [
+          "reserva"
+        ],
+        [
+          "número",
+          "numero"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "Por favor, díganos el número de reserva.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.281
+    },
+    {
+      "id": "r-es-02",
+      "source": "ja",
+      "target": "es",
+      "text": "追加のタオルを3枚お部屋へお届けします。",
+      "expected_any": [
+        [
+          "toalla"
+        ],
+        [
+          "tres",
+          "3"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "Se entregarán 3 toallas adicionales en la habitación.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.265
+    },
+    {
+      "id": "r-es-03",
+      "source": "ja",
+      "target": "es",
+      "text": "空港シャトルは午前8時に出発します。",
+      "expected_any": [
+        [
+          "aeropuerto"
+        ],
+        [
+          "transporte",
+          "autobús",
+          "bus"
+        ],
+        [
+          "8",
+          "ocho"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "El autobús del aeropuerto sale a las 8 de la mañana.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.404
+    },
+    {
+      "id": "r-es-04",
+      "source": "ja",
+      "target": "es",
+      "text": "ピーナッツアレルギーとして厨房に伝えます。",
+      "expected_any": [
+        [
+          "cacahuete",
+          "maní"
+        ],
+        [
+          "alerg"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "Se informa en la cocina que hay alergia a las cacahuetes.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.484
+    },
+    {
+      "id": "r-es-05",
+      "source": "ja",
+      "target": "es",
+      "text": "レイトチェックアウトは午後2時まで可能です。",
+      "expected_any": [
+        [
+          "tarde",
+          "tardía"
+        ],
+        [
+          "salida"
+        ],
+        [
+          "2",
+          "dos"
+        ]
+      ],
+      "corpus": "hotel_translation_extended",
+      "translated": "El check-out tardío es posible hasta las 2 de la tarde.",
+      "score": 0.667,
+      "missed": [
+        [
+          "salida"
+        ]
+      ],
+      "seconds": 1.286
+    },
+    {
+      "id": "f-en-h1",
+      "source": "en",
+      "target": "ja",
+      "text": "Could I get a wake-up call at half past six?",
+      "expected_any": [
+        [
+          "モーニングコール",
+          "目覚まし"
+        ],
+        [
+          "6時30分",
+          "6時半",
+          "六時半"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "6時半に起こしの電話が来るかな？",
+      "score": 0.5,
+      "missed": [
+        [
+          "モーニングコール",
+          "目覚まし"
+        ]
+      ],
+      "seconds": 0.978
+    },
+    {
+      "id": "f-en-h2",
+      "source": "en",
+      "target": "ja",
+      "text": "I am allergic to gluten and need a gluten-free meal.",
+      "expected_any": [
+        [
+          "グルテン"
+        ],
+        [
+          "アレルギー"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "私はグルテンにアレルギーがあり、グルテンフリーの食事が必要です。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.488
+    },
+    {
+      "id": "f-en-h3",
+      "source": "en",
+      "target": "ja",
+      "text": "Can you put a baby crib in the room?",
+      "expected_any": [
+        [
+          "ベビーベッド",
+          "乳児用ベッド"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "部屋にベビーベッドを置くことはできますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.991
+    },
+    {
+      "id": "f-en-h4",
+      "source": "en",
+      "target": "ja",
+      "text": "The room next door is too noisy. Can I change rooms?",
+      "expected_any": [
+        [
+          "騒音",
+          "うるさい",
+          "騒がしい"
+        ],
+        [
+          "部屋",
+          "客室"
+        ],
+        [
+          "変更",
+          "替え",
+          "変え"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "隣の部屋がうるさいです。部屋を変えることができますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.249
+    },
+    {
+      "id": "f-en-h5",
+      "source": "en",
+      "target": "ja",
+      "text": "I need a receipt issued in my company name.",
+      "expected_any": [
+        [
+          "領収書"
+        ],
+        [
+          "会社名",
+          "会社の名前"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "会社名で発行された領収書が必要です。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.8
+    },
+    {
+      "id": "f-ko-h1",
+      "source": "ko",
+      "target": "ja",
+      "text": "아침 여섯 시 반에 깨워 주실 수 있나요?",
+      "expected_any": [
+        [
+          "モーニングコール",
+          "目覚まし"
+        ],
+        [
+          "6時30分",
+          "6時半",
+          "六時半"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "朝の6時半に起こしてもらえますか？",
+      "score": 0.5,
+      "missed": [
+        [
+          "モーニングコール",
+          "目覚まし"
+        ]
+      ],
+      "seconds": 0.981
+    },
+    {
+      "id": "f-ko-h2",
+      "source": "ko",
+      "target": "ja",
+      "text": "글루텐 알레르기가 있어서 글루텐 프리 식사가 필요합니다.",
+      "expected_any": [
+        [
+          "グルテン"
+        ],
+        [
+          "アレルギー"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "グルテンアレルギーがあるため、グルテンフリーの食事が必要です。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.574
+    },
+    {
+      "id": "f-ko-h3",
+      "source": "ko",
+      "target": "ja",
+      "text": "객실에 아기 침대를 놓아 주실 수 있나요?",
+      "expected_any": [
+        [
+          "ベビーベッド",
+          "乳児用ベッド"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "客室にベビーベッドを置いてもらえますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.102
+    },
+    {
+      "id": "f-ko-h4",
+      "source": "ko",
+      "target": "ja",
+      "text": "옆방이 너무 시끄러운데 다른 방으로 바꿀 수 있나요?",
+      "expected_any": [
+        [
+          "騒音",
+          "うるさい",
+          "騒がしい"
+        ],
+        [
+          "部屋",
+          "客室"
+        ],
+        [
+          "変更",
+          "替え",
+          "変え"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "隣の部屋がとても騒音が大きいですが、別の部屋に移ることはできますか？",
+      "score": 0.667,
+      "missed": [
+        [
+          "変更",
+          "替え",
+          "変え"
+        ]
+      ],
+      "seconds": 1.714
+    },
+    {
+      "id": "f-ko-h5",
+      "source": "ko",
+      "target": "ja",
+      "text": "회사 이름으로 영수증을 발급해 주세요.",
+      "expected_any": [
+        [
+          "領収書"
+        ],
+        [
+          "会社名",
+          "会社の名前"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "会社名で領収書を発行してください。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.752
+    },
+    {
+      "id": "f-zh-h1",
+      "source": "zh",
+      "target": "ja",
+      "text": "可以在早上六点半叫醒我吗？",
+      "expected_any": [
+        [
+          "モーニングコール",
+          "目覚まし"
+        ],
+        [
+          "6時30分",
+          "6時半",
+          "六時半"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "朝6時半に起こしてくれますか？",
+      "score": 0.5,
+      "missed": [
+        [
+          "モーニングコール",
+          "目覚まし"
+        ]
+      ],
+      "seconds": 0.725
+    },
+    {
+      "id": "f-zh-h2",
+      "source": "zh",
+      "target": "ja",
+      "text": "我对麸质过敏，需要无麸质餐。",
+      "expected_any": [
+        [
+          "グルテン"
+        ],
+        [
+          "アレルギー"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "私はグルテンにアレルギーがあり、グルテンフリーの食事が必要です。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.29
+    },
+    {
+      "id": "f-zh-h3",
+      "source": "zh",
+      "target": "ja",
+      "text": "可以在房间里放一张婴儿床吗？",
+      "expected_any": [
+        [
+          "ベビーベッド",
+          "乳児用ベッド"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "部屋にベビーベッドを置けますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.77
+    },
+    {
+      "id": "f-zh-h4",
+      "source": "zh",
+      "target": "ja",
+      "text": "隔壁房间太吵了，可以换房吗？",
+      "expected_any": [
+        [
+          "騒音",
+          "うるさい",
+          "騒がしい"
+        ],
+        [
+          "部屋",
+          "客室"
+        ],
+        [
+          "変更",
+          "替え",
+          "変え"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "隣の部屋がうるさいです。部屋を変えられますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.021
+    },
+    {
+      "id": "f-zh-h5",
+      "source": "zh",
+      "target": "ja",
+      "text": "请用公司名称开具收据。",
+      "expected_any": [
+        [
+          "領収書"
+        ],
+        [
+          "会社名",
+          "会社の名前"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "会社名で領収書を発行してください。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.614
+    },
+    {
+      "id": "f-es-h1",
+      "source": "es",
+      "target": "ja",
+      "text": "¿Puede despertarme a las seis y media?",
+      "expected_any": [
+        [
+          "モーニングコール",
+          "目覚まし"
+        ],
+        [
+          "6時30分",
+          "6時半",
+          "六時半"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "6時半に起こしてくれますか？",
+      "score": 0.5,
+      "missed": [
+        [
+          "モーニングコール",
+          "目覚まし"
+        ]
+      ],
+      "seconds": 0.789
+    },
+    {
+      "id": "f-es-h2",
+      "source": "es",
+      "target": "ja",
+      "text": "Soy alérgico al gluten y necesito una comida sin gluten.",
+      "expected_any": [
+        [
+          "グルテン"
+        ],
+        [
+          "アレルギー"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "私はグルテンにアレルギーがあり、グルテンフリーの食事が必要です。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.371
+    },
+    {
+      "id": "f-es-h3",
+      "source": "es",
+      "target": "ja",
+      "text": "¿Puede poner una cuna para bebé en la habitación?",
+      "expected_any": [
+        [
+          "ベビーベッド",
+          "乳児用ベッド"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "部屋に赤ちゃん用のベッドを置くことができますか？",
+      "score": 0.0,
+      "missed": [
+        [
+          "ベビーベッド",
+          "乳児用ベッド"
+        ]
+      ],
+      "seconds": 1.024
+    },
+    {
+      "id": "f-es-h4",
+      "source": "es",
+      "target": "ja",
+      "text": "La habitación de al lado es muy ruidosa. ¿Puedo cambiar de habitación?",
+      "expected_any": [
+        [
+          "騒音",
+          "うるさい",
+          "騒がしい",
+          "大騒ぎ"
+        ],
+        [
+          "部屋",
+          "客室"
+        ],
+        [
+          "変更",
+          "替え",
+          "変え"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "隣の部屋はとても騒音が大きいです。別の部屋に変えることはできますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.53
+    },
+    {
+      "id": "f-es-h5",
+      "source": "es",
+      "target": "ja",
+      "text": "Necesito un recibo a nombre de mi empresa.",
+      "expected_any": [
+        [
+          "領収書"
+        ],
+        [
+          "会社名",
+          "会社の名前"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "会社名で領収書が必要です。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.634
+    },
+    {
+      "id": "r-en-h1",
+      "source": "ja",
+      "target": "en",
+      "text": "確認いたしますので、少々お待ちください。",
+      "expected_any": [
+        [
+          "wait"
+        ],
+        [
+          "check"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "I will confirm for you, so please wait a little while.",
+      "score": 0.5,
+      "missed": [
+        [
+          "check"
+        ]
+      ],
+      "seconds": 0.808
+    },
+    {
+      "id": "r-en-h2",
+      "source": "ja",
+      "target": "en",
+      "text": "ご不便をおかけして申し訳ございません。",
+      "expected_any": [
+        [
+          "apolog"
+        ],
+        [
+          "inconvenience"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "I am sorry for causing you any inconvenience.",
+      "score": 0.5,
+      "missed": [
+        [
+          "apolog"
+        ]
+      ],
+      "seconds": 0.634
+    },
+    {
+      "id": "r-en-h3",
+      "source": "ja",
+      "target": "en",
+      "text": "担当スタッフがすぐお部屋に伺います。",
+      "expected_any": [
+        [
+          "staff"
+        ],
+        [
+          "room"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "The responsible staff will come to your room right away.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.713
+    },
+    {
+      "id": "r-en-h4",
+      "source": "ja",
+      "target": "en",
+      "text": "タクシーを手配いたします。",
+      "expected_any": [
+        [
+          "taxi"
+        ],
+        [
+          "arrange"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "I will arrange a taxi.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.495
+    },
+    {
+      "id": "r-en-h5",
+      "source": "ja",
+      "target": "en",
+      "text": "請求内容を確認して訂正いたします。",
+      "expected_any": [
+        [
+          "charge"
+        ],
+        [
+          "check"
+        ],
+        [
+          "correct"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "I will check the claim details and correct them.",
+      "score": 0.667,
+      "missed": [
+        [
+          "charge"
+        ]
+      ],
+      "seconds": 0.686
+    },
+    {
+      "id": "r-ko-h1",
+      "source": "ja",
+      "target": "ko",
+      "text": "確認いたしますので、少々お待ちください。",
+      "expected_any": [
+        [
+          "기다려"
+        ],
+        [
+          "확인"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "확인해 드리겠습니다만, 잠시 기다려 주시기 바랍니다.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.191
+    },
+    {
+      "id": "r-ko-h2",
+      "source": "ja",
+      "target": "ko",
+      "text": "ご不便をおかけして申し訳ございません。",
+      "expected_any": [
+        [
+          "죄송"
+        ],
+        [
+          "불편"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "불편을 드린 점에 죄송합니다.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.765
+    },
+    {
+      "id": "r-ko-h3",
+      "source": "ja",
+      "target": "ko",
+      "text": "担当スタッフがすぐお部屋に伺います。",
+      "expected_any": [
+        [
+          "직원"
+        ],
+        [
+          "객실",
+          "방"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "담당 직원이 곧 방으로 찾아올 것입니다.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.926
+    },
+    {
+      "id": "r-ko-h4",
+      "source": "ja",
+      "target": "ko",
+      "text": "タクシーを手配いたします。",
+      "expected_any": [
+        [
+          "택시"
+        ],
+        [
+          "불러",
+          "배정"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "택시를 준비해 드리겠습니다.",
+      "score": 0.5,
+      "missed": [
+        [
+          "불러",
+          "배정"
+        ]
+      ],
+      "seconds": 0.68
+    },
+    {
+      "id": "r-ko-h5",
+      "source": "ja",
+      "target": "ko",
+      "text": "請求内容を確認して訂正いたします。",
+      "expected_any": [
+        [
+          "요금",
+          "청구"
+        ],
+        [
+          "확인"
+        ],
+        [
+          "정정"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "요청된 내용을 확인한 후 수정해 드리겠습니다.",
+      "score": 0.333,
+      "missed": [
+        [
+          "요금",
+          "청구"
+        ],
+        [
+          "정정"
+        ]
+      ],
+      "seconds": 0.884
+    },
+    {
+      "id": "r-zh-h1",
+      "source": "ja",
+      "target": "zh",
+      "text": "確認いたしますので、少々お待ちください。",
+      "expected_any": [
+        [
+          "稍等",
+          "等待"
+        ],
+        [
+          "确认"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "我会确认一下，请稍等片刻。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.617
+    },
+    {
+      "id": "r-zh-h2",
+      "source": "ja",
+      "target": "zh",
+      "text": "ご不便をおかけして申し訳ございません。",
+      "expected_any": [
+        [
+          "歉意",
+          "抱歉"
+        ],
+        [
+          "不便"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "给您带来不便，非常抱歉。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.547
+    },
+    {
+      "id": "r-zh-h3",
+      "source": "ja",
+      "target": "zh",
+      "text": "担当スタッフがすぐお部屋に伺います。",
+      "expected_any": [
+        [
+          "工作人员",
+          "员工"
+        ],
+        [
+          "房间"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "负责人员会立即到您的房间。",
+      "score": 0.5,
+      "missed": [
+        [
+          "工作人员",
+          "员工"
+        ]
+      ],
+      "seconds": 0.593
+    },
+    {
+      "id": "r-zh-h4",
+      "source": "ja",
+      "target": "zh",
+      "text": "タクシーを手配いたします。",
+      "expected_any": [
+        [
+          "出租车"
+        ],
+        [
+          "安排"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "我将安排出租车。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.38
+    },
+    {
+      "id": "r-zh-h5",
+      "source": "ja",
+      "target": "zh",
+      "text": "請求内容を確認して訂正いたします。",
+      "expected_any": [
+        [
+          "费用",
+          "收费"
+        ],
+        [
+          "核对",
+          "确认"
+        ],
+        [
+          "更正"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "我会确认请求内容并加以修正。",
+      "score": 0.333,
+      "missed": [
+        [
+          "费用",
+          "收费"
+        ],
+        [
+          "更正"
+        ]
+      ],
+      "seconds": 0.56
+    },
+    {
+      "id": "r-es-h1",
+      "source": "ja",
+      "target": "es",
+      "text": "確認いたしますので、少々お待ちください。",
+      "expected_any": [
+        [
+          "espere"
+        ],
+        [
+          "comprob"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "Lo confirmaré, por favor espere un momento.",
+      "score": 0.5,
+      "missed": [
+        [
+          "comprob"
+        ]
+      ],
+      "seconds": 0.698
+    },
+    {
+      "id": "r-es-h2",
+      "source": "ja",
+      "target": "es",
+      "text": "ご不便をおかけして申し訳ございません。",
+      "expected_any": [
+        [
+          "disculp"
+        ],
+        [
+          "molestias"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "Lamento las molestias que pueda haber causado.",
+      "score": 0.5,
+      "missed": [
+        [
+          "disculp"
+        ]
+      ],
+      "seconds": 0.784
+    },
+    {
+      "id": "r-es-h3",
+      "source": "ja",
+      "target": "es",
+      "text": "担当スタッフがすぐお部屋に伺います。",
+      "expected_any": [
+        [
+          "personal"
+        ],
+        [
+          "habitación"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "El personal encargado vendrá rápidamente a su habitación.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.831
+    },
+    {
+      "id": "r-es-h4",
+      "source": "ja",
+      "target": "es",
+      "text": "タクシーを手配いたします。",
+      "expected_any": [
+        [
+          "taxi"
+        ],
+        [
+          "pedir",
+          "organizar"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "Organizaré un taxi.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.463
+    },
+    {
+      "id": "r-es-h5",
+      "source": "ja",
+      "target": "es",
+      "text": "請求内容を確認して訂正いたします。",
+      "expected_any": [
+        [
+          "cargo"
+        ],
+        [
+          "revis"
+        ],
+        [
+          "correg"
+        ]
+      ],
+      "corpus": "hotel_translation_holdout",
+      "translated": "Verificaré el contenido de la solicitud y lo corregiré.",
+      "score": 0.333,
+      "missed": [
+        [
+          "cargo"
+        ],
+        [
+          "revis"
+        ]
+      ],
+      "seconds": 0.924
+    },
+    {
+      "id": "f-en-v1",
+      "source": "en",
+      "target": "ja",
+      "text": "Can the laundry be returned by tomorrow morning?",
+      "expected_any": [
+        [
+          "ランドリー",
+          "洗濯"
+        ],
+        [
+          "明日"
+        ],
+        [
+          "朝"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "明日の朝までに洗濯物を返すことができますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.845
+    },
+    {
+      "id": "f-en-v2",
+      "source": "en",
+      "target": "ja",
+      "text": "My flight is delayed. Please change the airport pickup time.",
+      "expected_any": [
+        [
+          "フライト",
+          "飛行機",
+          "便"
+        ],
+        [
+          "遅延",
+          "遅れ"
+        ],
+        [
+          "空港"
+        ],
+        [
+          "時間",
+          "タイミング"
+        ],
+        [
+          "変更",
+          "変え"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "私のフライトが遅延しています。空港での迎え時間を変更してください。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.131
+    },
+    {
+      "id": "f-en-v3",
+      "source": "en",
+      "target": "ja",
+      "text": "This is a non-smoking room, but it smells like cigarettes.",
+      "expected_any": [
+        [
+          "禁煙"
+        ],
+        [
+          "タバコ",
+          "煙草"
+        ],
+        [
+          "臭い",
+          "におい",
+          "匂い"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "これは非喫煙ルームですが、タバコの匂いがします。",
+      "score": 0.667,
+      "missed": [
+        [
+          "禁煙"
+        ]
+      ],
+      "seconds": 1.174
+    },
+    {
+      "id": "f-en-v4",
+      "source": "en",
+      "target": "ja",
+      "text": "My child has a fever. Can you call a doctor?",
+      "expected_any": [
+        [
+          "子供",
+          "子ども"
+        ],
+        [
+          "熱",
+          "発熱"
+        ],
+        [
+          "医者",
+          "医師"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "私の子供が発熱しています。医者を呼んでもらえますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.041
+    },
+    {
+      "id": "f-ko-v1",
+      "source": "ko",
+      "target": "ja",
+      "text": "세탁물을 내일 아침까지 받을 수 있나요?",
+      "expected_any": [
+        [
+          "ランドリー",
+          "洗濯"
+        ],
+        [
+          "明日"
+        ],
+        [
+          "朝"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "明日の朝まで洗濯物を受け取ることができますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.033
+    },
+    {
+      "id": "f-ko-v2",
+      "source": "ko",
+      "target": "ja",
+      "text": "비행기가 지연됐으니 공항 픽업 시간을 변경해 주세요.",
+      "expected_any": [
+        [
+          "フライト",
+          "飛行機",
+          "便"
+        ],
+        [
+          "遅延",
+          "遅れ"
+        ],
+        [
+          "空港"
+        ],
+        [
+          "時間"
+        ],
+        [
+          "変更",
+          "変え"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "飛行機が遅れていますので、空港での迎え時間を変更してください。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.259
+    },
+    {
+      "id": "f-ko-v3",
+      "source": "ko",
+      "target": "ja",
+      "text": "금연 객실인데 담배 냄새가 납니다.",
+      "expected_any": [
+        [
+          "禁煙"
+        ],
+        [
+          "タバコ",
+          "煙草"
+        ],
+        [
+          "臭い",
+          "におい",
+          "匂い"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "禁煙の客室ですが、タバコの臭いがします。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.129
+    },
+    {
+      "id": "f-ko-v4",
+      "source": "ko",
+      "target": "ja",
+      "text": "아이가 열이 나는데 의사를 불러 주실 수 있나요?",
+      "expected_any": [
+        [
+          "子供",
+          "子ども"
+        ],
+        [
+          "熱",
+          "発熱"
+        ],
+        [
+          "医者",
+          "医師"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "子供が熱を出していますが、医者を呼んでもらえますか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.239
+    },
+    {
+      "id": "f-zh-v1",
+      "source": "zh",
+      "target": "ja",
+      "text": "洗好的衣服可以明天早上送回来吗？",
+      "expected_any": [
+        [
+          "ランドリー",
+          "洗濯"
+        ],
+        [
+          "明日"
+        ],
+        [
+          "朝"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "洗った服を明日の朝に届けてもいいですか？",
+      "score": 0.667,
+      "missed": [
+        [
+          "ランドリー",
+          "洗濯"
+        ]
+      ],
+      "seconds": 0.884
+    },
+    {
+      "id": "f-zh-v2",
+      "source": "zh",
+      "target": "ja",
+      "text": "我的航班延误了，请更改机场接机时间。",
+      "expected_any": [
+        [
+          "フライト",
+          "便"
+        ],
+        [
+          "遅延",
+          "遅れ"
+        ],
+        [
+          "空港"
+        ],
+        [
+          "時間"
+        ],
+        [
+          "変更",
+          "変え"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "私のフライトが遅れました。空港での迎え時間を変更してください。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.156
+    },
+    {
+      "id": "f-zh-v3",
+      "source": "zh",
+      "target": "ja",
+      "text": "这是无烟房，但有烟味。",
+      "expected_any": [
+        [
+          "禁煙"
+        ],
+        [
+          "タバコ",
+          "煙草"
+        ],
+        [
+          "臭い",
+          "におい"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "これは無煙室ですが、煙の匂いがあります。",
+      "score": 0.0,
+      "missed": [
+        [
+          "禁煙"
+        ],
+        [
+          "タバコ",
+          "煙草"
+        ],
+        [
+          "臭い",
+          "におい"
+        ]
+      ],
+      "seconds": 0.932
+    },
+    {
+      "id": "f-zh-v4",
+      "source": "zh",
+      "target": "ja",
+      "text": "我的孩子发烧了，可以叫医生吗？",
+      "expected_any": [
+        [
+          "子供",
+          "子ども"
+        ],
+        [
+          "熱",
+          "発熱"
+        ],
+        [
+          "医者",
+          "医師"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "私の子供が熱を出しました。医者を呼んでもいいですか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.149
+    },
+    {
+      "id": "f-es-v1",
+      "source": "es",
+      "target": "ja",
+      "text": "¿Pueden devolver la ropa lavada mañana por la mañana?",
+      "expected_any": [
+        [
+          "ランドリー",
+          "洗濯"
+        ],
+        [
+          "明日"
+        ],
+        [
+          "朝"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "明日の朝、洗った服を返してもらえますか？",
+      "score": 0.667,
+      "missed": [
+        [
+          "ランドリー",
+          "洗濯"
+        ]
+      ],
+      "seconds": 1.021
+    },
+    {
+      "id": "f-es-v2",
+      "source": "es",
+      "target": "ja",
+      "text": "Mi vuelo se ha retrasado. Cambie la hora de recogida en el aeropuerto.",
+      "expected_any": [
+        [
+          "フライト",
+          "飛行機",
+          "便"
+        ],
+        [
+          "遅延",
+          "遅れ"
+        ],
+        [
+          "空港"
+        ],
+        [
+          "時間"
+        ],
+        [
+          "変更",
+          "変え"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "私のフライトが遅れています。空港での受け取り時間を変更してください。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.503
+    },
+    {
+      "id": "f-es-v3",
+      "source": "es",
+      "target": "ja",
+      "text": "Es una habitación para no fumadores, pero huele a tabaco.",
+      "expected_any": [
+        [
+          "禁煙"
+        ],
+        [
+          "タバコ",
+          "煙草"
+        ],
+        [
+          "臭い",
+          "におい",
+          "匂い"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "非喫煙者用の部屋ですが、タバコの臭いがあります。",
+      "score": 0.667,
+      "missed": [
+        [
+          "禁煙"
+        ]
+      ],
+      "seconds": 1.292
+    },
+    {
+      "id": "f-es-v4",
+      "source": "es",
+      "target": "ja",
+      "text": "Mi hijo tiene fiebre. ¿Puede llamar a un médico?",
+      "expected_any": [
+        [
+          "子供",
+          "子ども"
+        ],
+        [
+          "熱",
+          "発熱"
+        ],
+        [
+          "医者",
+          "医師"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "私の子供が熱を出しています。医者に電話してもいいですか？",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.371
+    },
+    {
+      "id": "r-en-v1",
+      "source": "ja",
+      "target": "en",
+      "text": "朝食会場は2階で、午前6時30分から10時までです。",
+      "expected_any": [
+        [
+          "breakfast"
+        ],
+        [
+          "second floor",
+          "2nd floor"
+        ],
+        [
+          "6:30"
+        ],
+        [
+          "10"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "The breakfast area is on the second floor, and it is available from 6:30 a.m. to 10 a.m.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.654
+    },
+    {
+      "id": "r-en-v2",
+      "source": "ja",
+      "target": "en",
+      "text": "パスポートが見つかりました。身分証明書を持ってフロントへお越しください。",
+      "expected_any": [
+        [
+          "passport"
+        ],
+        [
+          "identification",
+          "ID"
+        ],
+        [
+          "front desk",
+          "reception"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "The passport has been found. Please come to the front desk with your ID card.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.296
+    },
+    {
+      "id": "r-en-v3",
+      "source": "ja",
+      "target": "en",
+      "text": "緊急の場合は救急車を手配します。",
+      "expected_any": [
+        [
+          "emergency"
+        ],
+        [
+          "ambulance"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "In case of an emergency, we will arrange for an ambulance.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.942
+    },
+    {
+      "id": "r-ko-v1",
+      "source": "ja",
+      "target": "ko",
+      "text": "朝食会場は2階で、午前6時30分から10時までです。",
+      "expected_any": [
+        [
+          "조식",
+          "아침 식사"
+        ],
+        [
+          "2층"
+        ],
+        [
+          "6시 30분",
+          "6:30"
+        ],
+        [
+          "10시",
+          "10"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "아침 식사 장소는 2층에 있으며, 오전 6시 30분부터 10시까지입니다.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.74
+    },
+    {
+      "id": "r-ko-v2",
+      "source": "ja",
+      "target": "ko",
+      "text": "パスポートが見つかりました。身分証明書を持ってフロントへお越しください。",
+      "expected_any": [
+        [
+          "여권"
+        ],
+        [
+          "신분증",
+          "신분 증명서"
+        ],
+        [
+          "프런트",
+          "프론트"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "여권이 발견되었습니다. 신분증을 지참하여 프린트 데스크로 오세요.",
+      "score": 0.667,
+      "missed": [
+        [
+          "프런트",
+          "프론트"
+        ]
+      ],
+      "seconds": 1.744
+    },
+    {
+      "id": "r-ko-v3",
+      "source": "ja",
+      "target": "ko",
+      "text": "緊急の場合は救急車を手配します。",
+      "expected_any": [
+        [
+          "긴급",
+          "응급"
+        ],
+        [
+          "구급차"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "긴급 상황이라면 구급차를 준비합니다.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.016
+    },
+    {
+      "id": "r-zh-v1",
+      "source": "ja",
+      "target": "zh",
+      "text": "朝食会場は2階で、午前6時30分から10時までです。",
+      "expected_any": [
+        [
+          "早餐"
+        ],
+        [
+          "二楼",
+          "2楼"
+        ],
+        [
+          "六点半",
+          "6:30"
+        ],
+        [
+          "十点",
+          "10"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "早餐场位于二楼，开放时间为上午6点30分到10点。",
+      "score": 0.75,
+      "missed": [
+        [
+          "六点半",
+          "6:30"
+        ]
+      ],
+      "seconds": 1.162
+    },
+    {
+      "id": "r-zh-v2",
+      "source": "ja",
+      "target": "zh",
+      "text": "パスポートが見つかりました。身分証明書を持ってフロントへお越しください。",
+      "expected_any": [
+        [
+          "护照"
+        ],
+        [
+          "身份证件",
+          "身份证明"
+        ],
+        [
+          "前台"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "找到了护照。请携带身份证前往前台。",
+      "score": 0.667,
+      "missed": [
+        [
+          "身份证件",
+          "身份证明"
+        ]
+      ],
+      "seconds": 0.969
+    },
+    {
+      "id": "r-zh-v3",
+      "source": "ja",
+      "target": "zh",
+      "text": "緊急の場合は救急車を手配します。",
+      "expected_any": [
+        [
+          "紧急"
+        ],
+        [
+          "救护车"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "在紧急情况时，会安排救护车前来。",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 0.755
+    },
+    {
+      "id": "r-es-v1",
+      "source": "ja",
+      "target": "es",
+      "text": "朝食会場は2階で、午前6時30分から10時までです。",
+      "expected_any": [
+        [
+          "desayuno"
+        ],
+        [
+          "segundo piso",
+          "segunda planta"
+        ],
+        [
+          "6:30",
+          "seis y media"
+        ],
+        [
+          "10",
+          "diez"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "El lugar de la comida matutina está en el segundo piso, y abre desde las 6:30 de la mañana hasta las 10 de la mañana.",
+      "score": 0.75,
+      "missed": [
+        [
+          "desayuno"
+        ]
+      ],
+      "seconds": 2.408
+    },
+    {
+      "id": "r-es-v2",
+      "source": "ja",
+      "target": "es",
+      "text": "パスポートが見つかりました。身分証明書を持ってフロントへお越しください。",
+      "expected_any": [
+        [
+          "pasaporte"
+        ],
+        [
+          "identificación",
+          "documento"
+        ],
+        [
+          "recepción"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "Se encontró el pasaporte. Por favor, vaya a la recepción con su identificación.",
+      "score": 1.0,
+      "missed": [],
+      "seconds": 1.711
+    },
+    {
+      "id": "r-es-v3",
+      "source": "ja",
+      "target": "es",
+      "text": "緊急の場合は救急車を手配します。",
+      "expected_any": [
+        [
+          "emergencia"
+        ],
+        [
+          "ambulancia"
+        ]
+      ],
+      "corpus": "hotel_translation_validation",
+      "translated": "En casos de emergencia, se organizará un coche de rescate.",
+      "score": 0.5,
+      "missed": [
+        [
+          "ambulancia"
+        ]
+      ],
+      "seconds": 1.201
+    }
+  ]
+}

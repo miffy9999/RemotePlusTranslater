@@ -1,0 +1,51 @@
+{
+  "summary": {
+    "test_type": "fixed_language_execution_smoke",
+    "transcript_accuracy_evaluated": false,
+    "samples": 4,
+    "passed": 4,
+    "failed": []
+  },
+  "rows": [
+    {
+      "mode": "customer",
+      "selected": "en",
+      "expected": "en",
+      "detected": "en",
+      "probability": 1.0,
+      "text": "I love you.",
+      "text_present": true,
+      "smoke_passed": true
+    },
+    {
+      "mode": "customer",
+      "selected": "ko",
+      "expected": "ko",
+      "detected": "ko",
+      "probability": 1.0,
+      "text": "자신의 꿈을 포기하는 것은 죽음과 같다",
+      "text_present": true,
+      "smoke_passed": true
+    },
+    {
+      "mode": "customer",
+      "selected": "zh",
+      "expected": "zh",
+      "detected": "zh",
+      "probability": 1.0,
+      "text": "这是一个使用信贷卡底进行与种检测的程序",
+      "text_present": true,
+      "smoke_passed": true
+    },
+    {
+      "mode": "customer",
+      "selected": "es",
+      "expected": "es",
+      "detected": "es",
+      "probability": 1.0,
+      "text": "más vale pájaro en mano que cien volando",
+      "text_present": true,
+      "smoke_passed": true
+    }
+  ]
+}

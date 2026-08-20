@@ -1,0 +1,9 @@
+# Copy these values into config.local.toml ONLY when that file exists and
+# currently overrides [audio] or [stt]. Do not copy device settings.
+
+[audio]
+end_silence_ms = 360
+tail_keep_ms = 180
+
+[stt]
+beam_size = 2

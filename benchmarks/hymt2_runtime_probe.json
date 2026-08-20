@@ -1,0 +1,7 @@
+{
+  "return_code": 1,
+  "timed_out": true,
+  "seconds": 180.22,
+  "stdout": "\nLoading model... \n\n\n▄▄ ▄▄\n██ ██\n██ ██  ▀▀█▄ ███▄███▄  ▀▀█▄    ▄████ ████▄ ████▄\n██ ██ ▄█▀██ ██ ██ ██ ▄█▀██    ██    ██ ██ ██ ██\n██ ██ ▀█▄██ ██ ██ ██ ▀█▄██ ██ ▀████ ████▀ ████▀\n                                    ██    ██\n                                    ▀▀    ▀▀\n\nbuild      : b9870-2d973636e\nmodel      : C:\\Users\\user\\Desktop\\바탕 화면\\RemotePlus\\realtime-translator\\models\\hymt2\\Hy-MT2-1.8B-Q4_K_M.gguf\nftype      : Q4_K - Medium\nmodalities : text\n\navailable commands:\n  /exit or Ctrl+C     stop or exit\n  /regen              regenerate the last response\n  /clear              clear the chat history\n  /read <file>        add a text file\n  /glob <pattern>     add text files using globbing pattern\n\n\n> Translate the following text into Japanese. Only output the translation:\n\nHello.\n\nこんにちは。\n\n[ Prompt: 84.2 t/s | Generation: 32.6 t/s ]\n\n> ",
+  "stderr": ""
+}

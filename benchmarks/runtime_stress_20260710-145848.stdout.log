@@ -1,0 +1,30 @@
+STT loading: Loading final speech model
+MT loading: Loading high-quality Hy-MT2 translation model
+MT loading: Hy-MT2 translation model ready
+Running for 30 minute(s); Ctrl+C writes a partial report.
+{"cycle": 1, "language": "en", "stt_seconds": 2.264, "translation_seconds": 1.485, "stt_text_characters": 11, "translation_characters": 22, "ok": true, "tts_seconds": 1.244, "tts_bytes": 25344, "total_rss_mib": 2497.7}
+{"cycle": 2, "language": "ko", "stt_seconds": 4.601, "translation_seconds": 2.763, "stt_text_characters": 21, "translation_characters": 19, "ok": true, "total_rss_mib": 2505.4}
+{"cycle": 3, "language": "zh", "stt_seconds": 4.221, "translation_seconds": 1.701, "stt_text_characters": 19, "translation_characters": 20, "ok": true, "total_rss_mib": 2508.9}
+{"cycle": 4, "language": "es", "stt_seconds": 3.538, "translation_seconds": 1.631, "stt_text_characters": 40, "translation_characters": 22, "ok": true, "total_rss_mib": 2515.6}
+{"cycle": 5, "language": "ja", "stt_seconds": 3.209, "translation_seconds": 1.285, "stt_text_characters": 7, "translation_characters": 34, "ok": true, "total_rss_mib": 2517.6}
+{"cycle": 6, "language": "en", "stt_seconds": 2.925, "translation_seconds": 0.788, "stt_text_characters": 11, "translation_characters": 22, "ok": true, "total_rss_mib": 2519.0}
+{"cycle": 7, "language": "ko", "stt_seconds": 3.395, "translation_seconds": 0.784, "stt_text_characters": 21, "translation_characters": 19, "ok": true, "total_rss_mib": 2519.8}
+{"cycle": 8, "language": "zh", "stt_seconds": 2.895, "translation_seconds": 0.734, "stt_text_characters": 19, "translation_characters": 20, "ok": true, "tts_seconds": 0.399, "tts_bytes": 25056, "total_rss_mib": 2520.8}
+{"cycle": 9, "language": "es", "stt_seconds": 2.779, "translation_seconds": 0.85, "stt_text_characters": 40, "translation_characters": 22, "ok": true, "total_rss_mib": 2518.9}
+{"cycle": 10, "language": "ja", "stt_seconds": 2.454, "translation_seconds": 0.56, "stt_text_characters": 7, "translation_characters": 34, "ok": true, "total_rss_mib": 2519.6}
+{"cycle": 11, "language": "en", "stt_seconds": 2.458, "translation_seconds": 0.84, "stt_text_characters": 11, "translation_characters": 22, "ok": true, "total_rss_mib": 2519.6}
+{"cycle": 12, "language": "ko", "stt_seconds": 2.935, "translation_seconds": 0.845, "stt_text_characters": 21, "translation_characters": 19, "ok": true, "total_rss_mib": 2520.3}
+{"cycle": 13, "language": "zh", "stt_seconds": 4.02, "translation_seconds": 1.03, "stt_text_characters": 19, "translation_characters": 20, "ok": true, "total_rss_mib": 2519.1}
+{"cycle": 14, "language": "es", "stt_seconds": 3.342, "translation_seconds": 0.969, "stt_text_characters": 40, "translation_characters": 22, "ok": true, "tts_seconds": 0.219, "tts_bytes": 25776, "total_rss_mib": 2521.7}
+{"cycle": 15, "language": "ja", "stt_seconds": 2.534, "translation_seconds": 0.579, "stt_text_characters": 7, "translation_characters": 34, "ok": true, "total_rss_mib": 2518.7}
+{"cycle": 16, "language": "en", "stt_seconds": 2.864, "translation_seconds": 0.76, "stt_text_characters": 11, "translation_characters": 21, "ok": true, "total_rss_mib": 2519.8}
+{"cycle": 17, "language": "ko", "stt_seconds": 3.771, "translation_seconds": 0.847, "stt_text_characters": 21, "translation_characters": 19, "ok": true, "total_rss_mib": 2521.7}
+{"cycle": 18, "language": "zh", "stt_seconds": 4.251, "translation_seconds": 0.89, "stt_text_characters": 19, "translation_characters": 20, "ok": true, "total_rss_mib": 2518.8}
+{"cycle": 19, "language": "es", "stt_seconds": 3.332, "translation_seconds": 0.874, "stt_text_characters": 40, "translation_characters": 22, "ok": true, "total_rss_mib": 2521.4}
+{"cycle": 20, "language": "ja", "stt_seconds": 3.26, "translation_seconds": 0.561, "stt_text_characters": 7, "translation_characters": 34, "ok": true, "total_rss_mib": 2519.3}
+{"cycle": 21, "language": "en", "stt_seconds": 2.851, "translation_seconds": 0.853, "stt_text_characters": 11, "translation_characters": 22, "ok": true, "tts_seconds": 0.232, "tts_bytes": 25344, "total_rss_mib": 2520.1}
+{"cycle": 22, "language": "ko", "stt_seconds": 3.084, "translation_seconds": 0.793, "stt_text_characters": 21, "translation_characters": 19, "ok": true, "total_rss_mib": 2518.9}
+{"cycle": 23, "language": "zh", "stt_seconds": 2.859, "translation_seconds": 0.761, "stt_text_characters": 19, "translation_characters": 20, "ok": true, "total_rss_mib": 2518.9}
+{"cycle": 24, "language": "es", "stt_seconds": 4.018, "translation_seconds": 1.001, "stt_text_characters": 40, "translation_characters": 22, "ok": true, "total_rss_mib": 2521.0}
+{"cycle": 25, "language": "ja", "stt_seconds": 2.783, "translation_seconds": 0.652, "stt_text_characters": 7, "translation_characters": 34, "ok": true, "total_rss_mib": 2519.4}
+{"cycle": 26, "language": "en", "stt_seconds": 3.063, "translation_seconds": 0.693, "stt_text_characters": 11, "translation_characters": 21, "ok": true, "total_rss_mib": 2521.4}

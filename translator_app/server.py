@@ -1,0 +1,526 @@
+from __future__ import annotations
+
+import asyncio
+import json
+import os
+import queue
+import secrets
+import subprocess
+import sys
+import tempfile
+import threading
+import time
+from contextlib import asynccontextmanager
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from pydantic import BaseModel, ConfigDict
+
+from . import __version__
+from .config import AppConfig, load_config
+from .conversation import ConversationController
+from .events import EventBus
+from .feedback import FeedbackStore
+from .languages import CUSTOMER_LANGUAGE_CODES, public_languages
+from .process_cleanup import hidden_subprocess_options
+from .reading import SUPPORTED_READING_LANGUAGES
+from .quick_phrases import QuickPhraseStore
+from .settings import UserSettings
+from .translation_memory import TranslationMemory, TranslationMemoryTranslator
+from .wav_import import MAX_WAV_BYTES, WavImportManager, WavImportProcessor
+
+
+def _fallback_devices(message: str) -> dict[str, list]:
+    return {
+        "inputs": [{"id": "default", "name": "System default input"}],
+        "warnings": [message],
+    }
+
+
+def _run_device_probe(root: Path, code: str, timeout_seconds: float) -> dict[str, list]:
+    """Probe audio drivers out of process so a bad driver cannot hang the UI."""
+    env = os.environ.copy()
+    env["PYTHONUTF8"] = "1"
+    env["PYTHONPATH"] = str(root) + (
+        os.pathsep + env["PYTHONPATH"] if env.get("PYTHONPATH") else ""
+    )
+    output_file = (
+        Path(tempfile.gettempdir())
+        / f"remoteplus-device-{os.getpid()}-{secrets.token_hex(4)}.json"
+    )
+    env["REMOTEPLUS_PROBE_OUTPUT"] = str(output_file)
+    command = (
+        [sys.executable, "device-probe", "input"]
+        if getattr(sys, "frozen", False)
+        else [sys.executable, "-c", code]
+    )
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=root,
+            env=env,
+            capture_output=True,
+            timeout=timeout_seconds,
+            check=False,
+            **hidden_subprocess_options(),
+        )
+    except subprocess.TimeoutExpired:
+        return _fallback_devices(
+            "Audio device enumeration timed out; system default remains available."
+        )
+    except Exception as exc:
+        return _fallback_devices(
+            f"Audio device enumeration failed; system default remains available: {exc}"
+        )
+    finally:
+        if "completed" not in locals():
+            output_file.unlink(missing_ok=True)
+
+    try:
+        stdout = (completed.stdout or b"").decode("utf-8", errors="replace")
+        stderr = (completed.stderr or b"").decode("utf-8", errors="replace")
+        if completed.returncode != 0:
+            detail = (stderr or stdout).strip()
+            return _fallback_devices(
+                "Audio device enumeration failed; system default remains available: "
+                f"{detail or completed.returncode}"
+            )
+        if output_file.exists():
+            return json.loads(output_file.read_text(encoding="utf-8"))
+        lines = [line.strip() for line in stdout.splitlines() if line.strip()]
+        return json.loads(lines[-1] if lines else "")
+    except (TypeError, ValueError):
+        return _fallback_devices(
+            "Audio device enumeration returned invalid data; system default remains available."
+        )
+    finally:
+        output_file.unlink(missing_ok=True)
+
+
+def _enumerate_devices(root: Path, timeout_seconds: float = 8.0) -> dict[str, list]:
+    input_code = (
+        "import json;"
+        "from translator_app.audio import list_audio_devices;"
+        "result=list_audio_devices();"
+        "print(json.dumps({'inputs':result.get('inputs',[]),"
+        "'warnings':result.get('warnings',[])}, ensure_ascii=False), flush=True)"
+    )
+    result = _run_device_probe(root, input_code, timeout_seconds)
+    return {
+        "inputs": result.get("inputs")
+        or [{"id": "default", "name": "System default input"}],
+        "warnings": result.get("warnings", []),
+    }
+
+
+WEB = Path(__file__).resolve().parent / "web"
+WEB_ASSETS = {
+    "app.css": WEB / "app.css",
+    "device.css": WEB / "device.css",
+    "app.js": WEB / "app.js",
+}
+DEVICE_CACHE_SECONDS = 60.0
+
+
+class StrictRequest(BaseModel):
+    # Reject stale clients instead of silently ignoring removed TTS fields.
+    model_config = ConfigDict(extra="forbid")
+
+
+class ControlRequest(StrictRequest):
+    paused: bool | None = None
+    active_language: str | None = None
+    reply_language: str | None = None
+    input_device: str | int | None = None
+    enabled_languages: list[str] | None = None
+
+
+class StaffReplyRequest(StrictRequest):
+    text: str
+
+
+class QuickPhraseRequest(StrictRequest):
+    text: str
+
+
+class QuickPhraseCategoryRequest(StrictRequest):
+    category: str
+
+
+class QuickPhraseUIStateRequest(StrictRequest):
+    collapsed_categories: list[str]
+
+
+class FeedbackRequest(StrictRequest):
+    direction: str
+    source_language: str
+    target_language: str = ""
+    source: str
+    translation: str
+    corrected_source: str = ""
+    corrected_translation: str = ""
+
+
+def create_app(
+    cfg: AppConfig | None = None,
+    start_backend: bool = True,
+    recognizer=None,
+    wav_import_manager=None,
+) -> FastAPI:
+    config = cfg or load_config()
+    stale_wav_root = config.data_root / "wav-imports"
+    if stale_wav_root.is_dir():
+        for stale_wav in stale_wav_root.glob("remoteplus-wav-*.wav"):
+            try:
+                stale_wav.unlink()
+            except OSError:
+                pass
+    bus = EventBus()
+    translation_memory = TranslationMemory(config.data_root)
+    controller = ConversationController(config, bus, recognizer=recognizer)
+    controller.translator = TranslationMemoryTranslator(
+        controller.translator,
+        translation_memory,
+    )
+    wav_imports = wav_import_manager or WavImportManager(
+        WavImportProcessor(
+            controller.recognizer,
+            controller.translator,
+            config.audio,
+            controller.recognizer_lock,
+            controller.translator_lock,
+        )
+    )
+    feedback = FeedbackStore(config.data_root, translation_memory)
+    quick_phrases = QuickPhraseStore(config.data_root)
+    user_settings = UserSettings(config.data_root)
+    devices_cache: dict[str, object] = {"expires_at": 0.0, "payload": None}
+    devices_lock = threading.Lock()
+
+    def wav_import_active() -> bool:
+        checker = getattr(wav_imports, "active", None)
+        return bool(checker()) if checker is not None else False
+
+    # Every supported customer language is selectable. Japanese remains the
+    # fixed staff language and is therefore excluded from this list.
+    controller.control(enabled_languages=list(CUSTOMER_LANGUAGE_CODES))
+    saved = user_settings.load()
+    for key in ("active_language", "reply_language", "input_device"):
+        if key not in saved:
+            continue
+        try:
+            controller.control(**{key: saved[key]})
+        except (TypeError, ValueError):
+            # A device can disappear after moving the portable build.
+            continue
+
+    auth_token = secrets.token_urlsafe(32)
+    cookie_name = "remoteplus_session"
+    allowed_hosts = {
+        f"127.0.0.1:{config.server.port}",
+        f"localhost:{config.server.port}",
+        f"[::1]:{config.server.port}",
+    }
+    allowed_origins = {f"http://{host}" for host in allowed_hosts}
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        if start_backend:
+            controller.start()
+        yield
+        if hasattr(wav_imports, "close"):
+            wav_imports.close()
+        controller.stop()
+
+    app = FastAPI(title="RemotePlus Translator", lifespan=lifespan)
+    app.state.controller = controller
+    app.state.auth_token = auth_token
+    app.state.wav_imports = wav_imports
+    app.state.translation_memory = translation_memory
+    app.state.desktop_client_count = 0
+    app.state.desktop_client_seen = False
+    app.state.desktop_last_disconnect = 0.0
+    app.state.desktop_client_lock = threading.Lock()
+    app.state.ui_ready_event = threading.Event()
+
+    @app.middleware("http")
+    async def protect_local_api(request: Request, call_next):
+        host = request.headers.get("host", "").casefold()
+        if host not in allowed_hosts:
+            return PlainTextResponse("Forbidden", status_code=403)
+        if request.url.path.startswith("/api/"):
+            supplied = request.cookies.get(cookie_name) or request.headers.get(
+                "x-auth-token", ""
+            )
+            if not secrets.compare_digest(supplied, auth_token):
+                return JSONResponse({"detail": "Unauthorized"}, status_code=401)
+        return await call_next(request)
+
+    @app.get("/assets/{filename}")
+    def asset(filename: str):
+        path = WEB_ASSETS.get(filename)
+        if path is None:
+            raise HTTPException(404, "Asset not found")
+        return FileResponse(path)
+
+    @app.get("/")
+    def index():
+        response = FileResponse(WEB / "index.html")
+        response.set_cookie(
+            cookie_name,
+            auth_token,
+            httponly=True,
+            samesite="strict",
+            secure=False,
+        )
+        return response
+
+    @app.get("/remoteplus-health")
+    def health():
+        return {
+            "app": "remoteplus-translator",
+            "version": __version__,
+            "ok": True,
+        }
+
+    @app.get("/api/state")
+    def state():
+        return {
+            "state": controller.snapshot(),
+            "history": bus.history(),
+            "languages": public_languages(CUSTOMER_LANGUAGE_CODES),
+            "reading": {
+                "katakana_languages": sorted(SUPPORTED_READING_LANGUAGES),
+                "romanization": "all",
+            },
+        }
+
+    @app.post("/api/ui-ready", status_code=204)
+    def ui_ready():
+        app.state.ui_ready_event.set()
+
+    @app.get("/api/devices")
+    def devices():
+        with devices_lock:
+            now = time.monotonic()
+            cached = devices_cache.get("payload")
+            if cached is not None and now < float(devices_cache["expires_at"]):
+                return cached
+            result = _enumerate_devices(config.root)
+            devices_cache["payload"] = result
+            devices_cache["expires_at"] = time.monotonic() + DEVICE_CACHE_SECONDS
+            return result
+
+    @app.post("/api/control")
+    def control(request: ControlRequest):
+        try:
+            payload = request.model_dump()
+            mutable_during_wav = (
+                "active_language",
+                "reply_language",
+                "input_device",
+                "enabled_languages",
+            )
+            if wav_import_active() and any(
+                payload.get(key) is not None for key in mutable_during_wav
+            ):
+                raise HTTPException(409, "Wait for the WAV import to finish")
+            if payload.get("enabled_languages") is not None:
+                payload["enabled_languages"] = list(CUSTOMER_LANGUAGE_CODES)
+            state = controller.control(**payload)
+            persistent_keys = {
+                "active_language",
+                "reply_language",
+                "input_device",
+            }
+            if any(payload.get(key) is not None for key in persistent_keys):
+                try:
+                    user_settings.save(state)
+                    state["settings_persisted"] = True
+                except OSError as exc:
+                    state["settings_persisted"] = False
+                    bus.publish("warning", message=f"Settings could not be saved: {exc}")
+            return state
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.post("/api/reply", status_code=202)
+    def staff_reply(request: StaffReplyRequest):
+        if wav_import_active():
+            raise HTTPException(409, "Wait for the WAV import to finish")
+        try:
+            utterance_id = controller.submit_staff_text(request.text)
+            return {"accepted": True, "utterance_id": utterance_id}
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.post("/api/wav-import", status_code=202)
+    async def import_wav(request: Request, customer_language: str):
+        content_length = request.headers.get("content-length")
+        if content_length:
+            try:
+                if int(content_length) > MAX_WAV_BYTES:
+                    raise HTTPException(413, "WAV file is larger than 512 MB")
+            except ValueError as exc:
+                raise HTTPException(400, "Invalid Content-Length") from exc
+        content_type = request.headers.get("content-type", "").partition(";")[0].strip()
+        if content_type not in {
+            "audio/wav",
+            "audio/x-wav",
+            "audio/wave",
+            "application/octet-stream",
+        }:
+            raise HTTPException(415, "Upload an uncompressed PCM WAV file")
+        if wav_import_active():
+            raise HTTPException(409, "Another WAV import is already running")
+        imports_root = config.data_root / "wav-imports"
+        imports_root.mkdir(parents=True, exist_ok=True)
+        descriptor, temporary_name = tempfile.mkstemp(
+            prefix="remoteplus-wav-", suffix=".wav", dir=imports_root
+        )
+        os.close(descriptor)
+        temporary = Path(temporary_name)
+        size = 0
+        try:
+            with temporary.open("wb") as handle:
+                async for chunk in request.stream():
+                    size += len(chunk)
+                    if size > MAX_WAV_BYTES:
+                        raise HTTPException(413, "WAV file is larger than 512 MB")
+                    handle.write(chunk)
+            if size < 44:
+                raise HTTPException(400, "WAV file is empty or incomplete")
+            was_paused = bool(controller.snapshot().get("paused"))
+            if not was_paused:
+                controller.control(paused=True)
+            try:
+                return wav_imports.submit(temporary, customer_language)
+            except RuntimeError as exc:
+                if not was_paused:
+                    controller.control(paused=False)
+                raise HTTPException(409, str(exc)) from exc
+            except ValueError as exc:
+                if not was_paused:
+                    controller.control(paused=False)
+                raise HTTPException(400, str(exc)) from exc
+        except Exception:
+            temporary.unlink(missing_ok=True)
+            raise
+
+    @app.get("/api/wav-import/{job_id}")
+    def wav_import_status(job_id: str):
+        result = wav_imports.status(job_id)
+        if result is None:
+            raise HTTPException(404, "WAV import not found")
+        return result
+
+    @app.delete("/api/wav-import/{job_id}")
+    def cancel_wav_import(job_id: str):
+        if not wav_imports.cancel(job_id):
+            raise HTTPException(409, "WAV import is not running")
+        return {"cancelled": True}
+
+    @app.get("/api/quick-phrases")
+    def list_quick_phrases():
+        phrases, collapsed_categories = quick_phrases.list_state()
+        return {
+            "phrases": phrases,
+            "max_items": quick_phrases.MAX_ITEMS,
+            "collapsed_categories": collapsed_categories,
+        }
+
+    @app.post("/api/quick-phrases", status_code=201)
+    def add_quick_phrase(request: QuickPhraseRequest):
+        try:
+            return {"phrase": quick_phrases.add(request.text)}
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.patch("/api/quick-phrases/{phrase_id}/category")
+    def set_quick_phrase_category(phrase_id: str, request: QuickPhraseCategoryRequest):
+        try:
+            phrase = quick_phrases.set_category(phrase_id, request.category)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        if phrase is None:
+            raise HTTPException(404, "Quick phrase not found")
+        return {"phrase": phrase}
+
+    @app.patch("/api/quick-phrases/ui-state")
+    def set_quick_phrase_ui_state(request: QuickPhraseUIStateRequest):
+        try:
+            collapsed = quick_phrases.set_collapsed_categories(
+                request.collapsed_categories
+            )
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+        return {"collapsed_categories": collapsed}
+
+    @app.delete("/api/quick-phrases/{phrase_id}")
+    def delete_quick_phrase(phrase_id: str):
+        if not quick_phrases.delete(phrase_id):
+            raise HTTPException(404, "Quick phrase not found")
+        return {"deleted": True}
+
+    @app.post("/api/feedback")
+    def save_feedback(request: FeedbackRequest):
+        try:
+            path = feedback.append(request.model_dump())
+            return {"saved": True, "file": str(path)}
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    @app.delete("/api/history")
+    def clear_history():
+        controller.clear_dialogue_context()
+        bus.clear_history_and_publish()
+        return {"cleared": True}
+
+    @app.delete("/api/feedback")
+    def clear_feedback():
+        return {"cleared": feedback.clear()}
+
+    @app.websocket("/ws")
+    async def events(websocket: WebSocket):
+        host = websocket.headers.get("host", "").casefold()
+        origin = websocket.headers.get("origin", "").casefold()
+        supplied = websocket.cookies.get(cookie_name) or websocket.headers.get(
+            "x-auth-token", ""
+        )
+        if (
+            host not in allowed_hosts
+            or origin not in allowed_origins
+            or not secrets.compare_digest(supplied, auth_token)
+        ):
+            await websocket.close(code=1008)
+            return
+        await websocket.accept()
+        with app.state.desktop_client_lock:
+            app.state.desktop_client_count += 1
+            app.state.desktop_client_seen = True
+        subscriber = bus.subscribe()
+        try:
+            await websocket.send_json(
+                {"type": "snapshot", "data": await asyncio.to_thread(state)}
+            )
+            while True:
+                try:
+                    event = await asyncio.to_thread(subscriber.get, True, 1.0)
+                except queue.Empty:
+                    await websocket.send_json(
+                        {"type": "state", "data": controller.snapshot()}
+                    )
+                    continue
+                await websocket.send_json(event.as_dict())
+        except (WebSocketDisconnect, RuntimeError):
+            pass
+        finally:
+            with app.state.desktop_client_lock:
+                app.state.desktop_client_count = max(
+                    0, app.state.desktop_client_count - 1
+                )
+                app.state.desktop_last_disconnect = time.monotonic()
+            bus.unsubscribe(subscriber)
+
+    return app

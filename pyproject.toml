@@ -1,0 +1,45 @@
+[project]
+name = "local-conversation-translator"
+version = "0.8.5"
+description = "Local hotel voice-to-chat translator with typed Japanese replies"
+requires-python = ">=3.11,<3.14"
+dependencies = [
+  "faster-whisper==1.2.1",
+  "ctranslate2==4.8.1",
+  "numpy==2.5.1",
+  "sounddevice==0.5.5",
+  "SoundCard==0.4.6",
+  "pywin32==312",
+  "fastapi==0.139.1",
+  "starlette==1.3.1",
+  "pydantic==2.13.4",
+  "uvicorn==0.51.0",
+  "websockets==16.1",
+  "pypinyin==0.55.0",
+  "anyascii==0.3.3",
+  "pywebview==6.2.1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest==9.1.1", "pytest-cov==7.1.0", "ruff==0.15.21", "pyinstaller==6.21.0", "httpx2==2.7.0"]
+
+[project.scripts]
+local-translator = "translator_app.cli:main"
+
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["translator_app*"]
+
+[tool.setuptools.package-data]
+translator_app = ["web/*"]
+
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

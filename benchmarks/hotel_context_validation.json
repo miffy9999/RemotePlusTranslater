@@ -1,0 +1,10 @@
+[
+  {"id":"c-ja-ko-01","source":"ja","target":"ko","previous":"朝食は6時30分と7時のどちらになさいますか。","text":"それでお願いします。","next":"7時で予約いたします。","expected_any":[["부탁","주세요"]]},
+  {"id":"c-ja-en-01","source":"ja","target":"en","previous":"追加料金は1泊2,000円です。","text":"それは含まれていますか。","next":"税金は料金に含まれています。","expected_any":[["includ"]]},
+  {"id":"c-ko-ja-01","source":"ko","target":"ja","previous":"공항 셔틀은 오전 8시에 출발합니다.","text":"그때는 어렵습니다.","next":"오전 9시 차량을 확인해 드리겠습니다.","expected_any":[["難しい","難し"]]},
+  {"id":"c-en-ja-01","source":"en","target":"ja","previous":"The airport shuttle leaves at eight a.m.","text":"That is too early.","next":"I can check the nine a.m. service.","expected_any":[["早"]]},
+  {"id":"c-ja-ko-02","source":"ja","target":"ko","previous":"禁煙室は明日からご用意できます。","text":"それなら大丈夫です。","next":"明日から禁煙室へ変更いたします。","expected_any":[["괜찮","좋습니다"]]},
+  {"id":"c-ja-en-02","source":"ja","target":"en","previous":"ツインルームとダブルルームをご用意できます。","text":"そちらでお願いします。","next":"ダブルルームで承ります。","expected_any":[["that","one"],["please","like"]]},
+  {"id":"c-ko-ja-02","source":"ko","target":"ja","previous":"추가 침대는 1박에 3만 원입니다.","text":"그건 빼 주세요.","next":"추가 침대 없이 예약하겠습니다.","expected_any":[["追加しない","外して","除いて","なし"]]},
+  {"id":"c-en-ja-02","source":"en","target":"ja","previous":"The extra bed costs thirty dollars per night.","text":"Please leave that out.","next":"I will book the room without an extra bed.","expected_any":[["追加しない","外して","除いて","なし","不要"]]}
+]
