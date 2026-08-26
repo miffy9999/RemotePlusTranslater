@@ -19,7 +19,7 @@ M1 구현 완료, M2 독립형 음성 통역기 0.3.0 포터블 빌드와 핵심
 - localhost 세션 쿠키, Host·WebSocket Origin 검사, llama API key 적용
 - 모델·런타임 SHA-256 검증과 zip 경로 이탈 방지 적용
 - 개인 설정·교정 기록은 `%LOCALAPPDATA%\RemotePlusTranslator`, 모델은 EXE 옆에서 절대경로로 로드
-- Claude 정적 분석 29개 항목 검토 결과는 `FIXES_REVIEW.md`에 기록
+- 정적 분석 29개 항목 검토 결과는 `FIXES_REVIEW.md`에 기록
 
 - Whisper-small 463.7MB 다운로드 완료
 - M2M100 PyTorch 가중치 약 1.94GB 다운로드 완료
